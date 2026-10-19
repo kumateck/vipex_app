@@ -7,7 +7,7 @@ export function useSelfServiceCompletionForm(
   canComplete: boolean,
   onComplete: (input: CompleteSelfServiceDraftInput) => Promise<unknown>,
 ) {
-  const [parcelDetails, setParcelDetails] = useState(draft.parcelContent);
+  const [parcelDetails, setParcelDetails] = useState('');
   const [chargeCedis, setChargeCedis] = useState('');
   const [chargeAgentUserId, setChargeAgentUserId] = useState('');
   const chargeAgents = useParcelChargeAgents('self-service', canComplete);

@@ -2,6 +2,16 @@
 
 Base URL: `/v1`
 
+`POST /self-service/sessions` issues a branch-bound, single-use 15-minute token persisted in
+PostgreSQL (migration `0087`). All subsequent public self-service calls require
+`x-self-service-session`; the server remains the expiry authority. Missing, expired, used, or
+wrong-branch tokens return 410 with `SELF_SERVICE_SESSION_EXPIRED` (draft POST retries with a
+saved matching receipt return the original success). The web client offers
+**Start new booking** for expired sessions. Successful bookings offer **New booking** up to 10
+total per QR scan, then require the QR entry again. It does not expire tokens
+using the customer's device clock. See [Session lifetime and recovery](SELF_SERVICE_BOOKING.md#session-lifetime-and-recovery)
+for deployment order, rate limits, storage failures, and older-client behavior.
+
 Parcel creation and self-service completion accept optional nullable `chargeAgentUserId`.
 Current staff clients require the selection next to the parcel charge; older clients may omit it.
 `GET /v1/shipments/bookings/charge-agent-options` and
@@ -242,7 +252,8 @@ either record. Omitted fields are preserved; telephone `null` clears the primary
 Success returns `{ id }`. Authentication and one of `CanUpdateParcels`, `CanReadParcelIncoming`,
 `CanCompleteOfficePickup`, `CanCreateReceiverPayments`, `CanReadParcelScan`, or
 `CanReadShelfPickerUpdate` are required; any `receiver` payload also requires
-`CanUpdateCustomers`. Company/destination-branch scope comes from the session. Missing context
+`CanUpdateCustomers`. Company/branch scope comes from the session; destination-branch edits
+use their workflow grant, and source-branch edits require `CanUpdateParcels`. Missing context
 or invalid names/phones/details return 400/422, missing authentication/permission 401/403,
 out-of-scope/deleted parcels or inactive/missing receiver customers 404, and a stale receiver
 ID, duplicate phone, or a database trigger that cannot persist the correction 409. Failure rolls back parcel, customer, and audit writes. Names must
@@ -415,3 +426,38 @@ rules are unchanged. This behavior applies to web, desktop and mobile clients us
 shared endpoint. Notification dispatch logs retain the send failure. Tests:
 `src/server/features/parcel-receiver-otp/otp-sms-delivery.test.ts` and
 `src/server/features/notification-hub/sms-provider-payloads.test.ts`.
+
+Self-service public `POST /self-service/drafts` now returns `bookingsCompleted` and nullable
+`nextSession` alongside `draftId`/`expiresAt`. One QR scan permits ten successful drafts within
+its original 15-minute deadline; tokens remain single-use. Persistence and continuation issuance
+are atomic. Matching draft POST retries return the saved response; changing the details under
+a consumed token returns 409. See [Self-service booking](SELF_SERVICE_BOOKING.md) for refresh/rescan behavior and
+separate daily abuse quotas. Staff completion and sticker APIs are unchanged.
+
+Delivery Cashier can manage a second receiver before rider handover, including Address Collected
+and Dispatched parcels, through the existing permission-guarded receiver endpoint. Mobile rider
+handover supports an optional `handoverTarget` and only selects the cashier-linked second contact;
+stale choices fail with 409. See [Identity and operations APIs](api/IDENTITY_AND_OPERATIONS.md).
+
+The shift-session cashier sales clients derive separate Delivery Cashier **Delivery fees received**
+and **To Be Paid received** summaries from existing `GET /reports/daily-cashier-sales` transaction
+fields (`cashierType`, `component`, `grossAmountPsw`). No response or permission changes are
+required. The API continues to exclude voided payments and apply report scope. See
+[Cashier payments and shifts](CASHIER_PAYMENTS_AND_SHIFTS.md#delivery-cashier-received-summary)
+for component classification, outstanding-versus-received labels, printing and QA.
+
+Parcel information editing now also accepts the parcel's source branch when the authenticated
+actor has `CanUpdateParcels`; receiver fields still additionally require `CanUpdateCustomers`.
+`POST /shipments/parcels/:id/edit-information` keeps its existing request and response. Actor
+permissions and company/branch scope come from authentication, not the request body. Source Edit
+is exposed on Processed Parcels / Consignment, In Transit Outgoing and Super Search on web/desktop.
+Third branches and other companies remain rejected. See
+[Parcel Operations](PARCEL_OPERATIONS.md#correcting-a-receiver-from-a-parcel).
+
+Source-branch sender reassociation now uses `GET /shipments/parcels/:id/sender-candidates` and
+`POST /shipments/parcels/:id/correct-sender`, guarded by both parcel/customer-update permissions.
+The selected customer must already own the exact entered primary/secondary number; the change
+is isolated to one parcel and audited atomically. Sender credit history blocks reassociation
+pending Accounts reconciliation. See [Identity and operations APIs](api/IDENTITY_AND_OPERATIONS.md).
+Booking customer-name popups on web/mobile reuse existing lookup and customer PATCH endpoints;
+no customer-directory read grant is needed for minimal booking lookup.

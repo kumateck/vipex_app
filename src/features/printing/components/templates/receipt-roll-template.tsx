@@ -1,12 +1,12 @@
 import type { InvoiceA5TemplateProps } from './invoice-a5-template.types';
-import type { ReceiptPaperFormat } from '@/shared/printing/receipt-paper';
+import type { VerticalReceiptPaperFormat } from '@/shared/printing';
 import { isToBePaidDeliveryReceipt } from './invoice-a5-template.utils';
 import { ReceiptRollShell, ReceiptRollField } from './receipt-roll-shell';
 import { ReceiptRollPayment } from './receipt-roll-payment';
 
 export function ReceiptRollTemplate(
   props: InvoiceA5TemplateProps & {
-    paperFormat: Exclude<ReceiptPaperFormat, 'a5'>;
+    paperFormat: VerticalReceiptPaperFormat;
   },
 ) {
   const unpaid = isToBePaidDeliveryReceipt(props);

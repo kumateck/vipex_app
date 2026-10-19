@@ -1,3 +1,4 @@
+import { parcelSenderCorrectionRoutes } from './parcel-sender-correction.routes';
 import { Elysia, t } from 'elysia';
 import {
   authPlugin,
@@ -33,6 +34,7 @@ export function assertParcelInformationEditAccess({
 
 export const parcelInformationEditRoutes = new Elysia({ name: 'parcel-information-edit' })
   .use(authPlugin)
+  .use(parcelSenderCorrectionRoutes)
   .post(
     '/:id/edit-information',
     ({ params, body, user }) => {
@@ -42,6 +44,7 @@ export const parcelInformationEditRoutes = new Elysia({ name: 'parcel-informatio
         companyId: user!.companyId ?? '',
         branchId: user!.branchId ?? '',
         actorUserId: user!.sub,
+        actorPermissions: user!.permissions ?? [],
       });
     },
     {

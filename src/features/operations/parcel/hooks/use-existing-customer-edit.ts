@@ -1,7 +1,7 @@
 import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useUpdateCustomerMutation, type Customer } from '@/features/customers/api';
+import { useUpdateCustomerMutation } from '@/features/customers/api';
 import { limitPhoneDigits } from '@/lib/phone';
 import {
   validateExistingCustomerEdit,
@@ -9,7 +9,12 @@ import {
 } from '../utils/existing-customer-edit';
 
 type UseExistingCustomerEditOptions = {
-  customer?: Customer;
+  customer?: {
+    id: string;
+    fullname: string;
+    telephone?: string | null;
+    telephone2?: string | null;
+  };
   onUpdated: (values: ExistingCustomerEditValues) => void;
 };
 
@@ -19,6 +24,7 @@ const EMPTY_VALUES: ExistingCustomerEditValues = {
 };
 
 export function useExistingCustomerEdit({ customer, onUpdated }: UseExistingCustomerEditOptions) {
+  const saving = useRef(false);
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState(EMPTY_VALUES);
   const [updateCustomer, { isLoading }] = useUpdateCustomerMutation();
@@ -41,7 +47,7 @@ export function useExistingCustomerEdit({ customer, onUpdated }: UseExistingCust
   }, []);
 
   const save = useCallback(async () => {
-    if (!customer) return;
+    if (!customer || saving.current) return;
 
     const validationError = validateExistingCustomerEdit(values, customer.telephone ?? '');
     if (validationError) {
@@ -54,6 +60,7 @@ export function useExistingCustomerEdit({ customer, onUpdated }: UseExistingCust
       telephone2: values.telephone2.trim(),
     };
 
+    saving.current = true;
     try {
       await updateCustomer({
         id: customer.id,
@@ -65,6 +72,8 @@ export function useExistingCustomerEdit({ customer, onUpdated }: UseExistingCust
       toast.success('Customer information updated');
     } catch (error) {
       toast.error(getApplicationErrorMessage(error, '') || 'Failed to update customer');
+    } finally {
+      saving.current = false;
     }
   }, [customer, onUpdated, updateCustomer, values]);
 

@@ -4,16 +4,22 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 
 type SelfServiceSessionScreenProps = {
-  state: 'loading' | 'expired' | 'error' | 'invalid';
+  state: 'limit' | 'loading' | 'expired' | 'error' | 'invalid';
   message?: string;
   onRetry?: () => void;
   isRetrying?: boolean;
 };
 
 const COPY = {
-  expired: {
+  limit: {
     title: 'Scan the QR code again',
-    description: 'This 15-minute booking session has expired or has already been used.',
+    description:
+      'You have used all 10 bookings for this scan. Scan the branch QR code again to start a new set.',
+  },
+  expired: {
+    title: 'Start a new booking',
+    description:
+      'This booking session is no longer available. Start a new 15-minute session below.',
   },
   error: {
     title: 'Unable to start booking',
@@ -61,7 +67,7 @@ export function SelfServiceSessionScreen({
             className="mt-7 h-12 gap-2 rounded-xl bg-[#ef3340] px-5 text-white hover:bg-[#ff4652]"
           >
             {isRetrying ? <Spinner className="size-4" /> : <RefreshCw className="size-4" />}
-            Try again
+            {state === 'expired' ? 'Start new booking' : 'Try again'}
           </Button>
         ) : null}
       </div>

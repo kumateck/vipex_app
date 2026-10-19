@@ -11,3 +11,4 @@ export * from './daily-cashier-sales-transactions-table';
 export * from './daily-cashier-sales-types';
 export * from './daily-cashier-sales-utils';
 export * from './use-daily-cashier-sales';
+export { useDeliveryCashierCollections } from './use-delivery-cashier-collections';

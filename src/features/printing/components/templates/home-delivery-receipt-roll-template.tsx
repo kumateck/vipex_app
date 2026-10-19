@@ -1,10 +1,10 @@
 import type { HomeDeliveryReceiptA5Props } from './home-delivery-receipt-a5-template';
-import type { ReceiptPaperFormat } from '@/shared/printing/receipt-paper';
+import type { VerticalReceiptPaperFormat } from '@/shared/printing';
 import { ReceiptRollShell, ReceiptRollField, ReceiptRollAmount } from './receipt-roll-shell';
 
 export function HomeDeliveryReceiptRollTemplate(
   props: HomeDeliveryReceiptA5Props & {
-    paperFormat: Exclude<ReceiptPaperFormat, 'a5'>;
+    paperFormat: VerticalReceiptPaperFormat;
   },
 ) {
   const money = (psw: number) => `GH₵ ${(psw / 100).toFixed(2)}`;

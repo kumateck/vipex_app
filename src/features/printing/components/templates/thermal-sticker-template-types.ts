@@ -19,6 +19,7 @@ export type ThermalStickerTemplateProps = {
   destinationBranchName: string;
   destinationLocationName: string;
   toBePaidCedis?: number;
+  paymentStatusLabel?: 'PENDING' | 'CREDIT';
   qrValue: string;
   formatMoney: (amount: number) => string;
   orientation?: ThermalStickerOrientation;

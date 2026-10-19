@@ -16,6 +16,7 @@ import { useSelfServiceAgent } from '../../hooks';
 import { SelfServiceCompletionForm } from './self-service-completion-form';
 import { SelfServiceDraftCard } from './self-service-draft-card';
 import { SelfServiceDraftsSearch } from './self-service-drafts-search';
+import { SelfServiceCompletedBooking } from './self-service-completed-booking';
 
 export function SelfServiceAgentScreen() {
   const { session } = useAuth();
@@ -41,8 +42,14 @@ export function SelfServiceAgentScreen() {
           <AppButton title="Refresh" variant="plain" onPress={() => void workflow.load()} />
         }
       />
-      {workflow.selected ? (
+      {workflow.completedBooking ? (
+        <SelfServiceCompletedBooking
+          completed={workflow.completedBooking}
+          onDone={workflow.dismissCompletedBooking}
+        />
+      ) : workflow.selected ? (
         <SelfServiceCompletionForm
+          key={workflow.selected.id}
           draft={workflow.selected}
           saving={workflow.saving}
           canComplete={canComplete}

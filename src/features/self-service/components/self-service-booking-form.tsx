@@ -1,5 +1,6 @@
+import type { SubmitSelfServiceDraftResponse } from '../api/self-service-public.api';
 import { useEffect, useRef } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion';
 import { Form } from '@/components/ui/form';
 import { useSelfServiceGuidedFlow } from '../hooks/use-self-service-guided-flow';
 import { SelfServiceContactStage } from './self-service-contact-stage';
@@ -13,7 +14,8 @@ type SelfServiceBookingFormProps = {
   branchId: string;
   branchName: string;
   sessionToken: string;
-  onSessionConsumed: () => void;
+  onSessionConsumed: (response: SubmitSelfServiceDraftResponse) => void;
+  onNewBooking: () => void;
   onSessionExpired: () => void;
 };
 
@@ -31,10 +33,11 @@ export function SelfServiceBookingForm({
   sessionToken,
   onSessionConsumed,
   onSessionExpired,
+  onNewBooking,
 }: SelfServiceBookingFormProps) {
   const prefersReducedMotion = useReducedMotion();
   const flowRootRef = useRef<HTMLDivElement>(null);
-  const { form, stage, direction, goNext, goBack, goToStage, isSubmitting, submittedDraftId } =
+  const { form, stage, direction, goNext, goBack, goToStage, isSubmitting, submission } =
     useSelfServiceGuidedFlow(branchId, sessionToken, onSessionConsumed, onSessionExpired);
 
   useEffect(() => {
@@ -44,70 +47,81 @@ export function SelfServiceBookingForm({
     scrollContainer?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [stage]);
 
-  if (submittedDraftId) {
-    return <SelfServiceSuccessScreen branchName={branchName} />;
+  if (submission) {
+    return (
+      <SelfServiceSuccessScreen
+        branchName={branchName}
+        bookingsCompleted={submission.bookingsCompleted}
+        onNewBooking={submission.nextSession ? onNewBooking : undefined}
+      />
+    );
   }
 
   return (
-    <Form {...form}>
-      <div ref={flowRootRef} className="flex min-w-0 max-w-full flex-1 flex-col overflow-x-hidden">
-        <SelfServiceProgress stage={stage} />
-        <AnimatePresence mode="wait" custom={direction} initial={false}>
-          <motion.div
-            key={stage}
-            custom={direction}
-            variants={prefersReducedMotion ? undefined : stageVariants}
-            initial={prefersReducedMotion ? false : 'enter'}
-            animate="center"
-            exit={prefersReducedMotion ? undefined : 'exit'}
-            transition={prefersReducedMotion ? { duration: 0 } : STAGE_TRANSITION}
-            className="flex min-w-0 max-w-full flex-1 flex-col overflow-x-hidden"
-          >
-            {stage === 'sender' ? (
-              <SelfServiceContactStage
-                control={form.control}
-                branchId={branchId}
-                sessionToken={sessionToken}
-                role="sender"
-                onNext={goNext}
-              />
-            ) : null}
-            {stage === 'receiver' ? (
-              <SelfServiceContactStage
-                control={form.control}
-                branchId={branchId}
-                sessionToken={sessionToken}
-                role="receiver"
-                onBack={goBack}
-                onNext={goNext}
-              />
-            ) : null}
-            {stage === 'destination' ? (
-              <SelfServiceDestinationStage
-                control={form.control}
-                branchId={branchId}
-                sessionToken={sessionToken}
-                onBack={goBack}
-                onNext={goNext}
-              />
-            ) : null}
-            {stage === 'parcel' ? (
-              <SelfServiceParcelStage control={form.control} onBack={goBack} onNext={goNext} />
-            ) : null}
-            {stage === 'review' ? (
-              <SelfServiceReviewStage
-                control={form.control}
-                branchId={branchId}
-                sessionToken={sessionToken}
-                onBack={goBack}
-                onNext={goNext}
-                onEdit={goToStage}
-                isSubmitting={isSubmitting}
-              />
-            ) : null}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    </Form>
+    <LazyMotion features={domAnimation}>
+      <Form {...form}>
+        <div
+          ref={flowRootRef}
+          className="flex min-w-0 max-w-full flex-1 flex-col overflow-x-hidden"
+        >
+          <SelfServiceProgress stage={stage} />
+          <AnimatePresence mode="wait" custom={direction} initial={false}>
+            <m.div
+              key={stage}
+              custom={direction}
+              variants={prefersReducedMotion ? undefined : stageVariants}
+              initial={prefersReducedMotion ? false : 'enter'}
+              animate="center"
+              exit={prefersReducedMotion ? undefined : 'exit'}
+              transition={prefersReducedMotion ? { duration: 0 } : STAGE_TRANSITION}
+              className="flex min-w-0 max-w-full flex-1 flex-col overflow-x-hidden"
+            >
+              {stage === 'sender' ? (
+                <SelfServiceContactStage
+                  control={form.control}
+                  branchId={branchId}
+                  sessionToken={sessionToken}
+                  role="sender"
+                  onNext={goNext}
+                />
+              ) : null}
+              {stage === 'receiver' ? (
+                <SelfServiceContactStage
+                  control={form.control}
+                  branchId={branchId}
+                  sessionToken={sessionToken}
+                  role="receiver"
+                  onBack={goBack}
+                  onNext={goNext}
+                />
+              ) : null}
+              {stage === 'destination' ? (
+                <SelfServiceDestinationStage
+                  control={form.control}
+                  branchId={branchId}
+                  sessionToken={sessionToken}
+                  onBack={goBack}
+                  onNext={goNext}
+                />
+              ) : null}
+              {stage === 'parcel' ? (
+                <SelfServiceParcelStage control={form.control} onBack={goBack} onNext={goNext} />
+              ) : null}
+              {stage === 'review' ? (
+                <SelfServiceReviewStage
+                  control={form.control}
+                  branchId={branchId}
+                  sessionToken={sessionToken}
+                  onBack={goBack}
+                  onNext={goNext}
+                  onEdit={goToStage}
+                  isSubmitting={isSubmitting}
+                />
+              ) : null}
+            </m.div>
+          </AnimatePresence>
+        </div>
+      </Form>
+    </LazyMotion>
   );
 }

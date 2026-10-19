@@ -30,6 +30,7 @@ type ParcelReceiptActionsProps = {
   mode?: 'sender-payment' | 'receiver-payment' | 'reprint' | 'default';
   showSelectionMenu?: boolean;
   stickerCopies?: number;
+  stickerOnly?: boolean;
   onAutoPrintComplete?: () => void;
 };
 export function ParcelReceiptActions({
@@ -40,6 +41,7 @@ export function ParcelReceiptActions({
   mode = 'default',
   showSelectionMenu = false,
   stickerCopies = 1,
+  stickerOnly = false,
   onAutoPrintComplete: onPrintComplete,
 }: ParcelReceiptActionsProps) {
   const { hasPrinted, onAutoPrintComplete } = useParcelPrintCompletion(onPrintComplete);
@@ -274,6 +276,7 @@ export function ParcelReceiptActions({
         showSelectionMenu={showSelectionMenu}
         triggerLabel={triggerLabel}
         stickerCopies={selectedStickerCopies}
+        stickerOnly={stickerOnly}
         onStickerCopiesChange={(copies) => setSelectedStickerCopies(normalizeStickerCopies(copies))}
         onPrintBoth={handlePrintBoth}
         onPrintInvoice={handlePrintInvoiceOnly}

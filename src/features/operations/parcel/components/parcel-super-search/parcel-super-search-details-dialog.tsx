@@ -1,3 +1,4 @@
+import { ParcelInformationEditAction } from '../../parcel-information-editor';
 import { useCallback } from 'react';
 import { SendReceiptAction } from '@/features/digital-receipts';
 import { ParcelDetailsDialog } from '@/features/operations/parcel-details';
@@ -14,6 +15,7 @@ type ParcelSuperSearchDetailsDialogProps = {
   canRecordReturn: boolean;
   branchId: string | null;
   onReturnToSource: (parcel: { id: string; bookingCode: string; sourceName: string }) => void;
+  showReturnAvailability?: boolean;
 };
 
 /** The shared parcel details view plus Super Search's return-to-source and disposition actions. */
@@ -25,10 +27,16 @@ export function ParcelSuperSearchDetailsDialog({
   canRecordReturn,
   branchId,
   onReturnToSource,
+  showReturnAvailability = false,
 }: ParcelSuperSearchDetailsDialogProps) {
   const renderBanner = useCallback(
     (details: ParcelFullDetails) => (
       <>
+        {details.summary ? (
+          <ParcelInformationEditAction
+            parcel={{ ...details.summary, isDeleted: details.parcel.isDeleted }}
+          />
+        ) : null}
         <SendReceiptAction
           key={details.parcel.id}
           parcelId={details.parcel.id}
@@ -45,10 +53,11 @@ export function ParcelSuperSearchDetailsDialog({
           }
           canRecordReturn={canRecordReturn}
           onReturnToSource={onReturnToSource}
+          showUnavailableReason={showReturnAvailability}
         />
       </>
     ),
-    [branchId, branchNameById, canRecordReturn, onReturnToSource],
+    [branchId, branchNameById, canRecordReturn, onReturnToSource, showReturnAvailability],
   );
   const renderActions = useCallback(
     (details: ParcelFullDetails) => (

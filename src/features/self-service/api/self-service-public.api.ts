@@ -7,6 +7,7 @@ export type SelfServiceBranchInfo = {
 
 export type SelfServiceSession = SelfServiceBranchInfo & {
   sessionToken: string;
+  bookingNumber?: number;
   issuedAt: string;
   expiresAt: string;
 };
@@ -34,6 +35,8 @@ export type SubmitSelfServiceDraftInput = {
 export type SubmitSelfServiceDraftResponse = {
   draftId: string;
   expiresAt: string;
+  bookingsCompleted: number;
+  nextSession: SelfServiceSession | null;
 };
 
 export type SelfServiceCustomerMatch = {

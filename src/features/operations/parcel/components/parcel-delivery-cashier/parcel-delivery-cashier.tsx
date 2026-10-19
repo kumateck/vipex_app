@@ -1,3 +1,4 @@
+import { DeliveryCashierSecondReceivers } from '../../delivery-cashier-second-receivers';
 import { ParcelSessionGuard } from '../parcel-session-guard';
 import { DeliveryCashierTable } from './delivery-cashier-table';
 import { FinalizeDeliveryDialog } from './dialogs';
@@ -39,6 +40,7 @@ export function ParcelDeliveryCashier() {
   return (
     <div className="w-full space-y-4 p-4">
       <ParcelSessionGuard>
+        <DeliveryCashierSecondReceivers />
         <DeliveryCashierTable
           companyId={companyId}
           branchId={branchId}

@@ -8,6 +8,8 @@ import { ParcelSuperSearchTable } from './parcel-super-search-table';
 import { ReturnToSourceDialog } from './return-to-source-dialog';
 import type { ParcelSuperSearchQuery } from './types';
 
+const EMPTY_PARCEL_ROWS: ParcelSearchRow[] = [];
+
 export function ParcelSuperSearchPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
@@ -49,7 +51,7 @@ export function ParcelSuperSearchPage() {
     [branchOptions],
   );
 
-  const rows = data?.data ?? [];
+  const rows = data?.data ?? EMPTY_PARCEL_ROWS;
   const rowById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
   const selectedParcelRow: ParcelSearchRow | undefined = selectedParcelId
     ? rowById.get(selectedParcelId)
@@ -83,6 +85,7 @@ export function ParcelSuperSearchPage() {
         selectedParcelRow={selectedParcelRow}
         onClose={() => setSelectedParcelId(null)}
         branchId={branchId}
+        showReturnAvailability
         canRecordReturn={(user?.permissions ?? []).includes(PermissionKeys.CanUpdateParcels)}
         onReturnToSource={(parcel) => {
           setSelectedParcelId(null);
