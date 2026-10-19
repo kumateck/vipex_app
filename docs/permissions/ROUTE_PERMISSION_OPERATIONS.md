@@ -72,9 +72,20 @@ to anyone who can open the parcel; it does not require `CanListAuditLogs` or
 `POST /v1/shipments/parcels/:id/edit-information` accepts one of `CanUpdateParcels`,
 `CanReadParcelIncoming`, `CanCompleteOfficePickup`, `CanCreateReceiverPayments`,
 `CanReadParcelScan`, or `CanReadShelfPickerUpdate`. A receiver payload additionally requires
-`CanUpdateCustomers`. All writes use the authenticated company and destination branch;
+`CanUpdateCustomers`. Writes use the authenticated company and destination branch, or the
+source branch when the actor has `CanUpdateParcels`;
 client-supplied company/branch scope is not accepted. Customer Management PATCH routes keep
 their existing `CanUpdateCustomers` gate and never update parcel snapshots.
 QA: with each workflow grant, verify details-only edits succeed, receiver edits fail without
 the customer grant and succeed with it, customer permission alone fails, and another branch
-or company cannot edit the parcel. See `tests/server/parcel-information-edit-access.spec.ts`.
+or company cannot edit the parcel. The source-branch Edit action is available on Processed
+Parcels / Consignment, In Transit Outgoing and Super Search; receiver fields additionally need
+`CanUpdateCustomers`. Source read-workflow grants alone do not permit outgoing edits. See
+`tests/server/parcel-information-edit-access.spec.ts` and `parcel-information-edit.spec.ts`.
+
+Sender customer correction: `GET /shipments/parcels/:id/sender-candidates` and
+`POST /shipments/parcels/:id/correct-sender` both require `CanUpdateParcels` **and**
+`CanUpdateCustomers` and enforce the authenticated company/source branch. Neither destination
+branch access nor customer permission alone grants this action. Candidate lookup discloses only
+exact matching customer identity fields. Creation-page name editing remains under
+`CanCreateBookingWithParcels` for lookup and `CanUpdateCustomers` for saving on both clients.

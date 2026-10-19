@@ -6,10 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  normalizeReceiptPaperFormat,
-  type ReceiptPaperFormat,
-} from '@/shared/printing/receipt-paper';
+import { normalizeReceiptPaperFormat, type ReceiptPaperFormat } from '@/shared/printing';
 
 export function ReceiptPaperSelect({
   value,
@@ -27,13 +24,16 @@ export function ReceiptPaperSelect({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="a5">A5 — landscape receipt</SelectItem>
+          <SelectItem value="xprinter-80mm-landscape">
+            Xprinter — 80 mm browser-style receipt
+          </SelectItem>
           <SelectItem value="xprinter-80mm">Xprinter — 80 mm vertical receipt</SelectItem>
           <SelectItem value="xprinter-58mm">Xprinter — 58 mm vertical receipt</SelectItem>
         </SelectContent>
       </Select>
       <p className="text-sm text-muted-foreground">
-        Select your installed Xprinter above and choose the width of its paper roll. Xprinter
-        receipts print vertically; stickers and A4 reports keep their own routing.
+        Choose browser-style for the wide acknowledgement layout on an 80 mm roll. Vertical formats
+        use a stacked receipt. Stickers and A4 reports keep their own routing.
       </p>
     </div>
   );

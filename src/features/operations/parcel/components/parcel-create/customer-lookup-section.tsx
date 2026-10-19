@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { sanitizeString } from '@/lib/utils';
 import { PHONE_DIGITS, limitPhoneDigits, normalizePhoneDigits } from '@/lib/phone';
-import { useFindCustomersByTelephoneQuery } from '@/features/customers/api';
+import { useLookupBookingCustomersQuery, type BookingCustomer } from '../../services';
 import { useDebouncedValue } from '../../hooks/use-debounced-value';
 import type { ParcelBookingFormValues } from './parcel-form.types';
 
@@ -27,6 +27,7 @@ type CustomerLookupSectionProps = {
 };
 
 const PHONE_LOOKUP_DELAY_MS = 1000;
+const EMPTY_CUSTOMERS: BookingCustomer[] = [];
 
 export function CustomerLookupSection({
   label,
@@ -45,11 +46,11 @@ export function CustomerLookupSection({
   const debouncedPhone = useDebouncedValue(normalizedPhone, PHONE_LOOKUP_DELAY_MS);
   const canLookup = debouncedPhone.length === PHONE_DIGITS;
 
-  const { data: lookupCustomers = [], isFetching } = useFindCustomersByTelephoneQuery(
-    { telephone: debouncedPhone, limit: 10 },
+  const { data: lookupCustomers = EMPTY_CUSTOMERS, isFetching } = useLookupBookingCustomersQuery(
+    { telephone: debouncedPhone },
     { skip: !canLookup },
   );
-  const customers = canLookup ? lookupCustomers : [];
+  const customers = canLookup ? lookupCustomers : EMPTY_CUSTOMERS;
 
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
   const shouldEnableName = canLookup && !isFetching && customers.length === 0;

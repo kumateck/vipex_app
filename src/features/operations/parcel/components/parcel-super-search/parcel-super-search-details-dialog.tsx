@@ -1,3 +1,4 @@
+import { ParcelInformationEditAction } from '../../parcel-information-editor';
 import { useCallback } from 'react';
 import { SendReceiptAction } from '@/features/digital-receipts';
 import { ParcelDetailsDialog } from '@/features/operations/parcel-details';
@@ -31,6 +32,11 @@ export function ParcelSuperSearchDetailsDialog({
   const renderBanner = useCallback(
     (details: ParcelFullDetails) => (
       <>
+        {details.summary ? (
+          <ParcelInformationEditAction
+            parcel={{ ...details.summary, isDeleted: details.parcel.isDeleted }}
+          />
+        ) : null}
         <SendReceiptAction
           key={details.parcel.id}
           parcelId={details.parcel.id}

@@ -258,3 +258,10 @@ from the shift, and confirm **To Be Paid received = GHS 30** and **Delivery fees
 Keep **Payments = GHS 90**. Verify partial payments, multiple methods/parcels, zero collections,
 voided-payment exclusion after refresh, and that unrelated cashier payments and **Outstanding
 To Be Paid** are not included in either delivery subtotal. Compare with web and its printout.
+
+Parcel creation customer-name popup: for both sender and receiver, search an existing primary or
+secondary phone, select the correct match, tap the pencil and save a corrected name. Confirm ID
+and numbers stay unchanged, both roles refresh if the same customer is selected, and the newly
+processed parcel/sticker uses the saved name. Test failed updates, blank/overlong names, repeated
+Save taps, Cancel and missing `CanUpdateCustomers`. Existing parcel name snapshots must remain
+unchanged and no duplicate customer or premature booking should be created.

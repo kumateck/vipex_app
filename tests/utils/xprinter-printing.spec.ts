@@ -93,7 +93,8 @@ describe('Xprinter profile and routing', () => {
       expect(() => receiptHeightMicrons(height)).toThrow();
     let css = '';
     const contents = {
-      executeJavaScript: async () => 384,
+      executeJavaScript: async (script: string) =>
+        script.includes('invoice-a5-root') ? undefined : 384,
       insertCSS: async (value: string) => {
         css = value;
         return 'css-key';

@@ -14,3 +14,5 @@ export * from './use-parcel-status';
 export * from './use-receiver-cashier-table';
 export * from './use-parcel-print-completion';
 export * from './use-parcel-charge-agent-options';
+export { useBookingCustomerEdit } from './use-booking-customer-edit';
+export type { BookingCustomerEditFields } from './use-booking-customer-edit';

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { BrandedQrCode } from '@/components/ui/branded-qr-code';
-import { receiptPaperWidth, type ReceiptPaperFormat } from '@/shared/printing/receipt-paper';
+import { receiptPaperWidth, type VerticalReceiptPaperFormat } from '@/shared/printing';
 import { InvoiceA5Header } from './invoice-a5-header';
 import { InvoiceA5Terms } from './invoice-a5-terms';
 
@@ -13,7 +13,7 @@ export function ReceiptRollShell({
   qrValue,
   children,
 }: {
-  paperFormat: Exclude<ReceiptPaperFormat, 'a5'>;
+  paperFormat: VerticalReceiptPaperFormat;
   title: 'Tax Invoice' | 'ACKNOWLEDGEMENT NOTE';
   issuedAtLabel: string;
   cashierName?: string | null;

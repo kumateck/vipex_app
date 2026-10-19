@@ -81,6 +81,15 @@ Sender Cashier Payments. The parcel's processed-by user is the cashier who owns 
 created-by and the audit retain the staff member who entered the booking. Sender-paid bookings
 cannot use this option.
 
+Selected sender and receiver customers now have a pencil icon when the staff member holds
+`CanUpdateCustomers`. Tap it to open a name popup, edit the name and save before processing.
+The primary/secondary numbers and customer ID are read-only for this action. The selected match
+and form name refresh after a successful `PATCH /customers/:id`; choosing the same customer for
+both roles refreshes both names. Failure retains the popup and values. Existing parcel snapshots
+are not renamed; the upcoming booking captures the saved name. A missing update grant hides the
+icon. Correcting an already processed parcel's wrong sender identity is a separate source-branch
+web/desktop action, documented in [Parcel Operations](PARCEL_OPERATIONS.md).
+
 ### Charge Agent and Receiving Location Selection
 
 Mobile parcel creation displays **Agent who charged the parcel (required)** immediately after

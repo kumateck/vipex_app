@@ -582,10 +582,78 @@ parcel records the replacement customer's name at that change. Removing a second
 clears its stored name. Phone numbers and other customer contact fields still come from the
 linked customer record.
 
+#### Editing customer names before parcel creation
+
+On web/desktop parcel creation, an existing **Sender** and each existing **Recipient** have a
+pencil icon in their card header. Enter a ten-digit telephone, select the matching customer,
+then use the icon to edit the customer name in a popup before creating/processing the parcel.
+Both primary and secondary telephone lookups are supported. Booking lookup uses the minimal
+`GET /customers/lookup/booking-by-telephone/:telephone` endpoint under
+`CanCreateBookingWithParcels`; it does not additionally require `CanReadCustomers`. Saving the
+popup requires `CanUpdateCustomers`. The existing customer ID and primary number are retained;
+web/desktop also retains its optional secondary-number editor. A name must trim to 1–255
+characters. Saving the popup cannot submit/process the parent booking form. Failure leaves the
+popup open and preserves the entered values; duplicate saves are blocked while pending.
+
+Mobile parcel creation now has the same pencil action for both the selected sender and receiver.
+Its popup edits the name only; customer ID and both telephone numbers stay unchanged. On save,
+the selected match and displayed name update, including both roles when the same customer is
+selected as sender and receiver. Failed updates keep the popup open. A missing
+`CanUpdateCustomers` grant hides the action on both clients; unmatched numbers remain the
+ordinary new-customer flow. The server continues to enforce company scope and record its
+existing customer-update audit. Updating a customer profile name does not rewrite existing
+parcel name snapshots. Future bookings capture the saved corrected name.
+
+QA: edit sender and receiver names on each client before processing, including a number found
+in the secondary-phone field and a customer selected for both roles. Confirm the new parcel and
+sticker use the saved name and original customer ID, without a duplicate customer. Verify web
+Save/Enter in the popup never creates a booking, a user without customer-directory permission can
+use booking lookup with the proper booking/customer-update grants, missing update permission
+hides the icon, and blank/long names or failed updates preserve the form.
+
+#### Correcting a processed parcel's sender association
+
+If a wrong sender telephone was used and the correct telephone already belongs to an existing
+customer, use **Edit → Correct sender customer** from the source-branch Processed Parcels /
+Consignment, In Transit Outgoing or Super Search flow. Enter the correct number, choose the
+matching existing customer explicitly, enter a reason (5–1000 trimmed characters), and select
+**Link selected sender**. Do not change the mistaken customer's telephone to a number already
+owned by the correct customer. Both customer profiles remain unchanged; only this selected
+parcel's `senderId` and saved sender name change. Other parcels, booking/tracking codes,
+receiver association, status, charges and posted payments are preserved. Reprint the saved
+parcel's sticker/receipt when an already-printed label needs the corrected sender.
+
+`CanUpdateParcels` and `CanUpdateCustomers` are required. Candidate lookup and correction are
+company-scoped and restricted to the authenticated source branch. A destination or third branch
+cannot use this action. Exact primary/secondary telephone matching returns only customer ID,
+name and the two numbers; no match requires checking the number, and multiple matches require
+an explicit choice. Deleted parcels or inactive/foreign-company customers are rejected. The
+server locks the parcel, checks `expectedSenderId`, verifies the selected customer still owns
+the entered number, and atomically writes the association, sender snapshot and
+`PARCEL_SENDER_CHANGED` audit with old/new IDs/names, number, reason and actor. A stale sender,
+changed number, missing snapshot support or audit failure leaves the correction unsaved.
+Selecting the current sender changes nothing.
+
+A parcel with sender customer-credit ledger history is rejected with an Accounts reconciliation
+message. This correction does not transfer debts, credit allocations or balances between
+customers; posted ordinary payment rows have no direct customer ID and remain attached to the
+same parcel. Existing sender-linked credit history must be reconciled through the accounting
+workflow before identity reassociation. The feature introduces no schema migration and uses the
+existing name-capture trigger. It is a web/desktop processed-parcel correction; mobile's name
+popup is for pre-booking profile edits.
+
+QA: correct a processed parcel to an existing primary or secondary phone customer and verify
+its sender name/ID, unchanged profiles/other parcels, amounts, status and audit. Reject a stale
+sender, deleted/inactive customer, foreign company, destination/third branch, missing permissions,
+wrong number or credit-linked sender. Verify an audit-write failure rolls back the association.
+Automated coverage: `parcel-sender-correction.spec.ts`,
+`parcel-sender-correction-access.spec.ts` and `existing-customer-edit-dialog.test.tsx`.
+
 #### Correcting a receiver from a parcel
 
 The **Edit** action on incoming in-transit parcels, Waiting for Pickup, Receiver Cashier,
-and Shelf Picker Update saves a deliberate receiver-name correction on the selected parcel
+and Shelf Picker Update, and on source-branch Processed Parcels / Consignment, In Transit
+Outgoing and Super Search parcel details, saves a deliberate receiver-name correction on the selected parcel
 and the linked customer in one transaction. The receiver ID stays associated with the same
 customer. Other parcels for that customer retain their recorded names, including sender and
 second-receiver names. Editing through Customer Management still changes only the customer
@@ -596,12 +664,30 @@ across parcels because contact fields come from the customer record.
 Web and desktop use `POST /v1/shipments/parcels/:id/edit-information`; mobile's incoming
 receive-process screen uses the same operation. Parcel details/content changes and supplied
 receiver corrections are atomic, including their audit records. The server scopes the parcel
-to the authenticated company and destination branch, rejects deleted parcels and a stale
-receiver ID, and requires the existing workflow permission plus `CanUpdateCustomers` when
+to the authenticated company and destination branch, or to the source branch when the actor has
+`CanUpdateParcels`. It rejects deleted parcels and a stale receiver ID, and requires the existing
+workflow permission plus `CanUpdateCustomers` when
 receiver fields are supplied. Invalid/blank names, malformed phones, a duplicate telephone
 in either customer phone field, or a database write failure leave the entire edit unsaved.
 Details-only edits do not require customer-update permission. No status, payment, receiver
 association, second-receiver authorization, or shelf assignment change is part of this operation.
+
+Source-branch staff use the row **Edit** action on **Processed Parcels / Consignment**
+(`/parcels/processed`) and **In Transit Outgoing**, or **Edit** in **Super Search** details.
+The shared form edits parcel details, receiver name and primary telephone. `CanUpdateParcels`
+is required for these source actions; without `CanUpdateCustomers`, receiver fields are read-only
+and details-only changes remain available. Both grants are needed to correct all three fields.
+The source branch remains authorized after dispatch: the current workflow has no additional
+status restriction. Source-branch read/incoming workflow grants alone do not authorize outgoing
+edits. Another company, a third branch or a deleted parcel remains outside scope.
+
+The former Processed Parcels routing/telephone dialog is retained under **Edit routing & contacts**
+for destination, pickup/source location, sender phone and secondary-phone maintenance. The new
+**Edit** submits the three requested fields in one atomic information-edit request. List/detail
+caches refresh through the existing mutation invalidation. The form saves only changed fields,
+retains entered values on failure, prevents repeated saves while a request is pending and keeps
+the form's original values if a background list refresh occurs. No new mobile outgoing or
+consignment editor is introduced; existing mobile destination receiving uses the same endpoint.
 
 **Deployment requirement:** apply migration `0081_parcel_receiver_name_corrections` before
 deploying the new endpoint and clients. It replaces the existing capture function so explicit
@@ -631,7 +717,10 @@ QA: create two parcels for one receiver, correct the name from one parcel, and c
 that parcel and the customer change. Rename again from Customer Management and confirm both
 parcels retain their names in lists, detail, receipts, consignments, reports, and name search.
 Try a phone-only edit after a customer rename; the profile name must remain unchanged. Repeat
-on all four web/desktop edit screens and mobile receiving. Reject missing permissions, another
+on destination web/desktop edit screens and mobile receiving, and repeat at the source branch
+from Processed Parcels / Consignment, In Transit Outgoing and Super Search. Verify details-only
+source edits with `CanUpdateParcels`, receiver corrections with both grants, and reject source
+read-only workflow grants. Reject missing permissions, another
 company/branch, deleted parcels, a changed receiver ID, duplicate primary/secondary phones,
 and invalid names/phones. A failed parcel write must roll back customer changes and audits.
 Automated coverage is in `tests/server/parcel-information-edit*.spec.ts` and

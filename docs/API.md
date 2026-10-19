@@ -252,7 +252,8 @@ either record. Omitted fields are preserved; telephone `null` clears the primary
 Success returns `{ id }`. Authentication and one of `CanUpdateParcels`, `CanReadParcelIncoming`,
 `CanCompleteOfficePickup`, `CanCreateReceiverPayments`, `CanReadParcelScan`, or
 `CanReadShelfPickerUpdate` are required; any `receiver` payload also requires
-`CanUpdateCustomers`. Company/destination-branch scope comes from the session. Missing context
+`CanUpdateCustomers`. Company/branch scope comes from the session; destination-branch edits
+use their workflow grant, and source-branch edits require `CanUpdateParcels`. Missing context
 or invalid names/phones/details return 400/422, missing authentication/permission 401/403,
 out-of-scope/deleted parcels or inactive/missing receiver customers 404, and a stale receiver
 ID, duplicate phone, or a database trigger that cannot persist the correction 409. Failure rolls back parcel, customer, and audit writes. Names must
@@ -444,3 +445,19 @@ fields (`cashierType`, `component`, `grossAmountPsw`). No response or permission
 required. The API continues to exclude voided payments and apply report scope. See
 [Cashier payments and shifts](CASHIER_PAYMENTS_AND_SHIFTS.md#delivery-cashier-received-summary)
 for component classification, outstanding-versus-received labels, printing and QA.
+
+Parcel information editing now also accepts the parcel's source branch when the authenticated
+actor has `CanUpdateParcels`; receiver fields still additionally require `CanUpdateCustomers`.
+`POST /shipments/parcels/:id/edit-information` keeps its existing request and response. Actor
+permissions and company/branch scope come from authentication, not the request body. Source Edit
+is exposed on Processed Parcels / Consignment, In Transit Outgoing and Super Search on web/desktop.
+Third branches and other companies remain rejected. See
+[Parcel Operations](PARCEL_OPERATIONS.md#correcting-a-receiver-from-a-parcel).
+
+Source-branch sender reassociation now uses `GET /shipments/parcels/:id/sender-candidates` and
+`POST /shipments/parcels/:id/correct-sender`, guarded by both parcel/customer-update permissions.
+The selected customer must already own the exact entered primary/secondary number; the change
+is isolated to one parcel and audited atomically. Sender credit history blocks reassociation
+pending Accounts reconciliation. See [Identity and operations APIs](api/IDENTITY_AND_OPERATIONS.md).
+Booking customer-name popups on web/mobile reuse existing lookup and customer PATCH endpoints;
+no customer-directory read grant is needed for minimal booking lookup.

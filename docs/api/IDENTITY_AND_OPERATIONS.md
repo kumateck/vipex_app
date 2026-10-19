@@ -355,3 +355,24 @@ or retried submissions return the same successful response without another inser
 increment. Different details under a consumed token return 409; unknown/expired tokens return 410. Receipt expiry matches the draft deadline; failed persistence rolls back consumption. Daily submission quotas are 50 attempts per sender phone and
 200 per forwarded IP; QR issuance remains 30 per IP per 15 minutes. See
 [Self-service booking](../SELF_SERVICE_BOOKING.md).
+
+Parcel sender correction (web/desktop source branch):
+
+- `GET /shipments/parcels/:id/sender-candidates?telephone=<10 digits>` requires both
+  `CanUpdateParcels` and `CanUpdateCustomers`, plus company/source-branch scope on the parcel.
+  Returns exact active primary/secondary phone matches as `{ id, fullname, telephone, telephone2 }[]`.
+- `POST /shipments/parcels/:id/correct-sender` uses the same guards and accepts
+  `{ expectedSenderId, customerId, telephone, reason }`. Reason trims to 5–1000 characters.
+  Reuses an existing matching customer and returns `{ id, changed }`, without modifying profiles,
+  amounts, status or payment rows. A missing/deleted/out-of-scope parcel returns 404; invalid
+  number/reason or inactive/nonmatching customer returns 400/422; stale sender, sender credit
+  history, or failed snapshot persistence returns 409. Sender ID/name update and
+  `PARCEL_SENDER_CHANGED` audit are one transaction. Same sender is a no-op. Credit ledger
+  history is not transferred by this endpoint.
+
+Parcel-creation customer pencil actions use the existing
+`GET /customers/lookup/booking-by-telephone/:telephone` and `PATCH /customers/:id`. Lookup needs
+`CanCreateBookingWithParcels` and returns minimal company-scoped identity; profile changes need
+`CanUpdateCustomers`. No `CanReadCustomers` grant is required for this booking lookup. Web can
+edit name and optional secondary number; mobile edits name only. The primary lookup number and
+selected customer ID remain unchanged, and existing parcel snapshots are preserved.

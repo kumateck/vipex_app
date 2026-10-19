@@ -5,13 +5,15 @@ import { isToBePaidDeliveryReceipt } from './invoice-a5-template.utils';
 import { InvoiceA5Summary } from './invoice-a5-summary';
 import { receiptTaxRows } from './receipt-tax-rows';
 import { useReceiptPaperFormat } from '../../hooks/use-receipt-paper-format';
+import { isVerticalReceiptPaper } from '@/shared/printing';
 import { ReceiptRollTemplate } from './receipt-roll-template';
 import { InvoiceA5Terms } from './invoice-a5-terms';
 import { ToBePaidReceiptA5Template } from './to-be-paid-receipt-a5-template';
 
 export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
   const paperFormat = useReceiptPaperFormat();
-  if (paperFormat !== 'a5') return <ReceiptRollTemplate {...props} paperFormat={paperFormat} />;
+  if (isVerticalReceiptPaper(paperFormat))
+    return <ReceiptRollTemplate {...props} paperFormat={paperFormat} />;
   const {
     bookingCode,
     issuedAtLabel,
@@ -35,7 +37,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
   } = props;
 
   if (isToBePaidDeliveryReceipt(props)) {
-    return <ToBePaidReceiptA5Template {...props} />;
+    return <ToBePaidReceiptA5Template {...props} paperFormat={paperFormat} />;
   }
 
   const isPartialReceipt = senderPaidCedis > 0 && receiverToPayCedis > 0;
@@ -51,6 +53,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
   return (
     <div
       className="invoice-a5-root bg-white text-black"
+      data-receipt-paper={paperFormat}
       style={{
         width: '198mm',
         boxSizing: 'border-box',

@@ -64,6 +64,38 @@ loading and scan each QR to the exact tracking URL. Test failed and delayed imag
 printer/driver and QR-scan acceptance still require a branch hardware test. Mobile native sticker
 artwork already uses embedded logos/QR markup and is unaffected by this fix.
 
+## Xprinter browser-style receipts
+
+For the wide acknowledgement/invoice design used by browser printing, select **Settings →
+Printer Routing → Invoice / Receipt Printer → XP-80C** (or the installed receipt printer), then
+choose **Xprinter — 80 mm browser-style receipt** and save on that workstation. This is a
+separate choice from the stacked vertical receipt. Existing saved format choices are preserved.
+The Windows driver must use the installed printer's 80 mm roll. No manual browser scale is
+needed with this profile; in the browser dialog use the matching roll, no margins and 100% scale.
+
+Paid invoices, unpaid acknowledgement notes, duplicate reprints and home-delivery receipts keep
+the original 198 mm wide artwork, including its header, bordered amounts and QR position. Once
+fonts and images load, browser and desktop use the same preparation: measure the artwork,
+rotate it 90 degrees across the roll and scale it to fit a 72 mm printable area, centered on
+80 mm paper. Long/wrapped content is measured before fitting. Roll length follows the scaled
+artwork width with 2 mm clearance at each end. Desktop uses the matching custom paper size,
+portrait orientation, no margins and 100% native scale, so the artwork is not scaled twice or
+centered on an A5-sized sheet outside the roll. Single and parallel receipt jobs both use this
+geometry. Missing/invalid artwork fails preparation; it never sends a cropped substitute.
+
+The profile is local to web/desktop printing. Digital receipts remain A5; mobile sticker printing,
+sticker routing/copies, A4 reports, payments and permissions are unchanged. This change addresses
+the paper/layout mismatch that can leave only a strip of an A5 receipt visible on an 80 mm roll.
+Windows driver behavior and physical output still require acceptance on the branch printer.
+
+QA: save/reload this profile with XP-80C; print an unpaid acknowledgement matching the browser
+sample, paid invoice, partial payment, duplicate, storage and home-delivery receipt. Confirm the
+full border, logo, all customer/parcel/payment details and terms fit on one sheet, scan the QR,
+and compare browser and routed desktop output. Repeat with long names/details and a parallel
+sticker job; confirm only stickers receive their chosen copy count. Switch back to A5 and each
+vertical profile to verify their layouts. Test missing images, failed printer and cancellation;
+no parcel/payment is resubmitted. Automated geometry/render checks do not replace XP-80C hardware QA.
+
 ## Xprinter vertical receipts
 
 In desktop **Settings → Printer Routing**, select the installed Xprinter under **Invoice /
