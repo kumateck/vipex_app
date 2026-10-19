@@ -28,6 +28,6 @@ describe('parcel search performance safeguards', () => {
 
   test('avoids parallel-query shared-memory exhaustion on app connections', async () => {
     const config = await Bun.file('src/db/config.ts').text();
-    expect(config).toContain('max_parallel_workers_per_gather: 0');
+    expect(config).toContain("max_parallel_workers_per_gather: '0'");
   });
 });
