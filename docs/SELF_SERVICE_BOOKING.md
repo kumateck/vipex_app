@@ -64,6 +64,20 @@ Older cache-only tokens are not migrated and require one new session after deplo
 frontends may still instruct users to rescan, so deploy the web update too. A missing table or
 database outage must fail session creation visibly, never switch back to process memory.
 
+Production troubleshooting: PostgreSQL `42P01` for `self_service_sessions` during the expiry
+sweep means the table was unavailable to that connection at the logged time. Check fresh logs
+and inspect `current_database()`, `current_schema()` and
+`to_regclass('public.self_service_sessions')` using the **running container's** `DATABASE_URL`.
+Use a read-only diagnostic connection and never print the connection URL. Compare the actual
+runtime database with the migration target; a migration recorded in a different database does
+not repair this connection. If the table is already present, confirm a fresh scan/sweep before
+reapplying migrations. If absent, review pending migrations and apply the vetted runner to the
+correct database; do not hand-create a partial table or silently fall back to process memory.
+`discord-alert-failed` with HTTP 404 is a separate failed alert-delivery response, not evidence
+that the session table is still missing or that the parcel-search request failed for this reason.
+QA: verify a missing-table failure, migration to the intended runtime database, a new successful
+QR session and a successful expiry sweep; compare log timestamps when reviewing older failures.
+
 When the web application runs through Vite on `localhost`, the printable QR code replaces the
 loopback hostname with the development machine's detected LAN IPv4 address while preserving the web
 port. This lets a phone on the same network open the local self-service page. Set

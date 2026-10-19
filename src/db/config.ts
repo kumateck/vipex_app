@@ -29,7 +29,8 @@ function createSqlClient() {
       jit: 'off',
       // Parallel hash plans exhausted production PostgreSQL shared memory (53100)
       // during booking-code searches. Keep OLTP queries off dynamic shared memory.
-      max_parallel_workers_per_gather: 0,
+      // Postgres.js drops falsy startup values: numeric 0 is ignored; string '0' is sent.
+      max_parallel_workers_per_gather: '0',
     },
   });
 }

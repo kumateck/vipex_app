@@ -34,23 +34,36 @@ afterEach(() => {
   Reflect.deleteProperty(globalThis, 'localStorage');
 });
 describe('browser-style acknowledgement on an 80 mm roll', () => {
-  test('rotates original artwork inside the printable width with positive offsets and feed clearance', () => {
-    const { document, root, css } = fixture();
-    const height = prepareLandscapeReceipt(document)!;
-    const transform = (root.style as { transform: string }).transform;
-    const values = transform.match(
-      /translate\(([\d.]+)px, ([\d.]+)px\) rotate\(90deg\) scale\(([\d.]+)\)/,
-    )!;
-    const [left, top, scale] = values.slice(1).map(Number) as [number, number, number];
-    const pixelsPerMm = 96 / 25.4;
-    expect((420 * scale) / pixelsPerMm).toBeCloseTo(72);
-    expect((left - 420 * scale) / pixelsPerMm).toBeCloseTo(4);
-    expect(left / pixelsPerMm).toBeCloseTo(76);
-    expect(top / pixelsPerMm).toBeCloseTo(2);
-    expect(height).toBeGreaterThan(198 * pixelsPerMm * scale + top);
-    expect(css()).toContain('size: 80mm');
-    expect(css()).not.toContain('A5');
-  });
+  test.each([200, 420, 800])(
+    'fits %i px artwork across the roll after rotating left',
+    (artworkHeight) => {
+      const { document, root, css } = fixture(artworkHeight);
+      const height = prepareLandscapeReceipt(document)!;
+      const transform = (root.style as { transform: string }).transform;
+      const values = transform.match(
+        /translate\(([\d.]+)px, ([\d.]+)px\) rotate\(-90deg\) scale\(([\d.]+)\)/,
+      )!;
+      const [left, top, scale] = values.slice(1).map(Number) as [number, number, number];
+      const pixelsPerMm = 96 / 25.4;
+      expect((artworkHeight * scale) / pixelsPerMm).toBeCloseTo(72);
+      expect(left / pixelsPerMm).toBeCloseTo(4);
+      expect((left + artworkHeight * scale) / pixelsPerMm).toBeCloseTo(76);
+      expect((top - 198 * pixelsPerMm * scale) / pixelsPerMm).toBeCloseTo(2);
+      expect(height - top).toBeGreaterThanOrEqual(2 * pixelsPerMm);
+      for (const x of [0, 198 * pixelsPerMm]) {
+        for (const y of [0, artworkHeight]) {
+          const rotatedX = left + y * scale;
+          const rotatedY = top - x * scale;
+          expect(rotatedX).toBeGreaterThanOrEqual(4 * pixelsPerMm - 0.001);
+          expect(rotatedX).toBeLessThanOrEqual(76 * pixelsPerMm + 0.001);
+          expect(rotatedY).toBeGreaterThanOrEqual(2 * pixelsPerMm - 0.001);
+          expect(rotatedY).toBeLessThanOrEqual(height - 2 * pixelsPerMm + 0.001);
+        }
+      }
+      expect(css()).toContain('size: 80mm');
+      expect(css()).not.toContain('A5');
+    },
+  );
   test('allows wrapped taller receipts, rejects invalid artwork and ignores other document types', () => {
     expect(prepareLandscapeReceipt(fixture(800).document)).toBeLessThan(
       prepareLandscapeReceipt(fixture().document)!,
@@ -68,7 +81,7 @@ describe('browser-style acknowledgement on an 80 mm roll', () => {
     const height = await prepareReceiptPaper(
       {
         executeJavaScript: async (script: string) => {
-          expect(script).toContain('rotate(90deg)');
+          expect(script).toContain('rotate(-90deg)');
           return preparedHeight;
         },
         insertCSS: async () => {

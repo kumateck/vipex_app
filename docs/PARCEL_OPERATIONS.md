@@ -1201,11 +1201,18 @@ behavior:
 - The shared app connection (`src/db/config.ts`) starts every session with `jit=off`. No query
   in the app recovers JIT's compile time; long reports that might benefit should set `jit` per
   transaction.
-- App connections also use `max_parallel_workers_per_gather=0`. A production booking-code lookup
+- App connections also use `max_parallel_workers_per_gather='0'` in the driver's startup options
+  (PostgreSQL reports the setting as `0`). **The value must be a string:** Postgres.js filters out
+  falsy startup values, so numeric `0` is silently omitted and leaves the database default in
+  effect. The previous numeric configuration and diagnostic `--serial` flag did not actually
+  disable workers; a passing lookup under that configuration was not proof the mitigation was
+  active. A runtime integration test now checks three separate application connections with
+  `current_setting`, rather than relying only on a source-code assertion.
+  A production booking-code lookup
   from the reconciliation dialog reproduced PostgreSQL `53100`: a parallel plan could not resize
   an 8 MiB dynamic shared-memory segment (`No space left on device`), which the API correctly
-  concealed behind its generic 500 message. Running the same read-only lookup with parallel
-  workers disabled returned the expected parcel. This connection setting avoids that allocation
+  concealed behind its generic 500 message. Read-only booking lookups with the corrected string
+  option report `parallel_workers: "0"` and return the expected parcel. This connection setting avoids that allocation
   without changing search filters, amounts, permissions or database records. Application-level
   row/count requests still run concurrently; only PostgreSQL parallel workers are disabled.
   This applies to all clients using the shared backend connection. Large analytical queries
@@ -1247,10 +1254,17 @@ matches and linked duplicate searches. Confirm the correct saved parcel/amounts 
 without a generic 500 or a PostgreSQL `53100` log. The read-only diagnostic
 `bun run scripts/check-parcel-booking-search.ts [booking-code] --serial` checks both query
 directions against `CHECK_DATABASE_URL` (or `DATABASE_URL`), enforces read-only connections and
-a 15-second statement timeout, and reports counts/errors without customer details. Omitting a
+a 15-second statement timeout, and reports effective read-only, worker and JIT settings plus
+counts/errors without customer details. With `--serial`, it fails if PostgreSQL does not report
+zero workers. Code lookup is case-insensitive, and the search preserves the supplied casing.
+Omitting a
 code selects one existing non-deleted booking for the diagnostic. Without `--serial`, it uses
 the database's parallel-worker default for comparison. Never interpret a passing sample as
 verification of every production booking; repeat with the affected code when available.
+
+Run the database-level regression with `POSTGRES_SESSION_SETTINGS_TEST=1 TEST_DATABASE_URL=<local-test-url>
+bun test tests/server/postgres-session-settings.integration.spec.ts`; it requires a local database,
+reserves three independent connections and verifies zero parallel workers and JIT off on each.
 
 ### Storage fee indicator in parcel searches
 
