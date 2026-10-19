@@ -38,6 +38,12 @@ export type CompleteSelfServiceDraftResponse = {
   parcels: Array<{ id: string; trackingCode: string; bookingCode: string }>;
 };
 
+export type CompletedSelfServiceBooking = {
+  draft: SelfServiceDraft;
+  input: CompleteSelfServiceDraftInput;
+  result: CompleteSelfServiceDraftResponse;
+};
+
 export type SelfServiceContactInput = { fullname: string; phone: string; phone2: string | null };
 
 export type UpdateSelfServiceDraftInput = {

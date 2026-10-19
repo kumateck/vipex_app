@@ -3,6 +3,7 @@ export * from './use-existing-customer-edit';
 export * from './use-sticker-print-module';
 export * from './use-incoming-parcel-batch-arrival';
 export * from './use-return-to-source';
+export { useReturnToSourceAvailability } from './use-return-to-source-availability';
 export * from './use-return-to-source-list';
 export * from './use-receipt-reprint-tax';
 export * from './use-receiver-receipt-reprint';

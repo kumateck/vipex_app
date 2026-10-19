@@ -5,8 +5,9 @@ import { SelfServiceDraftStatus } from '@/db/schemas/enums';
 
 export async function createSelfServiceDraftRepo(
   values: typeof selfServiceBookingDrafts.$inferInsert,
+  executor: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db,
 ) {
-  const [row] = await db.insert(selfServiceBookingDrafts).values(values).returning();
+  const [row] = await executor.insert(selfServiceBookingDrafts).values(values).returning();
   return row ?? null;
 }
 

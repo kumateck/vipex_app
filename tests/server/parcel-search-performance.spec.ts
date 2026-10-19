@@ -23,6 +23,11 @@ describe('parcel search performance safeguards', () => {
   test('disables PostgreSQL JIT for the shared app connection', async () => {
     // JIT compilation measured at 5.0s of a 5.7s parcel search in production.
     const config = await Bun.file('src/db/config.ts').text();
-    expect(config).toContain("connection: { jit: 'off' }");
+    expect(config).toContain("jit: 'off'");
+  });
+
+  test('avoids parallel-query shared-memory exhaustion on app connections', async () => {
+    const config = await Bun.file('src/db/config.ts').text();
+    expect(config).toContain('max_parallel_workers_per_gather: 0');
   });
 });

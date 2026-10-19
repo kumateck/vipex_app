@@ -2,6 +2,16 @@
 
 Base URL: `/v1`
 
+`POST /self-service/sessions` issues a branch-bound, single-use 15-minute token persisted in
+PostgreSQL (migration `0087`). All subsequent public self-service calls require
+`x-self-service-session`; the server remains the expiry authority. Missing, expired, used, or
+wrong-branch tokens return 410 with `SELF_SERVICE_SESSION_EXPIRED` (draft POST retries with a
+saved matching receipt return the original success). The web client offers
+**Start new booking** for expired sessions. Successful bookings offer **New booking** up to 10
+total per QR scan, then require the QR entry again. It does not expire tokens
+using the customer's device clock. See [Session lifetime and recovery](SELF_SERVICE_BOOKING.md#session-lifetime-and-recovery)
+for deployment order, rate limits, storage failures, and older-client behavior.
+
 Parcel creation and self-service completion accept optional nullable `chargeAgentUserId`.
 Current staff clients require the selection next to the parcel charge; older clients may omit it.
 `GET /v1/shipments/bookings/charge-agent-options` and
@@ -415,3 +425,22 @@ rules are unchanged. This behavior applies to web, desktop and mobile clients us
 shared endpoint. Notification dispatch logs retain the send failure. Tests:
 `src/server/features/parcel-receiver-otp/otp-sms-delivery.test.ts` and
 `src/server/features/notification-hub/sms-provider-payloads.test.ts`.
+
+Self-service public `POST /self-service/drafts` now returns `bookingsCompleted` and nullable
+`nextSession` alongside `draftId`/`expiresAt`. One QR scan permits ten successful drafts within
+its original 15-minute deadline; tokens remain single-use. Persistence and continuation issuance
+are atomic. Matching draft POST retries return the saved response; changing the details under
+a consumed token returns 409. See [Self-service booking](SELF_SERVICE_BOOKING.md) for refresh/rescan behavior and
+separate daily abuse quotas. Staff completion and sticker APIs are unchanged.
+
+Delivery Cashier can manage a second receiver before rider handover, including Address Collected
+and Dispatched parcels, through the existing permission-guarded receiver endpoint. Mobile rider
+handover supports an optional `handoverTarget` and only selects the cashier-linked second contact;
+stale choices fail with 409. See [Identity and operations APIs](api/IDENTITY_AND_OPERATIONS.md).
+
+The shift-session cashier sales clients derive separate Delivery Cashier **Delivery fees received**
+and **To Be Paid received** summaries from existing `GET /reports/daily-cashier-sales` transaction
+fields (`cashierType`, `component`, `grossAmountPsw`). No response or permission changes are
+required. The API continues to exclude voided payments and apply report scope. See
+[Cashier payments and shifts](CASHIER_PAYMENTS_AND_SHIFTS.md#delivery-cashier-received-summary)
+for component classification, outstanding-versus-received labels, printing and QA.

@@ -12,6 +12,43 @@ const parcel = {
 };
 
 describe('return to source action', () => {
+  test.each([
+    {
+      branchId: 'Kumasi',
+      canRecordReturn: true,
+      status: ParcelStatus.AWAITING_PICKUP,
+      reason: 'destination branch',
+    },
+    {
+      branchId: 'destination-1',
+      canRecordReturn: false,
+      status: ParcelStatus.AWAITING_PICKUP,
+      reason: 'CanUpdateParcels',
+    },
+    {
+      branchId: 'destination-1',
+      canRecordReturn: true,
+      status: ParcelStatus.DELIVERED_BY_OFFICE,
+      reason: 'before customer handover',
+    },
+  ])(
+    'explains blocked Super Search actions %#',
+    ({ branchId, canRecordReturn, status, reason }) => {
+      const html = renderToStaticMarkup(
+        <ReturnToSourceAction
+          parcel={{ ...parcel, status }}
+          branchId={branchId}
+          sourceName="Source"
+          canRecordReturn={canRecordReturn}
+          showUnavailableReason
+          onReturnToSource={() => {}}
+        />,
+      );
+      expect(html).toContain('Return to Source');
+      expect(html).toContain('disabled=""');
+      expect(html).toContain(reason);
+    },
+  );
   test('shows for authorized destination staff with an eligible parcel', () => {
     const html = renderToStaticMarkup(
       <ReturnToSourceAction

@@ -286,8 +286,8 @@ roles that need it. Without it the action is hidden and the server returns 403. 
 Update offers **Add Second Receiver** / **Change Second Receiver** in the row action menu; Parcel
 Assignment shows an **Add 2nd Receiver** / **Change 2nd Receiver** button beside Assign. The
 action appears only for parcels in Arrived at Destination, Customer Contacted, Returned to Office,
-Awaiting Pickup, or Home Delivery Requested; parcels with a rider, delivered, or returning to
-source do not offer it.
+Awaiting Pickup, Home Delivery Requested, Address Collected, or Dispatched. Parcels already
+handed over by a rider, delivered, or returning to source do not offer it.
 
 The dialog requires a name and a ten-digit telephone that differs from the main receiver's, and is
 prefilled with the current second receiver when one exists. The telephone is resolved like other
@@ -303,13 +303,33 @@ email; customer notifications remain available only from the call outcome. The s
 parcels outside the staff member's company and destination branch. Web only; mobile has no
 equivalent page.
 
+Delivery Cashier also has **Upcoming handovers: second receivers**, showing Address Collected
+and Dispatched parcels at the cashier's destination branch. Search by booking/tracking or receiver,
+then use **Add Second Receiver** or **Change Second Receiver**. This uses the same permission,
+validation, customer reuse, removal, card clearing, OTP expiry and audit rules above, without
+requiring a separate `CanCreateCustomers` grant. The finalization queue remains separate and
+only contains completed rider handovers. Staff must save the contact before the rider confirms.
+
+On mobile, Assigned Deliveries → Confirm handover asks **Who is receiving the parcel?** and
+lets the rider select the main receiver or the cashier-added second receiver. Riders cannot
+create or edit this contact from the confirmation sheet; when absent, the second choice is
+disabled with instructions to contact the delivery cashier and refresh. Changing the choice
+clears the signature. Signed handover retains the parcel's authorized second receiver even
+when the main receiver collects. `CanCompleteDoorstepDelivery` authorizes confirmation;
+`CanCreateCustomers` and `CanManageParcelSecondReceiver` are not required for selection.
+The server rejects a selected second receiver that no longer matches the locked parcel with
+409, and rejects inactive or foreign-company customer IDs with 400. The rider must refresh,
+reselect and capture a fresh signature. `RIDER_HANDOVER_RECEIVER_SELECTED` audit metadata
+records the selected target and customer ID in the same transaction as signature and collection.
+Existing web handovers without the selection field retain their contact-entry behavior.
+
 QA: with a role lacking `CanManageParcelSecondReceiver`, confirm neither page shows the action;
 grant it and add a second receiver on each page and confirm it appears under the receiver and in
 Waiting for Pickup with no SMS sent; change it and confirm the old second receiver's OTP no longer
 verifies; remove it, confirm the prompt, and verify the row no longer shows a second receiver;
 enter an existing customer's telephone and confirm that customer is linked unchanged; enter the
 main receiver's telephone and a nine-digit number and confirm both are rejected; confirm a
-dispatched parcel offers no action and a direct request for another branch's parcel returns 404.
+dispatched parcel remains editable until handover and another branch's parcel returns 404.
 
 All Parcels Super Search uses the same payment legend and places the matching colored indicator in
 each Payment cell. A fully paid parcel shows only its **Paid** amount; a fully unpaid parcel shows
@@ -679,6 +699,11 @@ the parcel keeps the backfilled name.
 
 Destination staff with `CanUpdateParcels` can find a parcel in **All Parcels Super Search**,
 open its details, and select **Return to Source**. A reason of 5–500 characters is required.
+The action appears above the details tabs. If it is unavailable, Super Search shows the button
+disabled with the reason (missing Update Parcels permission, missing/wrong destination branch,
+deleted parcel, or ineligible status) instead of silently hiding it. This does not grant any new
+permission or bypass server checks. The source-branch Returns to Source history screen keeps
+its existing read-only behavior and does not offer this action.
 The server checks that the actor belongs to the parcel's destination branch, that the
 source and destination differ, and that the parcel is available at the destination.
 Eligible statuses are Arrived at Destination, Customer Contacted, Awaiting Pickup,
@@ -709,9 +734,12 @@ the list does not confirm physical receipt.
 QA: return a parcel from the destination and verify it appears only for its source
 branch. Search by booking code, review details, open reconciliation filtered to the
 booking, and start a new shipment. Check that users lacking the relevant action
-permissions do not see those actions, that pagination works, and that the original
+permissions cannot use those actions, that pagination works, and that the original
 return record remains after creating a new booking. A destination or unrelated branch
 must not see the source branch's list.
+In Super Search, verify an eligible destination officer sees the enabled return button above
+the tabs; source/unassigned branches, missing `CanUpdateParcels`, deleted and handed-over
+parcels show a disabled button and an accurate reason. Coverage: `return-to-source-action.test.tsx`.
 
 QA: mark a parcel arrived at its destination, record a reasoned return, and verify the
 status and audit entry. Repeat from Awaiting Pickup and Returned to Office. Verify
@@ -1084,6 +1112,17 @@ behavior:
 - The shared app connection (`src/db/config.ts`) starts every session with `jit=off`. No query
   in the app recovers JIT's compile time; long reports that might benefit should set `jit` per
   transaction.
+- App connections also use `max_parallel_workers_per_gather=0`. A production booking-code lookup
+  from the reconciliation dialog reproduced PostgreSQL `53100`: a parallel plan could not resize
+  an 8 MiB dynamic shared-memory segment (`No space left on device`), which the API correctly
+  concealed behind its generic 500 message. Running the same read-only lookup with parallel
+  workers disabled returned the expected parcel. This connection setting avoids that allocation
+  without changing search filters, amounts, permissions or database records. Application-level
+  row/count requests still run concurrently; only PostgreSQL parallel workers are disabled.
+  This applies to all clients using the shared backend connection. Large analytical queries
+  may run more slowly without parallel workers and should be measured separately. Deploy/restart
+  the backend to establish connections with this setting; a frontend/mobile update alone does
+  not apply it. No migration is needed.
 - The row query and the count query run in parallel.
 - The count query joins only the tables its filters reference: customers only when a search
   term is present, consignment tables only for sent-date or consignment-number filters.
@@ -1113,6 +1152,16 @@ list; enter an invalid date and confirm the validation message.
 QA: search a booking code, phone and name on Waiting for Pickup and Receiver Cashier at a busy
 branch and confirm results in under 2 s with an unchanged result count; page through results
 and confirm the total and page count stay consistent.
+
+For reconciliation, test booking-code searches for both source-branch and destination-branch
+matches and linked duplicate searches. Confirm the correct saved parcel/amounts are returned
+without a generic 500 or a PostgreSQL `53100` log. The read-only diagnostic
+`bun run scripts/check-parcel-booking-search.ts [booking-code] --serial` checks both query
+directions against `CHECK_DATABASE_URL` (or `DATABASE_URL`), enforces read-only connections and
+a 15-second statement timeout, and reports counts/errors without customer details. Omitting a
+code selects one existing non-deleted booking for the diagnostic. Without `--serial`, it uses
+the database's parallel-worker default for comparison. Never interpret a passing sample as
+verification of every production booking; repeat with the affected code when available.
 
 ### Storage fee indicator in parcel searches
 
@@ -1183,7 +1232,11 @@ approval cycles. Receipt reprints retain the documented DUPLICATE behavior.
 
 Migration `0077_parcel_storage_clearance.sql` adds `parcel_storage_clearance_requests` and its
 company/status/date, parcel/date, and unique-open-request indexes. Assign the new permissions
-before users work with the pages. The former direct storage-waiver API and cashier action are
+before users work with the pages. On the Permissions page all four appear together under
+**Operations → Parcel Lifecycle → Storage Fee Clearance**. `CanExecuteParcelStorageClearance`
+keeps its `Accounting` catalog group but is no longer listed under Finance → Financial
+Accounting. Permission search only covers the active tab, so search from the Operations tab.
+Only a System Admin role, or a role that already holds a permission, can grant it. The former direct storage-waiver API and cashier action are
 removed. Mobile has no clearance screens; cashier settlement and storage indicators continue to
 use the shared backend balance. This change does not apply the migration to deployed databases.
 

@@ -2,8 +2,8 @@ import { ParcelStatus } from '@/db/schemas/enums';
 
 /**
  * Statuses in which destination-branch staff may add or replace a parcel's second receiver
- * from Shelf Picker Update or Parcel Assignment. Parcels already with a rider, delivered,
- * or returning to source are excluded.
+ * before handover, including address-collected and dispatched doorstep parcels. Delivered
+ * parcels and parcels returning to source are excluded.
  */
 export const SECOND_RECEIVER_EDITABLE_STATUSES: readonly number[] = [
   ParcelStatus.ARRIVED_AT_DESTINATION,
@@ -11,6 +11,8 @@ export const SECOND_RECEIVER_EDITABLE_STATUSES: readonly number[] = [
   ParcelStatus.RETURNED_TO_OFFICE,
   ParcelStatus.AWAITING_PICKUP,
   ParcelStatus.HOME_DELIVERY_REQUESTED,
+  ParcelStatus.ADDRESS_COLLECTED,
+  ParcelStatus.DISPATCHED,
 ];
 
 export function canEditSecondReceiver(status: number) {

@@ -65,6 +65,7 @@ function resolveDeliveryModule(permissionKey: PermissionKey) {
 function resolveShipmentsModule(permissionKey: PermissionKey) {
   if (permissionKey.includes('Consignment')) return 'Consignment Processing';
   if (permissionKey.includes('Reconciliation')) return 'Parcel Reconciliation';
+  if (permissionKey.includes('StorageClearance')) return 'Storage Fee Clearance';
   if (
     permissionKey.includes('Receiving') ||
     permissionKey.includes('Incoming') ||

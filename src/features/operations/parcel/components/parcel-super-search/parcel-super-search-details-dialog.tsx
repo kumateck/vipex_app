@@ -14,6 +14,7 @@ type ParcelSuperSearchDetailsDialogProps = {
   canRecordReturn: boolean;
   branchId: string | null;
   onReturnToSource: (parcel: { id: string; bookingCode: string; sourceName: string }) => void;
+  showReturnAvailability?: boolean;
 };
 
 /** The shared parcel details view plus Super Search's return-to-source and disposition actions. */
@@ -25,6 +26,7 @@ export function ParcelSuperSearchDetailsDialog({
   canRecordReturn,
   branchId,
   onReturnToSource,
+  showReturnAvailability = false,
 }: ParcelSuperSearchDetailsDialogProps) {
   const renderBanner = useCallback(
     (details: ParcelFullDetails) => (
@@ -45,10 +47,11 @@ export function ParcelSuperSearchDetailsDialog({
           }
           canRecordReturn={canRecordReturn}
           onReturnToSource={onReturnToSource}
+          showUnavailableReason={showReturnAvailability}
         />
       </>
     ),
-    [branchId, branchNameById, canRecordReturn, onReturnToSource],
+    [branchId, branchNameById, canRecordReturn, onReturnToSource, showReturnAvailability],
   );
   const renderActions = useCallback(
     (details: ParcelFullDetails) => (

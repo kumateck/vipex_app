@@ -19,10 +19,13 @@ import {
 } from '@/features/operations/parcel/components/parcel-create';
 import { useSelfServiceDraftCompleteWorkflow } from '../../hooks';
 import { SelfServiceDraftSummaryCard } from '../self-service-draft-summary-card';
+import { SelfServiceCompletedBooking } from './self-service-completed-booking';
 
 export function SelfServiceDraftComplete() {
   const {
     form,
+    receipt,
+    onDone,
     control,
     clearErrors,
     destinationBranchId,
@@ -43,6 +46,8 @@ export function SelfServiceDraftComplete() {
     openCustomerEditor,
     closeCustomerEditor,
   } = useSelfServiceDraftCompleteWorkflow();
+
+  if (receipt) return <SelfServiceCompletedBooking receipt={receipt} onDone={onDone} />;
 
   if (isLoading) {
     return (

@@ -7,3 +7,4 @@ export {
   getRiderCollectedPrincipalPsw,
   getTotalExpectedCollectionPsw,
 } from './assigned-deliveries.utils';
+export { getRiderHandoverReceiver } from './rider-handover-receiver';

@@ -2,7 +2,15 @@
 
 ## Purpose
 
-The application prints parcel stickers and A5 customer documents from the browser and desktop application. Mobile receiver-paid creation can also open the phone's native print dialog for a parcel sticker. Printing is part of parcel creation, payment, receiving, and reprint workflows, but a successful print is not the authority for whether the parcel or payment exists.
+The application prints parcel stickers and A5 customer documents from the browser and desktop application. Mobile receiver-paid creation and completed self-service bookings can also open the phone's native print dialog for a parcel sticker. Printing is part of parcel creation, payment, receiving, and reprint workflows, but a successful print is not the authority for whether the parcel or payment exists.
+
+Self-service completion retains a completed-booking panel on web, desktop and mobile, with manual
+**Print Sticker** and a positive whole-number copy input. It prints only the saved parcel's sticker;
+retrying a print never resubmits completion. Web/desktop retain the shared sticker module/session
+gates and routing. Mobile retains print retry and a separate usage-log retry, and can retry loading
+destination names before printing. Self-service labels with no receiver amount show **PENDING** or
+**CREDIT**, since completion itself records no sender payment. See
+[Self-Service Booking](SELF_SERVICE_BOOKING.md#payment-and-printing) for workflow and QA scenarios.
 
 When `callSender` is true, portrait and landscape parcel stickers print a prominent black-on-white
 `CS` mark beside the receiver block. Receiver name and phone remain visible. The mark is present

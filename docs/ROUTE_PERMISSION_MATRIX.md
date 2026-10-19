@@ -79,3 +79,9 @@ Saved matching customer profile changes additionally require `CanUpdateCustomers
 Edits are company/branch scoped and reject another officer's claim or a stale draft.
 No page override changes. Location capability controls retain the existing location
 create/update/read permissions. Receiving quota exemptions do not bypass any route guard.
+
+Delivery Cashier's upcoming handovers section uses `CanManageParcelSecondReceiver` for
+`PUT/DELETE /shipments/parcels/:id/second-receiver`, scoped to the destination branch. The
+editable states now include Address Collected and Dispatched until rider handover. Mobile rider
+selection remains under `CanCompleteDoorstepDelivery`, without customer-create/manage rights.
+See [Parcel Operations](PARCEL_OPERATIONS.md) for validation and stale-selection behavior.

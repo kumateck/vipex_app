@@ -16,6 +16,17 @@ const sticker: MobileSticker = {
 };
 
 describe('mobile to-be-paid sticker', () => {
+  test('does not label unpaid self-service completion as paid or demand zero receiver payment', () => {
+    const html = buildMobileStickerHtml({
+      ...sticker,
+      amountCedis: 0,
+      paymentStatusLabel: 'PENDING',
+    });
+    expect(html).toContain('PENDING');
+    expect(html).not.toContain('TO BE PAID');
+    expect(html).not.toContain('GHS 0.00');
+    expect(html).not.toContain('PAYMENT DUE UPON RECEIPT');
+  });
   test('prints each requested copy with a scannable QR and escaped customer data', () => {
     const html = buildMobileStickerHtml(sticker);
     expect(html.match(/class="sticker"/g)).toHaveLength(2);

@@ -29,6 +29,23 @@ Each Operations workflow card opens its registered native screen. The shared mob
 
 Read access never substitutes for a separate mutation permission. The server remains authoritative when a cached screen or stale session attempts an action.
 
+## Rider Third-party Handover
+
+The delivery cashier adds or changes the parcel's second receiver on web/desktop under Delivery
+Cashier → Upcoming handovers, using `CanManageParcelSecondReceiver`. The parcel must be at that
+cashier's destination branch and Address Collected or Dispatched. After refreshing Assigned
+Deliveries, the rider sees this contact and selects **Main receiver** or **Second receiver** when
+confirming handover. There is no mobile rider contact-entry form. A missing second contact disables
+that choice and tells the rider to contact the cashier. Selecting the other person clears the
+signature so the selected recipient must sign. Existing collection values/checks are retained.
+
+Rider selection requires `CanCompleteDoorstepDelivery`, not customer-create or receiver-management
+permission. A changed/removed cashier contact produces 409; reload and reselect before signing.
+The server locks the parcel and checks assignment, active company customer, pending changes,
+signature and amounts. Selection and receipt identity are audited atomically with completion.
+The optional second contact stays on the parcel even when the main receiver collects. No new
+mobile cashier screen or schema migration is introduced for this workflow.
+
 ## Parcel Creation and Customer Reuse
 
 The mobile parcel creation form automatically searches for the sender and recipient when a

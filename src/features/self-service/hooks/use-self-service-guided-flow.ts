@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { normalizePhoneDigits } from '@/lib/phone';
 import { sanitizeNumber, sanitizeString } from '@/lib/utils';
 import { SELF_SERVICE_TERMS_VERSION } from '@/shared/self-service/terms';
-import { useSubmitSelfServiceDraftMutation } from '../api/self-service-public.api';
+import {
+  type SubmitSelfServiceDraftResponse,
+  useSubmitSelfServiceDraftMutation,
+} from '../api/self-service-public.api';
 import {
   createInitialSelfServiceFormValues,
   SELF_SERVICE_STAGE_FIELDS,
@@ -28,12 +31,13 @@ function getErrorStatus(error: unknown): number | null {
 export function useSelfServiceGuidedFlow(
   branchId: string,
   sessionToken: string,
-  onSessionConsumed: () => void,
+  onSessionConsumed: (response: SubmitSelfServiceDraftResponse) => void,
   onSessionExpired: () => void,
 ) {
+  const submitting = useRef(false);
   const [stageIndex, setStageIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
-  const [submittedDraftId, setSubmittedDraftId] = useState<string | null>(null);
+  const [submission, setSubmission] = useState<SubmitSelfServiceDraftResponse | null>(null);
   const [submitDraft, { isLoading: isSubmitting }] = useSubmitSelfServiceDraftMutation();
 
   const form = useForm<SelfServiceBookingFormValues>({
@@ -44,6 +48,8 @@ export function useSelfServiceGuidedFlow(
   const stage = SELF_SERVICE_STAGES[stageIndex] ?? 'sender';
 
   const submit = async () => {
+    if (submitting.current) return;
+    submitting.current = true;
     const values = form.getValues();
     try {
       const parcelValueCedis = sanitizeNumber(sanitizeString(values.parcelValue).replace(/,/g, ''));
@@ -69,8 +75,8 @@ export function useSelfServiceGuidedFlow(
         termsAccepted: true,
         termsVersion: SELF_SERVICE_TERMS_VERSION,
       }).unwrap();
-      onSessionConsumed();
-      setSubmittedDraftId(response.draftId);
+      onSessionConsumed(response);
+      setSubmission(response);
     } catch (error) {
       if (getErrorStatus(error) === 410) {
         onSessionExpired();
@@ -79,6 +85,8 @@ export function useSelfServiceGuidedFlow(
       // Data entered so far is preserved - the form is untouched on failure,
       // so the customer can just retry without retyping anything.
       toast.error(getErrorMessage(error) ?? 'Failed to submit your booking. Please try again.');
+    } finally {
+      submitting.current = false;
     }
   };
 
@@ -117,6 +125,7 @@ export function useSelfServiceGuidedFlow(
     goBack,
     goToStage,
     isSubmitting,
-    submittedDraftId,
+    submittedDraftId: submission?.draftId,
+    submission,
   };
 }
