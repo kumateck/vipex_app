@@ -34,7 +34,9 @@ export function InfoBlock({
           fontSize: '3.4mm',
           fontWeight: 700,
           lineHeight: 1.08,
-          overflowWrap: 'anywhere',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
         }}
       >
         {secondary || '-'}
