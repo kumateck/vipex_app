@@ -49,6 +49,49 @@ The parcel's `processedBy` user ID is the **owning cashier**, including when a d
 
 ## Payment Workflows
 
+### Confirmation owns the To Be Paid report
+
+Agent charge entry, completing a self-service draft, or printing a sticker alone does not choose a
+cashier. A pending booking requires sender-cashier confirmation, including zero sender payment
+for fully To Be Paid parcels. First confirmation sets `processedBy` and the parcel's
+`cashierSessionId` to that cashier and their active session, replacing a provisional entry link.
+`createdBy` and `chargeAgentUserId` retain who entered/charged it; `confirmedBy` remains the later
+receiver handover field. The parcel session is authoritative; a booking header can cover parcels
+subsequently confirmed by different cashiers.
+
+With two active cashiers at one location, an agent's parcel confirmed by cashier B appears only
+under B's session. The server locks the parcel so simultaneous confirmations have one owner;
+repeating confirmation cannot transfer an already processed parcel to another cashier/session.
+First confirmation adds `PARCEL_SENDER_PROCESSED` audit metadata with current/prior session IDs.
+Paid/split confirmation still records actual collections; zero-payment confirmation creates no
+payment and does not add To Be Paid balances to collected sales.
+
+The authorized mobile **Complete & print sticker** delegate path confirms immediately for its
+resolved owning cashier session. A changed authorized session is rejected before creation.
+Agent web/mobile entry without immediate completion and self-service retain cashier confirmation.
+Printing/reprinting does not change ownership or duplicate report rows.
+
+Daily report ownership comes from the recorded parcel session, not its creator. Date/location
+filters use session opening date and the owning cashier location, including earlier parcel entry
+dates. Sessions with only To Be Paid records remain visible and selectable. Pending, deleted,
+unlinked, and contradictory processor/session rows are excluded. Active-session totals also stop
+guessing ownership from branch/time. The daily table retains current outstanding-balance amounts.
+
+Existing correctly linked records appear under their cashier after deployment without a backfill.
+Historical missing/contradictory links require evidence-based, audited repair; this change does
+not guess between cashiers or rewrite past financial records. A non-null `processedBy` that
+disagrees with the session owner is excluded pending repair; a null historical processor with
+a valid session remains supported. Migration `0088_parcel_cashier_session_index.sql` indexes
+the existing parcel session field for report joins and summaries; it performs no data backfill.
+Apply it with the normal vetted migration workflow. No permission or client request change is required.
+
+QA: same-location cashiers; agent/self-service entry before and after confirmation; mobile
+delegates; paid/split/receiver-paid amounts; pending rows; earlier entry dates; location filters;
+zero-collection sessions; simultaneous confirmation/retries; closed sessions; company/branch/
+deletion scope; ambiguous old links. Automated coverage is
+`tests/server/cashier-session-attribution.spec.ts`, using a dedicated empty local database with
+real column definitions/defaults but without production triggers/FKs.
+
 The payment service supports:
 
 - General payment creation.

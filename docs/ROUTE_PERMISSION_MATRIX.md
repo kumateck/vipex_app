@@ -9,6 +9,13 @@ authenticated user. Internal ticket permissions grant no inbox access. See
 
 Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`).
 
+Saved call outcome notification resends use
+`POST /v1/notification-hub/events/parcel-status-call/resend`: authentication, the
+`notification_hub` module, and either `CanSendCallCenterNotifications` or
+`CanReadCallCenterParcelStatus` are required. The server additionally checks authenticated
+company/destination branch, the current caller assignment, and a matching saved call outcome.
+The `/parcels/status` page permission is unchanged; no retry or parcel-update grant is added.
+
 Charge-agent selectors use existing workflow permissions: booking options at
 `GET /shipments/bookings/charge-agent-options` require `CanCreateBookingWithParcels`; self-service
 options at `GET /self-service/charge-agent-options` require `CanCompleteSelfServiceBookings`.

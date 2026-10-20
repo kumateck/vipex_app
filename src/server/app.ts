@@ -58,6 +58,7 @@ import { fleetTransportRoutes } from './features/fleet-transport/routes';
 import { customerWalletCreditRoutes } from './features/customer-wallet-credit/routes';
 import { reconciliationRoutes } from './features/reconciliation/routes';
 import { notificationHubRoutes } from './features/notification-hub/routes';
+import { parcelCallResendRoutes } from './features/notification-hub';
 import { desktopUpdatesRoutes } from './features/desktop-updates/routes';
 import { mobileUpdatesRoutes } from './features/mobile-updates/routes';
 import { momoRoutes } from './features/momo/routes';
@@ -126,7 +127,7 @@ export const app = new Elysia()
       .group('/fleet-transport', (r) => r.use(fleetTransportRoutes))
       .group('/customer-wallet-credit', (r) => r.use(customerWalletCreditRoutes))
       .group('/reconciliation', (r) => r.use(reconciliationRoutes))
-      .group('/notification-hub', (r) => r.use(notificationHubRoutes))
+      .group('/notification-hub', (r) => r.use(notificationHubRoutes).use(parcelCallResendRoutes))
       .group('/whatsapp', (r) => r.use(whatsappMessagingRoutes))
       .group('/digital-receipts', (r) => r.use(digitalReceiptRoutes))
       .group('/momo', (r) => r.use(momoRoutes))

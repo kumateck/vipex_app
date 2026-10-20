@@ -17,6 +17,7 @@ describe('BMS mNotify OTP transport', () => {
       calls++;
       expect(String(url)).toBe('https://api.mnotify.com/api/sms/quick?key=private+key');
       expect(options?.method).toBe('POST');
+      expect(new Headers(options?.headers).get('accept')).toBe('application/json');
       expect(options?.signal).toBeInstanceOf(AbortSignal);
       expect(JSON.parse(String(options?.body))).toMatchObject({
         recipient: ['0240000000'],
@@ -87,6 +88,44 @@ describe('BMS mNotify OTP transport', () => {
       status: 'failed',
       errorMessage: 'mNotify returned an invalid JSON acknowledgement',
     });
+  });
+  test.each([500, 502, 503])(
+    'handles an HTML HTTP %s error without exposing HTML or resending',
+    async (status) => {
+      let calls = 0;
+      const result = await sendMnotifySms({ ...input, smsType: undefined }, (async (
+        _url: unknown,
+        options?: RequestInit,
+      ) => {
+        calls++;
+        expect(JSON.parse(String(options?.body))).not.toHaveProperty('sms_type');
+        return new Response('<!DOCTYPE html><html><script>window.NREUM={}</script></html>', {
+          status,
+          headers: { 'content-type': 'text/html' },
+        });
+      }) as unknown as typeof fetch);
+      expect(result).toEqual({
+        status: 'failed',
+        errorMessage: `mNotify service error (HTTP ${status}). Delivery acceptance could not be confirmed. Check mNotify delivery reports before retrying.`,
+      });
+      expect(calls).toBe(1);
+    },
+  );
+  test('keeps JSON rejection details and redacts credentials on HTTP errors', async () => {
+    expect(await sendMnotifySms(input, fakeFetch({ message: 'Invalid private key' }, 403))).toEqual(
+      {
+        status: 'failed',
+        errorMessage: 'mNotify API returned 403: Invalid [REDACTED]',
+      },
+    );
+    const result = await sendMnotifySms(
+      input,
+      (async () =>
+        new Response('<html>Access denied</html>', { status: 403 })) as unknown as typeof fetch,
+    );
+    expect(result.status).toBe('failed');
+    expect(result.errorMessage).toContain('No JSON error details returned');
+    expect(result.errorMessage).not.toContain('<html>');
   });
   test('timeouts fail once without silently retrying a billable SMS', async () => {
     let calls = 0;
