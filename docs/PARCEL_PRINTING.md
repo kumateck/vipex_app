@@ -90,6 +90,15 @@ area, with 4 mm side clearance and at least 2 mm feed clearance. This replaces t
 clockwise rotation. Paper orientation stays portrait in the driver because the artwork itself
 is rotated. Update both the web client and desktop build to apply the shared preparation.
 
+Deployment troubleshooting: desktop version **0.1.51** (published 21 September 2026) predates
+roll-paper preparation and the left-rotation fix. The production Windows update feed still
+advertised that version when checked on 19 October 2026. The hosted website can display the new
+paper-format choice inside an older installed desktop shell; saving that choice does not update
+its native printing code. An installer containing `prepareReceiptPaper` and the shared
+`prepareLandscapeReceipt` must be published, installed and restarted before testing routed output.
+Check the installed desktop version as well as the website deployment. Changing scale in printer
+preferences alone cannot add missing native roll preparation.
+
 The profile is local to web/desktop printing. Digital receipts remain A5; mobile sticker printing,
 sticker routing/copies, A4 reports, payments and permissions are unchanged. This change addresses
 the paper/layout mismatch that can leave only a strip of an A5 receipt visible on an 80 mm roll.
@@ -105,6 +114,9 @@ of unrotated text or clockwise output is acceptable. Check compact and tall rece
 sticker job; confirm only stickers receive their chosen copy count. Switch back to A5 and each
 vertical profile to verify their layouts. Test missing images, failed printer and cancellation;
 no parcel/payment is resubmitted. Automated geometry/render checks do not replace XP-80C hardware QA.
+Release QA: verify the installer was built from a commit containing both preparation functions,
+install it on a workstation running 0.1.51, restart the app and confirm its reported version has
+changed. Repeat the routed print test with the existing saved browser-style receipt preference.
 
 ## Xprinter vertical receipts
 

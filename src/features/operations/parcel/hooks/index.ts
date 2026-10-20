@@ -11,6 +11,8 @@ export * from './use-parcel-receipt-tax';
 export * from './use-parcel-invoice-print-action';
 export * from './use-parcel-second-receiver';
 export * from './use-parcel-status';
+export { useParcelCallNotificationResend } from './use-parcel-call-notification-resend';
+export { useParcelStatusColumns } from './use-parcel-status-columns';
 export * from './use-receiver-cashier-table';
 export * from './use-parcel-print-completion';
 export * from './use-parcel-charge-agent-options';
