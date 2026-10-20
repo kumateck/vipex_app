@@ -68,6 +68,9 @@ function StickerRowContent({
           fontWeight: 800,
           lineHeight: scale === 'large' ? 1 : 1.1,
           overflowWrap: 'anywhere',
+          ...(scale === 'normal'
+            ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+            : {}),
         }}
       >
         {displayValue}
