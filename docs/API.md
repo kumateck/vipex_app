@@ -330,6 +330,21 @@ without snapshots use the legacy status and payment fallback.
 
 ## Contract Authority
 
+`POST /v1/payments/collect-sender-and-process` assigns first processing confirmation to the
+authenticated cashier's active session, replacing a provisional parcel entry-session link and
+preserving the creator. This covers paid, split, and zero-payment To Be Paid confirmation,
+including self-service bookings. Parcel locking gives concurrent confirmations one owner;
+repeating confirmation preserves ownership. Missing/deleted/wrong-company/wrong-source-branch
+parcels return 404 even without a payment; missing active sessions return 403. First processing
+adds `PARCEL_SENDER_PROCESSED` audit metadata with current/prior session IDs. Immediate delegated
+creation rejects a changed authorized session with 400 before persistence. Schemas/permissions
+are unchanged.
+
+Daily Cashier Sales To Be Paid rows and current-session totals require recorded session ownership,
+with report date/location derived from the session/owning cashier rather than parcel creation.
+Pending, deleted, unlinked, and contradictory processor/session records are excluded; historical
+valid links need no backfill. See [cashier confirmation ownership](CASHIER_PAYMENTS_AND_SHIFTS.md#confirmation-owns-the-to-be-paid-report).
+
 Swagger UI at `/docs` and OpenAPI JSON at `/docs/json` from the running server are authoritative for exact methods, schemas, validation, and response bodies. These documents explain the stable domain surface and access rules.
 
 Every protected endpoint must enforce authentication, permission, company-module availability where applicable, company scope, branch/location scope, and any required operational assignment. Hiding a client route is not sufficient authorization.

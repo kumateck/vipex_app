@@ -617,6 +617,13 @@
       "when": 1792425137776,
       "tag": "0087_self_service_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1792497600000,
+      "tag": "0088_parcel_cashier_session_index",
+      "breakpoints": true
     }
   ]
 }
