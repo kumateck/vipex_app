@@ -36,12 +36,18 @@ and value line has at least 1.1x line spacing and about 0.5 mm padding from the 
 receiver name prints at 5 mm for names up to 12 characters, stepping down to 4.4 mm, 3.8 mm,
 and 3.2 mm for longer names, so the receiver telephone always prints in full beneath it. The
 to-be-paid amount prints at 4 mm with space above the payment note. Location names longer than
-10 characters print smaller so two-word locations usually fit on one line. The header is 22 mm
-with a 21 mm QR code. Landscape stickers are unchanged.
+10 characters print smaller. Sticker locations always occupy a single line, truncating with an
+ellipsis when they exceed the available column width. This applies to portrait and landscape
+browser/desktop stickers (including reprints), and mobile stickers, including self-service
+completion. The saved location name remains complete. The header is 22 mm with a 21 mm QR code.
 QA: print portrait to-be-paid and paid stickers with a short receiver name (`ADU EVANS`), a
 long receiver name (23+ characters), a long sender name, a two-word location, and a long
 destination, with and without the CS mark; confirm no text touches or is cut by a border line
 on browser, desktop, and mobile output.
+Also print short, blank, and long locations such as `Suame Mbrom VIP Bus Station Behind the Goil
+Filling Station` on original/reprinted portrait and landscape stickers and mobile copies. Verify
+the location stays on one line, long names end with an ellipsis, blank names show `-`, and the
+destination, sender, telephone, and parcel details remain visible.
 
 ## QR codes and logos in print documents
 
