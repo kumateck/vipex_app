@@ -52,6 +52,48 @@ Date: 2026-03-31
 - [ ] Save outcome with Email toggle on -> dispatch rows created.
 - [ ] Enable second receiver and confirm second receiver receives selected channels.
 - [ ] Failed call-center sends are visible in dispatch logs and retryable.
+- [ ] Simulate mNotify HTTP 500 with an HTML/New Relic error page: the saved outcome remains,
+      exactly one SMS request occurs, and the warning/log shows a readable HTTP 500 service
+      error with guidance to check mNotify delivery reports before retrying; no HTML appears.
+- [ ] Verify ordinary call-outcome SMS requests use JSON and `Accept: application/json`, with
+      `is_schedule: false`, recipient array, and no OTP `sms_type` flag.
+- [ ] Simulate SMS failure, email failure, and a failed email dispatch-record creation: the API
+      returns matching failed counts and channel/recipient failure entries; API keys are redacted.
+- [ ] Main receiver succeeds and second receiver fails: show both the successful count and the
+      second receiver's failure reason. Full success returns an empty failure list.
+- [ ] An older count-only API response still shows a warning with Dispatch Logs guidance; web
+      and desktop display detailed warnings for ten seconds and do not repeat the outcome save.
+- [ ] Mobile and bulk count-based notification feedback remains compatible with additive fields.
+
+Automated coverage: `parcel-notifications.service.test.ts`, `mnotify-sms-provider.test.ts`, and
+`call-outcome-notification-feedback.test.ts`. These use mocked provider responses and do not send
+live customer messages.
+
+### Resend a saved call outcome (web and desktop)
+
+- [ ] Save pickup/delivery/follow-up with notifications off or a mocked provider failure. Enable
+      **Include saved outcomes**, search by booking, and open **Resend Notification** on the saved row.
+- [ ] Verify the saved outcome is read-only, SMS defaults on/email off, and the saved second
+      receiver option appears only when present. Both channels off disables sending.
+- [ ] Send SMS only, email only, and both channels, with/without the saved second receiver;
+      confirm current saved recipients, event template, and per-channel failure diagnostics.
+- [ ] Confirm each resend creates new dispatch history and `isResend: true` audit metadata;
+      parcel status, call timestamp, assignment, receiver details, and payments remain unchanged.
+- [ ] Double-click resend and try closing the dialog during a delayed request: one request is
+      sent, controls remain disabled, and the dialog cannot close until it finishes.
+- [ ] Success closes the dialog; provider rejection, transport errors, and zero contact addresses
+      leave it open with a clear message. No automatic resend or outcome save occurs.
+- [ ] Reassign/delete the parcel, change its outcome, clear its call marker, or progress delivery
+      after opening the dialog: reject the stale send before contacting the provider (404/409).
+- [ ] Check missing authentication, either permitted call-center grant, missing permission,
+      disabled module, wrong company/branch, missing scope, no channels, and malformed input.
+- [ ] Toggle saved outcomes after changing search/payment/page size: server pagination remains
+      accurate, page resets to 1, selection clears, and contacted rows cannot enter bulk updates.
+- [ ] Default calling queue and existing mobile call-save behavior remain unchanged. Check
+      mNotify delivery reports before manually resending an unconfirmed HTTP 500 attempt.
+
+Coverage: `saved-parcel-call-outcome.test.ts`, `parcel-call-resend.service.test.ts`,
+`parcel-call-resend.routes.test.ts`, and `parcel-call-notification-resend-content.test.tsx`.
 
 ## 8. Permission Gates
 

@@ -1,4 +1,5 @@
 export { sendNotificationCampaignSvc } from './campaign-dispatch.service';
+export { resendParcelCallNotificationSvc } from './parcel-call-resend.service';
 export {
   listNotificationCampaignsSvc,
   createNotificationCampaignSvc,

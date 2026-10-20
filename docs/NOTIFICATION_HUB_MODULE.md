@@ -247,3 +247,52 @@ Flow:
 2. Agent optionally sends SMS/email to receiver (and second receiver when enabled).
 3. Dispatch records are created in `notification_dispatches`.
 4. Failed sends can be retried in Notification Hub logs.
+
+The event response includes `parcelId`, `trackingCode`, `sentCount`, `failedCount`, and
+`failures: { channel, recipientType, message }[]`. Each failed SMS/email attempt has a
+failure entry identifying the channel and main or second receiver, without returning contact
+addresses. Provider diagnostics are bounded to 500 characters and API query credentials are
+redacted. Successful sends return an empty failure list. Missing contact addresses retain the
+existing skip behavior; they do not count as provider failures.
+
+The single-parcel web Call Outcome warning (also used by desktop) displays these failure reasons
+for ten seconds. Older backend responses containing only counts show guidance to check Dispatch
+Logs. A notification failure leaves the saved outcome intact; closing the dialog and refreshing
+queues do not automatically resend the message. Bulk and mobile clients continue using their
+existing count-based feedback; the API fields are additive.
+
+### mNotify HTTP errors
+
+Quick SMS requests use the [BMS documented endpoint and JSON format](https://developer.bms.africa/),
+with `Accept: application/json`. HTTP 5xx responses, including HTML error pages containing
+monitoring scripts, are recorded as readable mNotify service errors. A 5xx response does not
+confirm whether the provider accepted the SMS. Check mNotify delivery reports before manually
+retrying; if service errors persist, contact mNotify support with the failure time and endpoint.
+The app makes one request and does not automatically retry billable sends. Non-5xx JSON errors
+retain their provider message with the API key redacted; non-JSON errors use a readable fallback.
+This transport behavior applies to all mNotify SMS callers, including pickup OTPs. It does not
+resolve an outage or account problem at the provider, and local tests do not establish live
+delivery or deployment status.
+
+### Resending saved call outcomes
+
+On web/desktop Parcel Status (Call Receivers), enable **Include saved outcomes**, search for the
+booking, and choose **Resend Notification** from its row menu. The default queue still shows only
+uncalled assigned parcels. Including saved outcomes preserves server pagination, assignment,
+branch, search, and payment filters; contacted rows cannot be selected for another bulk outcome.
+The resend dialog shows the saved outcome read-only, defaults SMS on/email off, and optionally
+includes the saved second receiver (default on when present). At least one channel is required.
+Sending disables the controls and guards against a second click while the request is pending.
+Success closes the dialog; failed or zero-send attempts leave it open with diagnostic feedback.
+
+`POST /events/parcel-status-call/resend` requires the Notification Hub module and either
+`CanSendCallCenterNotifications` or `CanReadCallCenterParcelStatus`. It rechecks the authenticated
+company, destination branch, current call-center assignee, non-deleted parcel, call timestamp,
+and expected outcome before sending. Only saved Awaiting Pickup, Home Delivery Requested, or
+Customer Contacted outcomes are eligible. Changed, uncalled, or progressed outcomes return 409;
+missing/out-of-scope parcels return 404; missing context or both channels disabled returns 400.
+Each explicit resend creates new dispatch history and an audit entry with `isResend: true`.
+It uses current saved recipients and configured templates without updating the parcel outcome,
+call timestamp, assignments, receiver details, or payments. It is a manual new send, including
+previously successful recipients when selected, with no automatic retries. Mobile has no new
+resend control; its existing save workflow is unchanged. No migration is required.

@@ -1,4 +1,5 @@
 export * from './existing-customer-edit';
+export { getCallOutcomeNotificationFeedback } from './call-outcome-notification-feedback';
 export { formatParcelTimestamp } from './format-parcel-timestamp';
 export * from './dialog-load-state';
 export * from './internal-transfer-print';

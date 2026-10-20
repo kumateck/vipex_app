@@ -12,6 +12,7 @@ import {
 import { canChangeCallOutcome } from '../components/parcel-status/utils';
 import { useParcelCallOutcome } from './use-parcel-call-outcome';
 import { useParcelBulkCallOutcome } from './use-parcel-bulk-call-outcome';
+import { useParcelCallNotificationResend } from './use-parcel-call-notification-resend';
 
 export function useParcelStatus() {
   const user = useAuthStore((state) => state.user);
@@ -24,6 +25,7 @@ export function useParcelStatus() {
   const [pageSize, setPageSize] = useState(20);
   const [paymentType, setPaymentType] = useState<'all' | 'paid' | 'to_be_paid' | 'partial'>('all');
   const [selectedParcelIds, setSelectedParcelIds] = useState<Set<string>>(new Set());
+  const [includeSavedOutcomes, setIncludeSavedOutcomes] = useState(false);
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [recordContact, { isLoading: isRecordingContact }] = useRecordCallCenterContactMutation();
   const baseQuery = useMemo(
@@ -41,9 +43,6 @@ export function useParcelStatus() {
       filters: {
         companyId,
         destinationId: branchId,
-        // Keep already-contacted parcels in the queue too — until a real
-        // outcome (pickup/delivery) is chosen, staff still need to see and
-        // act on them here rather than have them silently disappear.
         statuses: [
           ParcelStatus.ARRIVED_AT_DESTINATION,
           ParcelStatus.RETURNED_TO_OFFICE,
@@ -55,7 +54,7 @@ export function useParcelStatus() {
           ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER,
         ],
         assignedToCurrentUser: true,
-        callCenterUncalledOnly: true,
+        callCenterUncalledOnly: !includeSavedOutcomes,
         paymentType: paymentType === 'all' ? undefined : paymentType,
       },
     },
@@ -75,11 +74,13 @@ export function useParcelStatus() {
   };
 
   const single = useParcelCallOutcome(refreshQueues);
+  const resend = useParcelCallNotificationResend();
   const bulk = useParcelBulkCallOutcome(async () => {
     setSelectedParcelIds(new Set());
     await refreshQueues();
   });
-  const isSaving = isUpdatingParcel || isRecordingContact || single.isSaving || bulk.isSaving;
+  const isSaving =
+    isUpdatingParcel || isRecordingContact || single.isSaving || bulk.isSaving || resend.isSaving;
   const toggleParcel = (id: string, checked: boolean) => {
     setSelectedParcelIds((current) => {
       const next = new Set(current);
@@ -92,7 +93,11 @@ export function useParcelStatus() {
   const selectAll = (checked: boolean) =>
     setSelectedParcelIds(
       checked
-        ? new Set(rows.filter((row) => canChangeCallOutcome(row.status)).map((row) => row.id))
+        ? new Set(
+            rows
+              .filter((row) => !row.callCenterCalledAt && canChangeCallOutcome(row.status))
+              .map((row) => row.id),
+          )
         : new Set(),
     );
 
@@ -123,6 +128,7 @@ export function useParcelStatus() {
   return {
     single,
     bulk,
+    resend,
     tableProps: {
       rows,
       loading,
@@ -137,6 +143,13 @@ export function useParcelStatus() {
         setSubmittedSearch(searchInput.trim());
       },
       onCallOutcome: single.open,
+      onResendNotification: resend.open,
+      includeSavedOutcomes,
+      onIncludeSavedOutcomesChange: (value: boolean) => {
+        setIncludeSavedOutcomes(value);
+        setPage(1);
+        setSelectedParcelIds(new Set());
+      },
       onReturnToPickup: handleReturnToPickup,
       onMarkCalled: handleMarkCalled,
       selectedParcelIds,

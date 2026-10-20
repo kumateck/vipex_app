@@ -1392,6 +1392,28 @@ The existing notification-hub module gate, provider settings, templates, permiss
 history, and audit apply. Mobile and single-parcel workflows retain their existing behavior;
 desktop clients using the web page receive the same bulk SMS controls.
 
+For single-parcel Call Outcome saves, web and desktop show the failed channel, main or second
+receiver, and provider reason below the notification counts. With an older backend that returns
+only counts, the warning points staff to Notification Hub Dispatch Logs. The warning stays visible
+for ten seconds. An mNotify HTTP 500/other 5xx error means delivery acceptance could not be
+confirmed; check the provider's delivery reports before retrying to avoid a duplicate message.
+The saved outcome remains valid and messages are not automatically retried. Mobile and bulk
+notification feedback is unchanged. See [Notification Hub](NOTIFICATION_HUB_MODULE.md#call-center-integration)
+for API failure details and provider recovery behavior.
+
+To send again after an outcome was saved, enable **Include saved outcomes** on web/desktop Call
+Receivers, find the booking, and choose **Resend Notification** in the row menu. Choose SMS/email
+and whether to include the saved second receiver, then click **Resend Notification**. This sends
+the current saved pickup, delivery, or follow-up message without saving the outcome again or
+changing the call timestamp, receiver, status, assignment, or payment. The server rechecks the
+current assignment and destination branch and rejects changed, uncalled, or progressed outcomes.
+The default queue still hides called parcels; including saved rows retains server pagination,
+search, and payment filters. Called rows cannot be changed through the single/bulk outcome actions.
+The resend dialog stays open after failure or missing contact details and closes on success.
+Every manual resend creates a new notification attempt and can resend previously successful
+selected recipients. Verify an unconfirmed mNotify send in provider reports before trying again.
+Mobile retains its current workflow. No schema change or migration is needed.
+
 Call Center Assignment sets newly assigned arrived, returned, or follow-up parcels to **Awaiting
 Pickup** as a provisional customer pickup choice. Assignment and reassignment clear the separate
 call marker. An assigned parcel remains in the caller's web and mobile worklist while uncalled,

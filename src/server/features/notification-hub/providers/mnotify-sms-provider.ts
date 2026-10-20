@@ -15,6 +15,23 @@ function safeError(value: string, apiKey: string) {
     .slice(0, 500);
 }
 
+async function getHttpError(response: Response, apiKey: string) {
+  if (response.status >= 500) {
+    return `mNotify service error (HTTP ${response.status}). Delivery acceptance could not be confirmed. Check mNotify delivery reports before retrying.`;
+  }
+  let detail = '';
+  try {
+    const payload = await response.json();
+    detail = text(payload?.message);
+  } catch {
+    // HTML error pages are not useful delivery diagnostics and may contain scripts.
+  }
+  return safeError(
+    `mNotify API returned ${response.status}: ${detail || 'No JSON error details returned. Check the provider configuration or contact mNotify support.'}`,
+    apiKey,
+  );
+}
+
 export async function sendMnotifySms(
   input: {
     config: Record<string, unknown>;
@@ -39,7 +56,7 @@ export async function sendMnotifySms(
     url.searchParams.set('key', apiKey);
     const response = await request(url.toString(), {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify(
         buildMnotifySmsPayload({
           recipient: input.recipient,
@@ -53,10 +70,7 @@ export async function sendMnotifySms(
     if (!response.ok)
       return {
         status: 'failed',
-        errorMessage: safeError(
-          `mNotify API returned ${response.status}: ${await response.text()}`,
-          apiKey,
-        ),
+        errorMessage: await getHttpError(response, apiKey),
       };
     let payload: {
       code?: unknown;

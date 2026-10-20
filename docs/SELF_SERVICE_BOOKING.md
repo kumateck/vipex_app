@@ -148,6 +148,15 @@ Authenticated agents use permission-controlled routes to:
 7. Complete the draft into the normal parcel workflow.
 8. Print the resulting documents or recover through reprint if printing fails.
 
+Charge entry and self-service completion preserve the agent as creator and queue the parcel for
+sender-cashier confirmation; sticker printing does not confirm the financial transaction. When
+one of two cashiers at the same location confirms a paid, split, or fully To Be Paid parcel,
+that cashier's active session owns its report entry, including agent-created bookings. Creator
+and charge agent remain separate. No new completion input or client-side session selection is
+required. QA: complete on web/mobile, verify the pending parcel is absent from cashier reports,
+then confirm as the second cashier and verify only their session includes it. See
+[cashier ownership](CASHIER_PAYMENTS_AND_SHIFTS.md#confirmation-owns-the-to-be-paid-report).
+
 Reading drafts uses `CanReadSelfServiceBookings`. Claiming, completing, or cancelling uses `CanCompleteSelfServiceBookings`.
 
 Printing a branch entry QR code uses `CanPrintSelfServiceQrCode`. This permission is listed under
