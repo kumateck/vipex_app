@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ParcelReceiptPrintContent } from './parcel-receipt-print-content';
+import type { VerifiedStickerPayment } from '@/shared/printing';
 import type { ReceiptPrintData } from './parcel-receipt.types';
 
 const receipt: ReceiptPrintData = {
@@ -20,10 +21,20 @@ const receipt: ReceiptPrintData = {
   issuedAt: '2026-10-01T12:00:00.000Z',
 };
 
-function renderReceipt(data: ReceiptPrintData, isDuplicate = false) {
+function renderReceipt(
+  data: ReceiptPrintData,
+  isDuplicate = false,
+  payment: VerifiedStickerPayment | null = {
+    bookingCode: data.bookingCode,
+    trackingCode: data.trackingCode,
+    status: data.receiverToPayCedis > 0 ? 'TO BE PAID' : 'PAID',
+    amountCedis: data.receiverToPayCedis,
+  },
+) {
   return renderToStaticMarkup(
     <ParcelReceiptPrintContent
       data={data}
+      verifiedStickerPayment={payment}
       isDuplicate={isDuplicate}
       desktopStickerRef={createRef<HTMLDivElement>()}
       stickerRef={createRef<HTMLDivElement>()}
@@ -36,6 +47,28 @@ function renderReceipt(data: ReceiptPrintData, isDuplicate = false) {
 }
 
 describe('parcel sticker CS propagation', () => {
+  test.each([NaN, Infinity, -1])(
+    'rejects invalid receiver balances before printing: %s',
+    (amount) => {
+      expect(() => renderReceipt({ ...receipt, receiverToPayCedis: amount })).toThrow(
+        'Sticker payment amount',
+      );
+    },
+  );
+  test('renders no sticker when a legacy pending payload has no verified payment', () => {
+    const html = renderReceipt(
+      {
+        ...receipt,
+        receiverToPayCedis: 0,
+        stickerStatusLabel: 'PENDING' as ReceiptPrintData['stickerStatusLabel'],
+      },
+      true,
+      null,
+    );
+    expect(html).not.toContain('data-sticker-brand');
+    expect(html).not.toContain('>PENDING<');
+    expect(html).not.toContain('>PAID<');
+  });
   test('marks browser and desktop stickers while keeping receiver contacts', () => {
     const html = renderReceipt({ ...receipt, callSender: true });
     expect(html.match(/>CS<\/span>/g)).toHaveLength(2);

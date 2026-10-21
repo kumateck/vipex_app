@@ -15,6 +15,8 @@ export { useParcelCallNotificationResend } from './use-parcel-call-notification-
 export { useParcelStatusColumns } from './use-parcel-status-columns';
 export * from './use-receiver-cashier-table';
 export * from './use-parcel-print-completion';
+export { useParcelStickerVerification } from './use-parcel-sticker-verification';
+export { useParcelAutoPrint } from './use-parcel-auto-print';
 export * from './use-parcel-charge-agent-options';
 export { useBookingCustomerEdit } from './use-booking-customer-edit';
 export type { BookingCustomerEditFields } from './use-booking-customer-edit';

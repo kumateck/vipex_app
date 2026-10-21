@@ -8,9 +8,57 @@ Self-service completion retains a completed-booking panel on web, desktop and mo
 **Print Sticker** and a positive whole-number copy input. It prints only the saved parcel's sticker;
 retrying a print never resubmits completion. Web/desktop retain the shared sticker module/session
 gates and routing. Mobile retains print retry and a separate usage-log retry, and can retry loading
-destination names before printing. Self-service labels with no receiver amount show **PENDING** or
-**CREDIT**, since completion itself records no sender payment. See
-[Self-Service Booking](SELF_SERVICE_BOOKING.md#payment-and-printing) for workflow and QA scenarios.
+destination names before printing. Every sticker attempt verifies the saved parcel payment state
+with the server before opening a browser/phone print dialog or submitting a desktop print job.
+See [Self-Service Booking](SELF_SERVICE_BOOKING.md#payment-and-printing) for completion workflows.
+
+### Verified sticker payment status
+
+Only **PAID**, **TO BE PAID**, and **CREDIT** can be printed, on web, desktop and mobile. Unknown,
+missing, `PENDING`, and `UNPAID` states block printing; no status defaults to **PAID**. A form's
+selected payment option or planned sender contribution is not proof of payment.
+
+Each attempt requests `GET /v1/shipments/parcels/sticker-payment` with the saved booking and tracking
+codes. The server reads a consistent snapshot of the parcel, active non-credit principal payments
+(excluding voided payments), and its posted sender credit ledger. It returns:
+
+- **PAID** only when recorded sender and receiver principal payments exactly cover the charge.
+- **TO BE PAID** with the current receiver balance only when the saved receiver allocation is
+  positive and the sender's required contribution is already covered. An uncollected planned split
+  contribution blocks printing. Receiver payments reduce the amount; full settlement becomes PAID.
+- **CREDIT** only when the saved parcel uses credit and its matching sender/parcel credit ledger
+  entry covers the charge. Selecting credit without the posted entry is insufficient.
+
+Unpaid sender bookings, unconfirmed split contributions, missing/zero/invalid charges, overpayment,
+inconsistent amounts, missing credit approval, deleted/cancelled parcels and unavailable payment
+verification block sticker printing. Errors are visible and retry rechecks the server. There is no
+cached/offline fallback. A previous successful print does not authorize the next attempt. The
+returned identifiers must match the parcel being printed. Sticker markup is absent until verification
+succeeds; renderers also reject unknown status or inconsistent amount/status pairs.
+
+The endpoint requires authentication, a permitted booking/payment/reprint workflow, the same company
+and a source/destination branch (or company-wide parcel reader/head office), and the `sticker_print`
+company module. Mobile now enforces that company module through the same server check. Existing
+cashier-session and receipt-tax gates remain. Receipt-only printing follows its existing workflow.
+Verification creates no payment, booking, print-usage entry or handover; blocked attempts send no
+print job and no sticker usage log. Successfully printed mobile labels retain separate usage-log retry.
+
+Original, automatic, duplicate, sequential/parallel desktop and mobile printing all use this check.
+After payment is recorded, staff can retry from the completed-booking panel: fresh verification
+supplies the current status/receiver amount instead of the completion-time snapshot. Existing paper
+labels and older installed bundles cannot be changed by this code. Deploy the verification endpoint
+before the new web/desktop bundle and mobile build; an absent endpoint blocks updated clients.
+
+QA: print settled sender/receiver payments, full receiver-pay, settled split, and approved credit.
+Block unpaid sender completion, unsettled split, credit without ledger approval, zero/invalid charge,
+overpayment, unknown/legacy labels, deleted/cancelled and out-of-scope records, disabled module,
+network/server failure and mismatched identifiers. Void a payment between attempts and confirm the
+next attempt is blocked. Record the missing sender payment and retry without completing the booking
+again. Repeat browser, desktop original/duplicate/parallel and multiple mobile copies; verify no
+print job or usage log is created on failure and receiver balances/CS/QR remain correct on success.
+Automated coverage includes `parcel-sticker-payment.rules.test.ts`, `.service.test.ts`,
+`parcel-sticker-payment-route.spec.ts`, `sticker-payment.test.ts`,
+`thermal-sticker-template.test.tsx`, `sticker-html.test.ts` and completion sticker tests.
 
 When `callSender` is true, portrait and landscape parcel stickers print a prominent black-on-white
 `CS` mark beside the receiver block. Receiver name and phone remain visible. The mark is present

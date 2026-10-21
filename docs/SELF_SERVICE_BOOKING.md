@@ -304,8 +304,15 @@ Printing is manual, after the officer chooses the quantity. Web/desktop reuse th
 module and cashier-session print gates and desktop printer routing; mobile uses the phone's native
 print dialog. This action prints a sticker only and creates no invoice or payment. The label uses
 the corrected contacts, chosen destination, officer-entered parcel details and final CS choice.
-Receiver/split labels show the planned receiver amount; a sender-only label shows **PENDING** or
-**CREDIT**, never a paid receipt, because completion records no sender payment.
+Printing first verifies the current saved payment state. A full receiver-pay booking can print
+**TO BE PAID** with its balance. A split booking can print only after its sender contribution is
+recorded, or after full settlement. Sender pay-now completion is blocked until payment is recorded;
+approved credit requires a posted credit ledger entry. Only **PAID**, **TO BE PAID**, and **CREDIT**
+print. Unknown, missing, `PENDING` and `UNPAID` states never print. Verification/network failures
+leave the saved booking unchanged and permit retry; no print job or usage log is created. Every
+retry fetches fresh payment data, so recording payment then retrying in the completed panel uses
+the current state rather than the completion snapshot. Mobile also requires the `sticker_print`
+company module. See [Parcel Printing](PARCEL_PRINTING.md#verified-sticker-payment-status).
 
 Failed/cancelled printing leaves the completed panel available for another print attempt without
 calling completion again. Mobile blocks invalid/unsafe copy counts and printing until destination
@@ -346,7 +353,10 @@ is held in the current screen's memory; after leaving it, use the existing parce
   verify the officer's details survive. Open a second draft and confirm the details reset to blank.
 - Complete once on each client; print 1, 2 and 25 copies and verify the same saved tracking code,
   destination, backup phones, operational details and CS mark on every copy. Verify sender pay-now,
-  receiver, split and web credit labels; no sender payment or paid receipt is created by printing.
+  receiver, split and credit states. Block unpaid sender and unsettled split completion; record the
+  sender payment and retry without re-completing the draft. Only PAID, TO BE PAID with the current
+  receiver amount, and ledger-approved CREDIT may print. Legacy PENDING, missing state and failed
+  verification must open no print dialog or desktop job and create no usage log.
 - Cancel/fail the print and retry: the same booking remains, no second completion request is sent.
   On mobile, fail destination lookup and retry, then fail usage logging and retry only that log.
   Check disabled web sticker module and cashier-without-session print gates.

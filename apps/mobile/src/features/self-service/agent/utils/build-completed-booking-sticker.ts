@@ -23,7 +23,6 @@ export function buildCompletedBookingSticker(
     parcelDetails: input.parcelDetails,
     callSender: input.callSender ?? draft.callSender,
     amountCedis: payment.receiverToPayCedis,
-    paymentStatusLabel: payment.statusLabel,
     copies,
   };
 }

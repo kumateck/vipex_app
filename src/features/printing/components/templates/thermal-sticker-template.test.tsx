@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ThermalStickerTemplate } from './thermal-sticker-template';
+import type { ThermalStickerTemplateProps } from './thermal-sticker-template-types';
 
 const baseProps = {
   bookingCode: 'BOOKING-CODE-MUST-NOT-PRINT',
+  paymentStatusLabel: 'PAID' as const,
+  toBePaidCedis: 0,
   issuedAtLabel: '22 Sep 2026',
   parcelDetails: '1 parcel',
   parcelContent: 'Clothes',
@@ -19,35 +22,32 @@ const baseProps = {
 
 describe('ThermalStickerTemplate', () => {
   test.each(['portrait', 'landscape'] as const)(
-    'keeps unpaid completion %s labels pending',
+    'only renders known payment states in %s labels',
     (orientation) => {
-      const pending = renderToStaticMarkup(
-        <ThermalStickerTemplate
-          {...baseProps}
-          orientation={orientation}
-          paymentStatusLabel="PENDING"
-        />,
-      );
-      const credit = renderToStaticMarkup(
-        <ThermalStickerTemplate
-          {...baseProps}
-          orientation={orientation}
-          paymentStatusLabel="CREDIT"
-        />,
-      );
-      const receiver = renderToStaticMarkup(
-        <ThermalStickerTemplate
-          {...baseProps}
-          orientation={orientation}
-          paymentStatusLabel="PENDING"
-          toBePaidCedis={30}
-        />,
-      );
-      expect(pending).toContain('PENDING');
-      expect(pending).not.toContain('>PAID<');
-      expect(credit).toContain('CREDIT');
-      expect(receiver).toContain('TO BE PAID');
-      expect(receiver).toContain('GHS 30.00');
+      for (const status of ['PAID', 'CREDIT', 'TO BE PAID'] as const) {
+        const markup = renderToStaticMarkup(
+          <ThermalStickerTemplate
+            {...baseProps}
+            orientation={orientation}
+            paymentStatusLabel={status}
+            toBePaidCedis={status === 'TO BE PAID' ? 30 : 0}
+          />,
+        );
+        expect(markup).toContain(`>${status}<`);
+        expect(markup).not.toContain('PENDING');
+        if (status === 'TO BE PAID') expect(markup).toContain('GHS 30.00');
+      }
+      for (const status of ['PENDING', 'UNPAID', undefined]) {
+        expect(() =>
+          renderToStaticMarkup(
+            <ThermalStickerTemplate
+              {...baseProps}
+              orientation={orientation}
+              paymentStatusLabel={status as ThermalStickerTemplateProps['paymentStatusLabel']}
+            />,
+          ),
+        ).toThrow('requires a verified');
+      }
     },
   );
   test.each(['portrait', 'landscape'] as const)(

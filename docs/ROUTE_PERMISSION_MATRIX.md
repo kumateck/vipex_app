@@ -1,5 +1,12 @@
 # Route Permission Matrix
 
+Sticker payment verification (`GET /v1/shipments/parcels/sticker-payment`) accepts any existing
+booking-create, self-service-complete, sender-payment, receiver-payment, consignment-read,
+outgoing-parcel-read, or parcel-read permission. It additionally requires the `sticker_print` module
+and authenticated company/source-or-destination scope (company-wide parcel readers/head office
+may verify other branches in the same company). No new permission is granted automatically.
+See [API scope and rejection rules](api/IDENTITY_AND_OPERATIONS.md#sticker-payment-verification).
+
 Last generated: 2026-10-17
 
 `/customer-messages` requires `CanReadCustomerMessages`; handling changes additionally
