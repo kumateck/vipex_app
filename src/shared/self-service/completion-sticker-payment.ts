@@ -14,6 +14,5 @@ export function getSelfServiceStickerPayment(input: CompletionPayment) {
       : input.paymentResponsibility === 'SPLIT'
         ? Math.max(charge - Number(input.senderPartialPaymentCedis ?? 0), 0)
         : 0;
-  const statusLabel = input.senderSettlementMode === 'CREDIT' ? 'CREDIT' : 'PENDING';
-  return { receiverToPayCedis, statusLabel } as const;
+  return { receiverToPayCedis } as const;
 }

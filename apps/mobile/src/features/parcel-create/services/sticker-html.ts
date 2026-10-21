@@ -1,4 +1,5 @@
 import qrcode from 'qrcode-generator';
+import { resolveStickerPayment, type StickerPaymentStatus } from '@/shared/printing';
 import stickerLogo from './sticker-logo-data-uri.json';
 
 export type MobileSticker = {
@@ -13,7 +14,7 @@ export type MobileSticker = {
   parcelDetails: string;
   amountCedis: number;
   callSender?: boolean;
-  paymentStatusLabel?: 'PENDING' | 'CREDIT';
+  paymentStatusLabel?: StickerPaymentStatus;
   copies: number;
 };
 
@@ -83,8 +84,10 @@ export function buildMobileStickerHtml(sticker: MobileSticker) {
   if (!Number.isSafeInteger(copies) || copies < 1)
     throw new Error('Sticker copies must be a positive whole number');
   const display = (value: string) => escapeHtml(value.trim() || '-');
-  const hasReceiverPayment = !sticker.paymentStatusLabel || sticker.amountCedis > 0;
-  const paymentLabel = hasReceiverPayment ? 'TO BE PAID' : sticker.paymentStatusLabel;
+  const { hasToBePaid: hasReceiverPayment, statusLabel: paymentLabel } = resolveStickerPayment(
+    sticker.amountCedis,
+    sticker.paymentStatusLabel,
+  );
   const row = (label: string, value: string) =>
     `<div class="row"><div class="label">${label}</div><div class="value" style="font-size:${valueFontSize(value, true)}">${display(value)}</div></div>`;
   const destination = (label: string, value: string, large = false) =>

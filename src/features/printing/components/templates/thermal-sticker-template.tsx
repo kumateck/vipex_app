@@ -1,3 +1,4 @@
+import { resolveStickerPayment } from '@/shared/printing';
 import { ThermalStickerLandscapeTemplate } from './thermal-sticker-landscape-template';
 import { ThermalStickerPortraitTemplate } from './thermal-sticker-portrait-template';
 import type { ThermalStickerTemplateProps } from './thermal-sticker-template-types';
@@ -26,9 +27,11 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
     formatMoney,
     orientation = 'portrait',
   } = props;
-  const hasToBePaid = typeof toBePaidCedis === 'number' && toBePaidCedis > 0;
-  const statusLabel = hasToBePaid ? 'TO BE PAID' : (props.paymentStatusLabel ?? 'PAID');
-  const statusAmountLabel = hasToBePaid ? formatMoney(toBePaidCedis) : undefined;
+  const { hasToBePaid, statusLabel } = resolveStickerPayment(
+    toBePaidCedis,
+    props.paymentStatusLabel,
+  );
+  const statusAmountLabel = hasToBePaid ? formatMoney(toBePaidCedis ?? 0) : undefined;
   const senderTelephones = formatTelephones(senderTelephone, senderTelephone2);
   const receiverTelephones = formatTelephones(receiverTelephone, receiverTelephone2);
   const templateProps = {

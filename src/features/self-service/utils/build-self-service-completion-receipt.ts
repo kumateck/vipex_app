@@ -39,7 +39,6 @@ export function buildSelfServiceCompletionReceipt({
     totalChargeCedis: Number(input.chargeCedis),
     senderPaidCedis: 0,
     receiverToPayCedis: payment.receiverToPayCedis,
-    stickerStatusLabel: payment.statusLabel,
     issuedAt: new Date().toISOString(),
   };
 }

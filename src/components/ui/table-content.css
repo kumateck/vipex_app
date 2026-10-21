@@ -1,0 +1,50 @@
+/* Apply the same readable content policy to shared and plain application tables. */
+@media screen {
+  table:not([data-slot='calendar'] *) > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  table:not([data-slot='calendar'] *) > :is(thead, tbody, tfoot) > tr > :is(th, td):not([colspan]) {
+    max-width: 24rem;
+  }
+
+  table:not([data-slot='calendar'] *)
+    > :is(thead, tbody, tfoot)
+    > tr
+    > :is(th, td):not([colspan])
+    > :is(div, p, span, a) {
+    max-width: 24rem;
+  }
+
+  table:not([data-slot='calendar'] *)
+    > :is(thead, tbody, tfoot)
+    > tr
+    > :is(th, td):not([colspan])
+    :is(div, p, span, a):not(
+      .whitespace-pre-wrap,
+      .whitespace-pre-line,
+      button *,
+      [role='button'] *,
+      [role='combobox'] *
+    ) {
+    min-width: 0;
+    white-space: inherit;
+    overflow-wrap: anywhere;
+  }
+
+  table:not([data-slot='calendar'] *)
+    > :is(thead, tbody, tfoot)
+    > tr
+    :is(th, td):not([colspan]):is(.truncate, [class*='line-clamp-']),
+  table:not([data-slot='calendar'] *)
+    > :is(thead, tbody, tfoot)
+    > tr
+    > :is(th, td):not([colspan])
+    :is(.truncate, [class*='line-clamp-']):not(button *, [role='button'] *, [role='combobox'] *) {
+    overflow: visible;
+    text-overflow: clip;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+  }
+}

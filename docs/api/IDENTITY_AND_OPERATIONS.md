@@ -90,6 +90,29 @@ authorization. Web and mobile use the same endpoints.
 
 - `/shipments/bookings`: booking creation and query, including booking-with-parcels operations.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
+
+### Sticker payment verification
+
+`GET /v1/shipments/parcels/sticker-payment?bookingCode=...&trackingCode=...` returns
+`{ bookingCode, trackingCode, status, amountCedis }` with `Cache-Control: no-store`.
+Both identifiers are required (1–255 characters). `status` is only `PAID`, `TO BE PAID`, or `CREDIT`;
+`amountCedis` is positive only for `TO BE PAID`, otherwise zero. This endpoint is read-only.
+
+Authentication and any of `CanCreateBookingWithParcels`, `CanCompleteSelfServiceBookings`,
+`CanCreateSenderPayments`, `CanCreateReceiverPayments`, `CanReadConsignments`,
+`CanReadParcelOutgoing`, or `CanReadParcels` are required. Scope is the authenticated company and
+source/destination branch, or company-wide parcel-read/head-office access. The `sticker_print`
+module must be enabled. Missing/inaccessible/deleted/cancelled parcels return 404, missing
+permission or disabled module returns 403, and an unconfirmed/inconsistent payment state returns 409. Verification failure blocks all updated-client sticker print paths without a cached fallback.
+
+PAID requires recorded non-void principal payments to equal the charge. TO BE PAID requires a
+confirmed receiver allocation and a covered sender share; the amount reflects remaining principal.
+CREDIT requires a matching posted sender/parcel credit ledger entry and saved credit method.
+Unknown/missing/zero charges, unpaid sender shares, overpayment and credit without ledger approval
+are rejected. Verification excludes delivery/storage fees, creates no financial record or print log,
+and does not authorize handover. See [Parcel Printing](../PARCEL_PRINTING.md#verified-sticker-payment-status)
+for client deployment order and QA scenarios.
+
 - `POST /deliveries/dd/:parcelId/rider-given`: requires `CanCompleteDoorstepDelivery` and an
   assigned, Dispatched parcel with no pending delivery change/reconciliation block. Mobile sends
   `handoverTarget: "main" | "second"`; second requires the currently linked `secondReceiverId`.
