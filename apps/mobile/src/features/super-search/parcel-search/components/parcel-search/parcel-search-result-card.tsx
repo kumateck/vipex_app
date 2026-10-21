@@ -75,7 +75,7 @@ export function ParcelSearchResultCard({
 
       <View style={styles.metaRow}>
         <Ionicons name="cube-outline" size={16} color={theme.colors.textSubtle} />
-        <Text numberOfLines={2} style={[styles.meta, { color: theme.colors.textMuted }]}>
+        <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
           {parcel.parcelDetails || 'No parcel description'}
         </Text>
         {cancelled || parcel.isDeleted ? (

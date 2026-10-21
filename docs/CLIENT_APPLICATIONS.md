@@ -28,6 +28,20 @@ The web client contains the complete sidebar workspace and feature modules. It u
 
 Pages are thin route wrappers. Feature UI, hooks, services, types, and dialogs live in their domain feature folders according to `AGENTS.md`.
 
+Screen tables share `src/components/ui/table-content.css`, loaded by the application stylesheet.
+Shared DataTables and plain HTML tables wrap long cell/header text at a maximum content width of
+24rem, including unbroken words and nested text previously using single-line or line-clamp styles.
+Rows expand instead of clipping content. Narrower location columns retain their existing widths.
+This applies across web and Electron modules; it does not change data, APIs, validation, or access.
+Controls keep their own labels, colspan loading/empty rows keep their full width, calendar day
+grids are excluded, and the rules apply only to screen media so print templates retain their layout.
+
+QA: follow the same long parcel description across booking, transit, receiving, call outcomes,
+pickup/cashier, delivery and search. Check long names/notes in other modules and plain inventory
+tables at narrow and wide widths, including unbroken text, nested truncation, badges, actions,
+empty/loading rows, numeric alignment, calendar navigation and print preview. Mobile descriptions
+use native text wrapping; Super Search descriptions and Queue Management values have no line cap.
+
 The web and Electron routers use `src/routes/generated.tsx`, generated from the page wrappers
 under `src/pages`. Adding a page or sidebar link requires regenerating this router; an outdated
 router produces **404 · Not Found** even when the page source exists. `bun run dev:web` now

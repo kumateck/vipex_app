@@ -26,9 +26,7 @@ export function QueueDetailRow({
     >
       <Text style={[styles.label, { color: theme.colors.textSubtle }]}>{label}</Text>
       {primitive ? (
-        <Text style={[styles.value, { color: theme.colors.text }]} numberOfLines={2}>
-          {value}
-        </Text>
+        <Text style={[styles.value, { color: theme.colors.text }]}>{value}</Text>
       ) : (
         <View style={styles.valueWrap}>{value}</View>
       )}

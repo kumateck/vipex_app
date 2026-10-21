@@ -9,6 +9,7 @@ type UseParcelDesktopStickerPrintParams = {
   trackingCode: string;
   canPrintStickerViaDesktop: boolean;
   stickerRef: RefObject<HTMLDivElement | null>;
+  verifyPayment: () => Promise<boolean>;
 };
 
 export function useParcelDesktopStickerPrint({
@@ -16,11 +17,13 @@ export function useParcelDesktopStickerPrint({
   trackingCode,
   canPrintStickerViaDesktop,
   stickerRef,
+  verifyPayment,
 }: UseParcelDesktopStickerPrintParams) {
   const [logStickerPrint] = useLogParcelStickerPrintMutation();
   return useCallback(
     async (copies: number) => {
       if (!canPrintStickerViaDesktop) return false;
+      if (!(await verifyPayment())) return false;
 
       const stickerNode = stickerRef.current;
       if (!stickerNode) return false;
@@ -63,6 +66,13 @@ export function useParcelDesktopStickerPrint({
 
       return result.ok;
     },
-    [bookingCode, canPrintStickerViaDesktop, logStickerPrint, stickerRef, trackingCode],
+    [
+      bookingCode,
+      canPrintStickerViaDesktop,
+      logStickerPrint,
+      stickerRef,
+      trackingCode,
+      verifyPayment,
+    ],
   );
 }

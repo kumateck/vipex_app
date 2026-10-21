@@ -4,6 +4,28 @@
 
 Parcel operations cover booking, parcel creation, payment responsibility, physical movement, custody transfer, receiving, pickup, delivery, and exception handling.
 
+### Long Parcel Text Across Workflows
+
+On web and desktop, all application tables wrap long text within columns bounded to 24rem.
+This shared display policy follows parcel details/content through booking, consignments, transit,
+receiving, call outcomes, shelf assignment, pickup, cashier, delivery, search, and reports, including
+plain HTML tables. Existing narrower location columns are retained. Nested single-line and clipped
+text also wraps, including words without spaces; rows grow to display the complete value. Calendar
+day grids and printed document layouts keep their existing sizing. Empty-value placeholders,
+stored data, permissions, and processing rules are unchanged.
+
+Mobile parcel cards normally wrap descriptions. Super Search descriptions and Queue Management
+detail values now also grow without a line limit.
+
+QA checklist:
+
+- Check a short description and the existing empty-value placeholders.
+- Follow a parcel with a long contents list through the workflows above. Also check a long word
+  without spaces: all text must remain visible without widening its column or overlapping others.
+- Repeat in narrow and wide web/desktop windows, including plain tables and nested text previously
+  truncated. Confirm selection, actions, numeric values, location wrapping, calendar day grids, and
+  print previews still work. Repeat long descriptions in mobile search and queue details.
+
 ### Agent Who Charged the Parcel
 
 Staff select **Agent who charged the parcel** for each parcel while entering its charge. Web,

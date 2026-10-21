@@ -4,9 +4,11 @@ import type { ReceiptPrintData } from './parcel-receipt.types';
 import { buildParcelStickerQrValue } from '../utils/tracking-url';
 import { formatDate, formatMoney } from './parcel-receipt-formatters';
 import { buildInvoiceA5Props } from '../utils/build-invoice-a5-props';
+import { assertVerifiedStickerPayment, type VerifiedStickerPayment } from '@/shared/printing';
 
 type ParcelReceiptPrintContentProps = {
   data: ReceiptPrintData;
+  verifiedStickerPayment?: VerifiedStickerPayment | null;
   desktopStickerRef: RefObject<HTMLDivElement | null>;
   stickerRef: RefObject<HTMLDivElement | null>;
   invoiceRef: RefObject<HTMLDivElement | null>;
@@ -29,6 +31,7 @@ type ParcelReceiptPrintContentProps = {
 
 export function ParcelReceiptPrintContent({
   data,
+  verifiedStickerPayment,
   desktopStickerRef,
   stickerRef,
   invoiceRef,
@@ -42,6 +45,9 @@ export function ParcelReceiptPrintContent({
   isDuplicate = false,
 }: ParcelReceiptPrintContentProps) {
   const copies = Math.max(Math.trunc(stickerCopies), 1);
+  const payment = verifiedStickerPayment
+    ? assertVerifiedStickerPayment(verifiedStickerPayment, data)
+    : null;
   const stickerTemplateProps = {
     bookingCode: data.bookingCode,
     duplicate: isDuplicate,
@@ -58,10 +64,10 @@ export function ParcelReceiptPrintContent({
     receiverTelephone: data.receiverTelephone,
     receiverTelephone2: data.receiverTelephone2,
     callSender: data.callSender,
-    paymentStatusLabel: data.stickerStatusLabel,
+    paymentStatusLabel: payment?.status,
     destinationBranchName: data.destinationBranchName,
     destinationLocationName: data.destinationLocationName,
-    toBePaidCedis: data.receiverToPayCedis > 0 ? data.receiverToPayCedis : undefined,
+    toBePaidCedis: payment?.amountCedis,
     qrValue: buildParcelStickerQrValue(data.trackingCode),
     formatMoney,
   };
@@ -70,20 +76,22 @@ export function ParcelReceiptPrintContent({
     <>
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '100mm' }}>
         <div ref={stickerRef}>
-          {Array.from({ length: copies }, (_, index) => (
-            <div
-              key={`${data.trackingCode}-${index}`}
-              style={{ breakAfter: index === copies - 1 ? 'auto' : 'page' }}
-            >
-              <ThermalStickerTemplate {...stickerTemplateProps} />
-            </div>
-          ))}
+          {payment
+            ? Array.from({ length: copies }, (_, index) => (
+                <div
+                  key={`${data.trackingCode}-${index}`}
+                  style={{ breakAfter: index === copies - 1 ? 'auto' : 'page' }}
+                >
+                  <ThermalStickerTemplate {...stickerTemplateProps} />
+                </div>
+              ))
+            : null}
         </div>
       </div>
 
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '100mm' }}>
         <div ref={desktopStickerRef}>
-          <ThermalStickerTemplate {...stickerTemplateProps} />
+          {payment ? <ThermalStickerTemplate {...stickerTemplateProps} /> : null}
         </div>
       </div>
 

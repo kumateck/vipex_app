@@ -22,8 +22,8 @@ export function SelfServiceCompletedBooking({
       </Text>
       <Text style={muted}>Tracking: {completed.result.parcels[0]?.trackingCode ?? '-'}</Text>
       <Text style={muted}>
-        Print a sticker for this saved booking. Payment and cashier processing continue through the
-        usual workflow.
+        Printing checks the saved payment status. Record any required sender payment first, then
+        retry for this saved booking.
       </Text>
       <AppLabel>Sticker copies</AppLabel>
       <AppInput value={print.copies} onChangeText={print.setCopies} keyboardType="number-pad" />

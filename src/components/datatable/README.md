@@ -2,6 +2,11 @@
 
 Reusable table component built with `shadcn/ui` + `@tanstack/react-table`.
 
+Screen cells use the application-wide wrapping policy in `src/components/ui/table-content.css`.
+Long content, unbroken words, nested single-line text, and clamped previews wrap without hiding
+values; rows expand. Content is bounded to 24rem, with existing narrower location widths retained.
+The same policy covers plain HTML tables. Calendar grids and print layouts are excluded.
+
 ## Modes
 
 - `server`: uses backend pagination (`page`, `pageSize`, `sort`, `search`, `filters`) and expects `meta`.

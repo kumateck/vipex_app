@@ -1,3 +1,5 @@
+import type { StickerPaymentStatus } from '@/shared/printing';
+
 export type ThermalStickerOrientation = 'landscape' | 'portrait';
 
 export type ThermalStickerTemplateProps = {
@@ -19,7 +21,7 @@ export type ThermalStickerTemplateProps = {
   destinationBranchName: string;
   destinationLocationName: string;
   toBePaidCedis?: number;
-  paymentStatusLabel?: 'PENDING' | 'CREDIT';
+  paymentStatusLabel?: StickerPaymentStatus;
   qrValue: string;
   formatMoney: (amount: number) => string;
   orientation?: ThermalStickerOrientation;

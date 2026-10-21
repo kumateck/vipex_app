@@ -27,7 +27,7 @@ export function SelfServiceCompletedBooking({
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Choose the sticker copies and print. If printing fails, retry here for this saved booking.
-          Payment and cashier processing continue through the usual workflow.
+          Printing verifies the saved payment status. Record any required sender payment first.
         </p>
         <Suspense fallback={<p className="text-sm">Loading sticker controls...</p>}>
           <ParcelStickerActions data={receipt} stickerOnly />

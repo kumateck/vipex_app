@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
 import { PAGE_STYLES } from '@/features/printing/constants/page-styles';
@@ -9,6 +9,8 @@ import {
   useParcelReceiptTax,
   useStickerPrintModule,
   useParcelPrintCompletion,
+  useParcelStickerVerification,
+  useParcelAutoPrint,
 } from '../hooks';
 import { buildParcelTrackingUrl } from '../utils/tracking-url';
 import {
@@ -55,7 +57,7 @@ export function ParcelReceiptActions({
   const stickerRef = useRef<HTMLDivElement>(null);
   const desktopStickerRef = useRef<HTMLDivElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
-  const hasAutoPrinted = useRef(false);
+  const verification = useParcelStickerVerification(data.bookingCode, data.trackingCode);
   const [queueInvoiceAfterSticker, setQueueInvoiceAfterSticker] = useState(false);
   const [selectedStickerCopies, setSelectedStickerCopies] = useState(() =>
     normalizeStickerCopies(stickerCopies),
@@ -77,7 +79,7 @@ export function ParcelReceiptActions({
       onAutoPrintComplete?.();
     },
   });
-  const printSticker = useManagedReactPrint({
+  const printStickerDocument = useManagedReactPrint({
     contentRef: stickerRef,
     documentTitle: `sticker-${data.bookingCode}`,
     pageStyle: PAGE_STYLES['thermal-sticker'],
@@ -97,11 +99,23 @@ export function ParcelReceiptActions({
       }, 120);
     },
   });
+  const printSticker = useCallback(
+    async (withInvoice = false) => {
+      if (!(await verification.verify())) {
+        onPrintComplete?.();
+        return;
+      }
+      setQueueInvoiceAfterSticker(withInvoice);
+      printStickerDocument();
+    },
+    [verification.verify, printStickerDocument, onPrintComplete],
+  );
   const printStickerViaDesktop = useParcelDesktopStickerPrint({
     bookingCode: data.bookingCode,
     trackingCode: data.trackingCode,
     canPrintStickerViaDesktop,
     stickerRef: desktopStickerRef,
+    verifyPayment: verification.verify,
   });
   const printInvoiceViaDesktop = useParcelDesktopInvoicePrint({
     bookingCode: data.bookingCode,
@@ -120,8 +134,9 @@ export function ParcelReceiptActions({
       return;
     }
     if (canPrintStickerViaDesktop) {
-      void printStickerViaDesktop(selectedStickerCopies).then(() => {
-        onAutoPrintComplete?.();
+      void printStickerViaDesktop(selectedStickerCopies).then((printed) => {
+        if (printed) onAutoPrintComplete?.();
+        else onPrintComplete?.();
       });
       return;
     }
@@ -134,6 +149,7 @@ export function ParcelReceiptActions({
     printSticker,
     printStickerViaDesktop,
     selectedStickerCopies,
+    onPrintComplete,
   ]);
   const handlePrintBoth = useCallback(() => {
     if (missingPaidTax) {
@@ -164,18 +180,20 @@ export function ParcelReceiptActions({
     }
     if (canPrintStickerViaDesktop) {
       void printStickerViaDesktop(selectedStickerCopies).then(async (printed) => {
-        if (printed) await printInvoiceViaDesktop();
-        onAutoPrintComplete?.();
+        if (printed) {
+          await printInvoiceViaDesktop();
+          onAutoPrintComplete?.();
+        } else onPrintComplete?.();
       });
       return;
     }
-    setQueueInvoiceAfterSticker(true);
-    void printSticker();
+    void printSticker(true);
   }, [
     canPrintForSession,
     canPrintInvoiceViaDesktop,
     canPrintStickerViaDesktop,
     handlePrintStickerOnly,
+    onPrintComplete,
     hasPrintableReceipt,
     isStickerPrintEnabled,
     missingPaidTax,
@@ -187,6 +205,7 @@ export function ParcelReceiptActions({
     selectedStickerCopies,
   ]);
   const handlePrintBothParallelDesktop = useParcelDesktopParallelPrint({
+    onPrintBlocked: onPrintComplete,
     bookingCode: data.bookingCode,
     trackingCode: data.trackingCode,
     canPrintForSession,
@@ -196,6 +215,7 @@ export function ParcelReceiptActions({
     mode,
     onAutoPrintComplete,
     stickerRef: desktopStickerRef,
+    verifyPayment: verification.verify,
     stickerCopies: selectedStickerCopies,
   });
   const handlePrintInvoiceOnly = useParcelInvoicePrintAction({
@@ -206,47 +226,22 @@ export function ParcelReceiptActions({
     printInvoice,
     printInvoiceViaDesktop,
   });
-  useEffect(() => {
-    if (
-      !autoPrint ||
-      hasAutoPrinted.current ||
-      isLoadingActiveSession ||
-      isLoadingStickerPrintModule ||
-      !canPrintForSession
-    ) {
-      return;
-    }
-    hasAutoPrinted.current = true;
-    if (autoPrintSelection === 'sticker') {
-      handlePrintStickerOnly();
-      return;
-    }
-    if (autoPrintSelection === 'invoice') {
-      handlePrintInvoiceOnly();
-      return;
-    }
-    void (async () => {
-      const ranParallel = await handlePrintBothParallelDesktop();
-      if (!ranParallel) {
-        handlePrintBoth();
-      }
-    })();
-  }, [
+  useParcelAutoPrint({
     autoPrint,
-    autoPrintSelection,
+    selection: autoPrintSelection,
+    loading: isLoadingActiveSession || isLoadingStickerPrintModule,
     canPrintForSession,
-    handlePrintBoth,
-    handlePrintBothParallelDesktop,
-    handlePrintInvoiceOnly,
-    handlePrintStickerOnly,
-    isLoadingActiveSession,
-    isLoadingStickerPrintModule,
-  ]);
+    printSticker: handlePrintStickerOnly,
+    printInvoice: handlePrintInvoiceOnly,
+    printBoth: handlePrintBoth,
+    printParallel: handlePrintBothParallelDesktop,
+  });
   const amountPaidCedis = data.amountPaidCedis ?? data.senderPaidCedis;
   return (
     <>
       <ParcelReceiptPrintContent
         data={data}
+        verifiedStickerPayment={verification.payment}
         desktopStickerRef={desktopStickerRef}
         stickerRef={stickerRef}
         invoiceRef={invoiceRef}
@@ -270,7 +265,9 @@ export function ParcelReceiptActions({
       <ParcelReceiptPrintControls
         autoPrint={autoPrint}
         canPrintForSession={canPrintForSession}
-        isLoading={isLoadingActiveSession || isLoadingStickerPrintModule}
+        isLoading={
+          isLoadingActiveSession || isLoadingStickerPrintModule || verification.isVerifying
+        }
         hasPrintableReceipt={hasPrintableReceipt}
         isStickerPrintEnabled={isStickerPrintEnabled}
         showSelectionMenu={showSelectionMenu}

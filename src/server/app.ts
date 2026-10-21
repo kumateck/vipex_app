@@ -68,6 +68,7 @@ import { startSelfServiceDraftExpirySweep } from './features/self-service/expiry
 import { publicContactRoutes, customerContactRoutes } from './features/public-contact';
 import { publicTrackingRoutes } from './features/public-tracking/public-tracking.routes';
 import { receiptReprintRoutes } from './features/receipt-reprint/receipt-reprint.routes';
+import { parcelStickerPaymentRoutes } from './features/shipments/parcel-sticker-payment.routes';
 import { whatsappMessagingRoutes, whatsappWebhookRoutes } from './features/whatsapp-messaging';
 import { digitalReceiptRoutes, publicReceiptRoutes } from './features/digital-receipts';
 
@@ -85,6 +86,7 @@ export const app = new Elysia()
   .use(publicTrackingRoutes)
   .use(publicContactRoutes)
   .use(receiptReprintRoutes)
+  .use(parcelStickerPaymentRoutes)
   .use(whatsappWebhookRoutes)
   .use(publicReceiptRoutes)
   // Mount dev routes BEFORE any catch-all

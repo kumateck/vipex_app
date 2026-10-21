@@ -1,8 +1,14 @@
 import { useState } from 'react';
+import { withVerifiedStickerPayment } from '@/shared/printing';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
-import { logParcelSticker, printParcelSticker, type MobileSticker } from '../services';
+import {
+  logParcelSticker,
+  printParcelSticker,
+  verifyMobileStickerPayment,
+  type MobileSticker,
+} from '../services';
 
 export function useMobileStickerPrint() {
   const { withAuth } = useAuth();
@@ -25,7 +31,11 @@ export function useMobileStickerPrint() {
   const print = async (sticker: MobileSticker) => {
     setPendingSticker(sticker);
     try {
-      await printParcelSticker(sticker);
+      await withVerifiedStickerPayment(
+        sticker,
+        () => withAuth((token) => verifyMobileStickerPayment(token, sticker)),
+        (payment) => printParcelSticker(sticker, payment),
+      );
       setPendingSticker(null);
       return recordPrint(sticker);
     } catch (error) {
