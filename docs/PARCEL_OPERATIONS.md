@@ -1155,6 +1155,10 @@ remaining principal, even when `plannedToBePaidPsw` has already been reduced; fu
 prints PAID. Approved credit prints CREDIT. These rules are shared by creation receipts, Sender
 Payments, Consignments and outgoing In Transit print actions. Receipt-only jobs do not require
 sticker verification; a sticker error in a combined job does not cancel a valid receipt.
+Previously confirmed parcels also reprint from their existing recorded settlement, including
+historical confirmations with no `processedBy`. The verifier's payment/credit query explicitly
+correlates totals to the parcel and company; it must not read a valid saved collection as zero.
+This query fix requires no repayment, reconfirmation, or financial-record backfill.
 See [Parcel Printing](PARCEL_PRINTING.md#verified-sticker-payment-status) for failures and QA.
 
 Storage settlement uses the parcel's persisted `receivedAt` timestamp. For legacy parcels where
