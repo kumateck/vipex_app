@@ -30,9 +30,10 @@ export function DeliveryCashierSecondReceivers() {
             }}
           >
             <Input
+              aria-label="Search upcoming handovers"
               value={state.search}
               onChange={(event) => state.setSearch(event.target.value)}
-              placeholder="Search booking, tracking or receiver"
+              placeholder="Search booking, tracking, sender or receiver name/phone"
             />
             <Button type="submit">Search</Button>
           </form>
@@ -45,6 +46,7 @@ export function DeliveryCashierSecondReceivers() {
             </p>
           ) : null}
           <DataTable
+            className="[&_table]:min-w-7xl [&_td]:align-top"
             mode="server"
             data={state.list.currentData?.data ?? []}
             columns={columns}

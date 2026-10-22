@@ -122,7 +122,16 @@ and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md)
 2. Rider:
    - Search parcel
    - Open details
-   - Cashier with `CanManageParcelSecondReceiver`: on web Delivery Cashier, search an Address
+   - On web/desktop Delivery Cashier, verify **Finalization** opens by default and only one queue
+     is visible. Switch tabs by pointer and keyboard; verify search, pagination, finalization and
+     Return to Pickup. Without `CanManageParcelSecondReceiver`, verify **Upcoming Handovers** is
+     absent. Check tab labels and table scrolling on narrow and desktop widths.
+   - In **Upcoming Handovers**, compare grouped reference, sender/main/second receiver names and
+     both phones, details/content, delivery address, route, rider, fees, payments and dates with
+     Super Search/parcel details. Check missing values, invalid dates, zero fees and long text;
+     **View Details** must open the selected parcel. Finalization remains the first/default tab.
+   - Cashier with `CanManageParcelSecondReceiver`: open Delivery Cashier → **Upcoming Handovers**
+     on web/desktop, search an Address
      Collected/Dispatched booking; add, replace and remove a second receiver. Verify same-company
      phone reuse, ten-digit/name validation, main receiver rejection and destination-branch scope.
    - Refresh mobile Assigned Deliveries and confirm saved second name/phone appears. Select main

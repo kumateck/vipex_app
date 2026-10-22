@@ -41,6 +41,11 @@ the drop-in `ViewParcelDetailsMenuItem` / `ViewParcelDetailsButton`.
 Rows that represent consignments or transfers rather than parcels (Incoming Consignments, Previous
 Consignments, Internal Transfer lists) have no row action; their parcel lists do.
 
+Delivery Cashier → **Upcoming Handovers** also offers a **View Details** button in each row,
+next to the second-receiver action. It opens this same dialog for the selected parcel; the
+Finalization tab keeps its existing row-menu entry. QA: verify each entry opens its selected
+parcel and closing details returns to the current cashier tab.
+
 ## Layout
 
 The dialog is up to 1280px wide (96% of the viewport on smaller screens). Fields are laid out in two
