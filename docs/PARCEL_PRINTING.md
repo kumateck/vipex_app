@@ -18,32 +18,48 @@ Only **PAID**, **TO BE PAID**, and **CREDIT** can be printed, on web, desktop an
 missing, `PENDING`, and `UNPAID` states block printing; no status defaults to **PAID**. A form's
 selected payment option or planned sender contribution is not proof of payment.
 
-Each attempt requests `GET /v1/shipments/parcels/sticker-payment` with the saved booking and tracking
-codes. The server reads a consistent snapshot of the parcel, active non-credit principal payments
+After **Collect Payment** or sender confirmation succeeds on Sender Payments or the creation
+payment dialog, the first sticker/receipt print uses that completed cashier transaction. It does
+not issue a second payment-verification request. A failed collection never supplies this
+confirmation; selecting a payment option or clicking the button before success does not authorize
+printing. Full sender settlement prints PAID; a confirmed receiver balance prints TO BE PAID.
+
+Initial bookings without a completed cashier transaction and all sticker reprints request
+`GET /v1/shipments/parcels/sticker-payment` with the saved booking and tracking codes. This includes
+Consignments, outgoing In Transit, and manual duplicates from the creation receipts panel. The
+server reads a consistent snapshot of the parcel, active non-credit principal payments
 (excluding voided payments), and its posted sender credit ledger. It returns:
 
 - **PAID** only when recorded sender and receiver principal payments exactly cover the charge.
 - **TO BE PAID** with the current receiver balance only when the saved receiver allocation is
-  positive and the sender's required contribution is already covered. An uncollected planned split
-  contribution blocks printing. Receiver payments reduce the amount; full settlement becomes PAID.
+  positive and covers the outstanding principal. An uncollected planned split contribution blocks
+  printing. The persisted allocation may already be the remaining balance after payment; it is
+  not treated as the original split to recompute a sender shortfall. Receiver payments reduce the
+  amount; full settlement becomes PAID.
 - **CREDIT** only when the saved parcel uses credit and its matching sender/parcel credit ledger
   entry covers the charge. Selecting credit without the posted entry is insufficient.
 
 Unpaid sender bookings, unconfirmed split contributions, missing/zero/invalid charges, overpayment,
 inconsistent amounts, missing credit approval, deleted/cancelled parcels and unavailable payment
-verification block sticker printing. Errors are visible and retry rechecks the server. There is no
-cached/offline fallback. A previous successful print does not authorize the next attempt. The
-returned identifiers must match the parcel being printed. Sticker markup is absent until verification
+verification block initial/reprinted stickers requiring that lookup. Errors are visible and retry
+rechecks the server. There is no cached/offline fallback for reprints. The first post-collection
+print uses the successful transaction as described above. A previous successful print does not
+authorize the next attempt. The returned identifiers must match the parcel being printed.
+Sticker markup is absent until verification
 succeeds; renderers also reject unknown status or inconsistent amount/status pairs.
 
 The endpoint requires authentication, a permitted booking/payment/reprint workflow, the same company
 and a source/destination branch (or company-wide parcel reader/head office), and the `sticker_print`
 company module. Mobile now enforces that company module through the same server check. Existing
-cashier-session and receipt-tax gates remain. Receipt-only printing follows its existing workflow.
-Verification creates no payment, booking, print-usage entry or handover; blocked attempts send no
-print job and no sticker usage log. Successfully printed mobile labels retain separate usage-log retry.
+cashier-session and receipt-tax gates remain. Receipt-only printing follows its existing workflow
+and never requires sticker verification. In a combined job, a sticker verification failure does
+not suppress an otherwise valid receipt: browser, sequential desktop and parallel desktop paths
+still submit the receipt and show the sticker error.
+Verification creates no payment, booking, print-usage entry or handover; blocked stickers send no
+sticker print job and no sticker usage log. Successfully printed mobile labels retain separate usage-log retry.
 
-Original, automatic, duplicate, sequential/parallel desktop and mobile printing all use this check.
+Original, automatic, duplicate, sequential/parallel desktop and mobile printing use these shared
+rules; the successful cashier transaction exception applies to the first web/desktop sender print.
 After payment is recorded, staff can retry from the completed-booking panel: fresh verification
 supplies the current status/receiver amount instead of the completion-time snapshot. Existing paper
 labels and older installed bundles cannot be changed by this code. Deploy the verification endpoint
@@ -56,7 +72,16 @@ network/server failure and mismatched identifiers. Void a payment between attemp
 next attempt is blocked. Record the missing sender payment and retry without completing the booking
 again. Repeat browser, desktop original/duplicate/parallel and multiple mobile copies; verify no
 print job or usage log is created on failure and receiver balances/CS/QR remain correct on success.
-Automated coverage includes `parcel-sticker-payment.rules.test.ts`, `.service.test.ts`,
+Also collect a full sender payment and a split payment on Sender Payments and Create Parcel, then
+confirm both sticker and receipt print without a secondary verification GET (including when that
+GET would fail). Confirm full receiver-pay processing prints TO BE PAID and its acknowledgement.
+Reprint after GHS 20 sender + GHS 10 receiver on a GHS 50 parcel with stored remaining balance
+GHS 20: the sticker must print TO BE PAID 20, then PAID after the remaining GHS 20 is collected.
+Repeat from Consignments, outgoing In Transit and the creation receipts panel, for browser and
+desktop. Confirm a sticker verification failure does not cancel a valid receipt in a combined job,
+and retry printing without collecting the payment again.
+Automated coverage includes `cashier-sticker-confirmation.spec.ts`, `sender-payment-printing.spec.ts`,
+`parcel-receipt-print-content.test.tsx`, `parcel-sticker-payment.rules.test.ts`, `.service.test.ts`,
 `parcel-sticker-payment-route.spec.ts`, `sticker-payment.test.ts`,
 `thermal-sticker-template.test.tsx`, `sticker-html.test.ts` and completion sticker tests.
 

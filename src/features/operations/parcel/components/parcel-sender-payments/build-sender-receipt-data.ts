@@ -1,5 +1,6 @@
 import type { SenderCashierParcel } from '../../api/parcel.api';
 import type { ReceiptPrintData } from '../parcel-receipt.types';
+import { buildConfirmedCashierStickerPayment } from '../../utils';
 
 type SenderPaymentTaxBreakdown = {
   vatCedis: number;
@@ -56,6 +57,11 @@ export function buildSenderReceiptData({
     senderPaidCedis: amountPaidCedis,
     receiverToPayCedis,
     amountPaidCedis,
+    confirmedStickerPayment: buildConfirmedCashierStickerPayment({
+      bookingCode: parcel.bookingCode,
+      trackingCode: parcel.trackingCode,
+      receiverToPayCedis,
+    }),
     issuedAt: new Date().toISOString(),
     taxBreakdown,
   };

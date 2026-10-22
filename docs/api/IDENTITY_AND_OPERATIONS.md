@@ -103,10 +103,16 @@ Authentication and any of `CanCreateBookingWithParcels`, `CanCompleteSelfService
 `CanReadParcelOutgoing`, or `CanReadParcels` are required. Scope is the authenticated company and
 source/destination branch, or company-wide parcel-read/head-office access. The `sticker_print`
 module must be enabled. Missing/inaccessible/deleted/cancelled parcels return 404, missing
-permission or disabled module returns 403, and an unconfirmed/inconsistent payment state returns 409. Verification failure blocks all updated-client sticker print paths without a cached fallback.
+permission or disabled module returns 403, and an unconfirmed/inconsistent payment state returns 409. Verification failure blocks stickers requiring this lookup without a cached fallback. The first
+web/desktop print immediately after successful cashier sender collection/confirmation uses that
+completed transaction instead of repeating this GET. Receipt-only jobs do not call this endpoint;
+a failed sticker lookup does not cancel an otherwise valid receipt in a combined job.
 
 PAID requires recorded non-void principal payments to equal the charge. TO BE PAID requires a
-confirmed receiver allocation and a covered sender share; the amount reflects remaining principal.
+positive saved receiver allocation covering the remaining principal. The saved allocation may
+already be reduced by sender/receiver payments; do not derive a new sender shortfall from it.
+The returned amount is charge minus recorded sender and receiver principal, so partial receiver
+settlement remains TO BE PAID and full settlement becomes PAID.
 CREDIT requires a matching posted sender/parcel credit ledger entry and saved credit method.
 Unknown/missing/zero charges, unpaid sender shares, overpayment and credit without ledger approval
 are rejected. Verification excludes delivery/storage fees, creates no financial record or print log,

@@ -22,6 +22,8 @@ type UseParcelDesktopParallelPrintParams = {
   onPrintBlocked?: () => void;
   stickerRef: RefObject<HTMLDivElement | null>;
   verifyPayment: () => Promise<boolean>;
+  missingPaidTax: boolean;
+  printInvoiceOnly: () => Promise<boolean>;
 };
 
 export function useParcelDesktopParallelPrint({
@@ -37,12 +39,15 @@ export function useParcelDesktopParallelPrint({
   onPrintBlocked,
   stickerRef,
   verifyPayment,
+  missingPaidTax,
+  printInvoiceOnly,
 }: UseParcelDesktopParallelPrintParams) {
   const [logStickerPrint] = useLogParcelStickerPrintMutation();
   return useCallback(async () => {
     if (
       mode !== 'sender-payment' ||
       !hasPrintableReceipt ||
+      missingPaidTax ||
       !isStickerPrintEnabled ||
       !canPrintForSession ||
       typeof window === 'undefined' ||
@@ -53,9 +58,10 @@ export function useParcelDesktopParallelPrint({
 
     const { stickerPrinter, invoicePrinter } = getPrinterPreferenceMapping();
     if (!stickerPrinter || !invoicePrinter) return false;
-    // Verification failure is handled: do not fall back to another sticker path.
+    // A blocked sticker must not suppress the valid receipt for a saved payment.
     if (!(await verifyPayment())) {
-      onPrintBlocked?.();
+      if (await printInvoiceOnly()) onAutoPrintComplete?.();
+      else onPrintBlocked?.();
       return true;
     }
     const stickerNode = stickerRef.current;
@@ -122,5 +128,7 @@ export function useParcelDesktopParallelPrint({
     stickerCopies,
     verifyPayment,
     onPrintBlocked,
+    missingPaidTax,
+    printInvoiceOnly,
   ]);
 }
