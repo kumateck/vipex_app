@@ -39,6 +39,14 @@ server reads a consistent snapshot of the parcel, active non-credit principal pa
 - **CREDIT** only when the saved parcel uses credit and its matching sender/parcel credit ledger
   entry covers the charge. Selecting credit without the posted entry is insufficient.
 
+Previously confirmed parcels use their existing payment/credit records for reprinting; they do
+not need another collection or confirmation. The payment and credit totals must be correlated
+with the outer parcel ID, company and sender in the generated database query. A missing table
+qualification previously made the verifier compare a payment's parcel ID with that payment's
+own ID, returning zero paid even when the saved payment fully covered the charge. The same
+correlation fix applies to sender, receiver and credit totals across every client using the
+verification endpoint. No financial backfill or parcel/payment update is required for this fix.
+
 Unpaid sender bookings, unconfirmed split contributions, missing/zero/invalid charges, overpayment,
 inconsistent amounts, missing credit approval, deleted/cancelled parcels and unavailable payment
 verification block initial/reprinted stickers requiring that lookup. Errors are visible and retry
@@ -80,8 +88,12 @@ GHS 20: the sticker must print TO BE PAID 20, then PAID after the remaining GHS 
 Repeat from Consignments, outgoing In Transit and the creation receipts panel, for browser and
 desktop. Confirm a sticker verification failure does not cancel a valid receipt in a combined job,
 and retry printing without collecting the payment again.
+Also reprint a previously confirmed GHS 40 sender-paid parcel with an existing GHS 40 payment
+and zero receiver balance: the database verifier must read GHS 40 paid and return PAID, including
+historical records with a null `processedBy`. Check receiver and approved credit records as well.
 Automated coverage includes `cashier-sticker-confirmation.spec.ts`, `sender-payment-printing.spec.ts`,
-`parcel-receipt-print-content.test.tsx`, `parcel-sticker-payment.rules.test.ts`, `.service.test.ts`,
+`parcel-receipt-print-content.test.tsx`, `parcel-sticker-payment.repository.test.ts`,
+`parcel-sticker-payment.rules.test.ts`, `.service.test.ts`,
 `parcel-sticker-payment-route.spec.ts`, `sticker-payment.test.ts`,
 `thermal-sticker-template.test.tsx`, `sticker-html.test.ts` and completion sticker tests.
 
