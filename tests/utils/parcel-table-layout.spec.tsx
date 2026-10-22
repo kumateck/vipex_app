@@ -30,7 +30,7 @@ const parcel = {
   destinationName: 'Kumasi',
   pickupLocationName: 'Mbrom VIP Bus Station Behind the Goil Filling Station',
   parcelDetails: '1 POLY',
-  parcelContent: 'DRESS',
+  parcelContent: 'DRESS, coffee mate, Nescafe, Milo, cups and lids. '.repeat(8),
   status: ParcelStatus.AWAITING_PICKUP,
   chargePsw: 5000,
   plannedToBePaidPsw: 5000,
@@ -103,6 +103,7 @@ describe('compact parcel tables and location wrapping', () => {
       expect(html.indexOf('Accra')).toBeLessThan(html.indexOf('Circle'));
       expect(html.indexOf('Circle')).toBeLessThan(html.indexOf('Kumasi'));
       expect(html).toContain(parcel.pickupLocationName!);
+      expect(html).toContain(parcel.parcelContent!);
       expect(html).toContain('overflow-wrap:anywhere');
     },
   );
@@ -112,7 +113,8 @@ describe('compact parcel tables and location wrapping', () => {
     expect(html).toContain('Status / Shelf Picker');
     expect(html).not.toContain('>Details<');
     expect(html).not.toContain('>Content<');
-    expect(html.indexOf('1 POLY')).toBeLessThan(html.indexOf('DRESS'));
+    expect(html.indexOf('1 POLY')).toBeLessThan(html.indexOf(parcel.parcelContent!));
+    expect(html).toContain(parcel.parcelContent!);
     expect(html.indexOf('Awaiting Pickup')).toBeLessThan(html.indexOf('Picker Name'));
   });
   test.each(['locationName', 'pickupLocation', 'route', 'fromLocation', 'workplace'])(

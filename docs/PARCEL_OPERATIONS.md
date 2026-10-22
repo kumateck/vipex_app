@@ -4,6 +4,28 @@
 
 Parcel operations cover booking, parcel creation, payment responsibility, physical movement, custody transfer, receiving, pickup, delivery, and exception handling.
 
+### Long Parcel Text Across Workflows
+
+On web and desktop, all application tables wrap long text within columns bounded to 24rem.
+This shared display policy follows parcel details/content through booking, consignments, transit,
+receiving, call outcomes, shelf assignment, pickup, cashier, delivery, search, and reports, including
+plain HTML tables. Existing narrower location columns are retained. Nested single-line and clipped
+text also wraps, including words without spaces; rows grow to display the complete value. Calendar
+day grids and printed document layouts keep their existing sizing. Empty-value placeholders,
+stored data, permissions, and processing rules are unchanged.
+
+Mobile parcel cards normally wrap descriptions. Super Search descriptions and Queue Management
+detail values now also grow without a line limit.
+
+QA checklist:
+
+- Check a short description and the existing empty-value placeholders.
+- Follow a parcel with a long contents list through the workflows above. Also check a long word
+  without spaces: all text must remain visible without widening its column or overlapping others.
+- Repeat in narrow and wide web/desktop windows, including plain tables and nested text previously
+  truncated. Confirm selection, actions, numeric values, location wrapping, calendar day grids, and
+  print previews still work. Repeat long descriptions in mobile search and queue details.
+
 ### Agent Who Charged the Parcel
 
 Staff select **Agent who charged the parcel** for each parcel while entering its charge. Web,
@@ -1201,11 +1223,18 @@ behavior:
 - The shared app connection (`src/db/config.ts`) starts every session with `jit=off`. No query
   in the app recovers JIT's compile time; long reports that might benefit should set `jit` per
   transaction.
-- App connections also use `max_parallel_workers_per_gather=0`. A production booking-code lookup
+- App connections also use `max_parallel_workers_per_gather='0'` in the driver's startup options
+  (PostgreSQL reports the setting as `0`). **The value must be a string:** Postgres.js filters out
+  falsy startup values, so numeric `0` is silently omitted and leaves the database default in
+  effect. The previous numeric configuration and diagnostic `--serial` flag did not actually
+  disable workers; a passing lookup under that configuration was not proof the mitigation was
+  active. A runtime integration test now checks three separate application connections with
+  `current_setting`, rather than relying only on a source-code assertion.
+  A production booking-code lookup
   from the reconciliation dialog reproduced PostgreSQL `53100`: a parallel plan could not resize
   an 8 MiB dynamic shared-memory segment (`No space left on device`), which the API correctly
-  concealed behind its generic 500 message. Running the same read-only lookup with parallel
-  workers disabled returned the expected parcel. This connection setting avoids that allocation
+  concealed behind its generic 500 message. Read-only booking lookups with the corrected string
+  option report `parallel_workers: "0"` and return the expected parcel. This connection setting avoids that allocation
   without changing search filters, amounts, permissions or database records. Application-level
   row/count requests still run concurrently; only PostgreSQL parallel workers are disabled.
   This applies to all clients using the shared backend connection. Large analytical queries
@@ -1247,10 +1276,17 @@ matches and linked duplicate searches. Confirm the correct saved parcel/amounts 
 without a generic 500 or a PostgreSQL `53100` log. The read-only diagnostic
 `bun run scripts/check-parcel-booking-search.ts [booking-code] --serial` checks both query
 directions against `CHECK_DATABASE_URL` (or `DATABASE_URL`), enforces read-only connections and
-a 15-second statement timeout, and reports counts/errors without customer details. Omitting a
+a 15-second statement timeout, and reports effective read-only, worker and JIT settings plus
+counts/errors without customer details. With `--serial`, it fails if PostgreSQL does not report
+zero workers. Code lookup is case-insensitive, and the search preserves the supplied casing.
+Omitting a
 code selects one existing non-deleted booking for the diagnostic. Without `--serial`, it uses
 the database's parallel-worker default for comparison. Never interpret a passing sample as
 verification of every production booking; repeat with the affected code when available.
+
+Run the database-level regression with `POSTGRES_SESSION_SETTINGS_TEST=1 TEST_DATABASE_URL=<local-test-url>
+bun test tests/server/postgres-session-settings.integration.spec.ts`; it requires a local database,
+reserves three independent connections and verifies zero parallel workers and JIT off on each.
 
 ### Storage fee indicator in parcel searches
 
@@ -1377,6 +1413,28 @@ customer phone numbers are skipped. Failed/unknown notifications are not automat
 The existing notification-hub module gate, provider settings, templates, permissions, dispatch
 history, and audit apply. Mobile and single-parcel workflows retain their existing behavior;
 desktop clients using the web page receive the same bulk SMS controls.
+
+For single-parcel Call Outcome saves, web and desktop show the failed channel, main or second
+receiver, and provider reason below the notification counts. With an older backend that returns
+only counts, the warning points staff to Notification Hub Dispatch Logs. The warning stays visible
+for ten seconds. An mNotify HTTP 500/other 5xx error means delivery acceptance could not be
+confirmed; check the provider's delivery reports before retrying to avoid a duplicate message.
+The saved outcome remains valid and messages are not automatically retried. Mobile and bulk
+notification feedback is unchanged. See [Notification Hub](NOTIFICATION_HUB_MODULE.md#call-center-integration)
+for API failure details and provider recovery behavior.
+
+To send again after an outcome was saved, enable **Include saved outcomes** on web/desktop Call
+Receivers, find the booking, and choose **Resend Notification** in the row menu. Choose SMS/email
+and whether to include the saved second receiver, then click **Resend Notification**. This sends
+the current saved pickup, delivery, or follow-up message without saving the outcome again or
+changing the call timestamp, receiver, status, assignment, or payment. The server rechecks the
+current assignment and destination branch and rejects changed, uncalled, or progressed outcomes.
+The default queue still hides called parcels; including saved rows retains server pagination,
+search, and payment filters. Called rows cannot be changed through the single/bulk outcome actions.
+The resend dialog stays open after failure or missing contact details and closes on success.
+Every manual resend creates a new notification attempt and can resend previously successful
+selected recipients. Verify an unconfirmed mNotify send in provider reports before trying again.
+Mobile retains its current workflow. No schema change or migration is needed.
 
 Call Center Assignment sets newly assigned arrived, returned, or follow-up parcels to **Awaiting
 Pickup** as a provisional customer pickup choice. Assignment and reassignment clear the separate

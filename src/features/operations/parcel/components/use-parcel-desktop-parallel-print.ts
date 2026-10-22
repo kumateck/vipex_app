@@ -19,7 +19,9 @@ type UseParcelDesktopParallelPrintParams = {
   mode: 'sender-payment' | 'receiver-payment' | 'reprint' | 'default';
   stickerCopies: number;
   onAutoPrintComplete?: () => void;
+  onPrintBlocked?: () => void;
   stickerRef: RefObject<HTMLDivElement | null>;
+  verifyPayment: () => Promise<boolean>;
 };
 
 export function useParcelDesktopParallelPrint({
@@ -32,7 +34,9 @@ export function useParcelDesktopParallelPrint({
   mode,
   stickerCopies,
   onAutoPrintComplete,
+  onPrintBlocked,
   stickerRef,
+  verifyPayment,
 }: UseParcelDesktopParallelPrintParams) {
   const [logStickerPrint] = useLogParcelStickerPrintMutation();
   return useCallback(async () => {
@@ -47,12 +51,16 @@ export function useParcelDesktopParallelPrint({
       return false;
     }
 
+    const { stickerPrinter, invoicePrinter } = getPrinterPreferenceMapping();
+    if (!stickerPrinter || !invoicePrinter) return false;
+    // Verification failure is handled: do not fall back to another sticker path.
+    if (!(await verifyPayment())) {
+      onPrintBlocked?.();
+      return true;
+    }
     const stickerNode = stickerRef.current;
     const invoiceNode = invoiceRef.current;
     if (!stickerNode || !invoiceNode) return false;
-
-    const { stickerPrinter, invoicePrinter } = getPrinterPreferenceMapping();
-    if (!stickerPrinter || !invoicePrinter) return false;
 
     const result = await printParallelViaDesktop({
       jobs: [
@@ -112,5 +120,7 @@ export function useParcelDesktopParallelPrint({
     onAutoPrintComplete,
     stickerRef,
     stickerCopies,
+    verifyPayment,
+    onPrintBlocked,
   ]);
 }

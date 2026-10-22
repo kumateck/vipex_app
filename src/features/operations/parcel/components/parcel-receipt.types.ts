@@ -1,8 +1,10 @@
+import type { StickerPaymentStatus } from '@/shared/printing';
+
 export type ReceiptPrintData = {
   bookingCode: string;
   trackingCode: string;
   callSender?: boolean;
-  stickerStatusLabel?: 'PENDING' | 'CREDIT';
+  stickerStatusLabel?: StickerPaymentStatus;
   parcelDetails: string;
   parcelContent?: string | null;
   parcelValueCedis?: number | null;

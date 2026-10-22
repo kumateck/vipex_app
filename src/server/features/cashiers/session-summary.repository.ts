@@ -204,29 +204,11 @@ export async function getSessionToBePaidCreatedPswRepo(input: {
     .innerJoin(cashierSessions, eq(cashierSessions.id, input.sessionId))
     .where(
       and(
-        or(
-          eq(parcels.cashierSessionId, input.sessionId),
-          and(
-            isNull(parcels.cashierSessionId),
-            eq(parcels.sourceId, cashierSessions.branchId),
-            eq(parcels.status, ParcelStatus.PROCESSED),
-            gte(parcels.updatedAt, cashierSessions.scheduledStartTime),
-            or(
-              isNull(cashierSessions.actualEndTime),
-              lte(parcels.updatedAt, cashierSessions.actualEndTime),
-            ),
-          ),
-          and(
-            isNull(parcels.cashierSessionId),
-            eq(parcels.createdBy, input.cashierId),
-            eq(parcels.sourceId, cashierSessions.branchId),
-            gte(parcels.createdAt, cashierSessions.scheduledStartTime),
-            or(
-              isNull(cashierSessions.actualEndTime),
-              lte(parcels.createdAt, cashierSessions.actualEndTime),
-            ),
-          ),
-        ),
+        eq(parcels.cashierSessionId, input.sessionId),
+        eq(cashierSessions.cashierId, input.cashierId),
+        eq(parcels.sourceId, cashierSessions.branchId),
+        sql`${parcels.status} <> ${ParcelStatus.CREATED}`,
+        or(isNull(parcels.processedBy), eq(parcels.processedBy, cashierSessions.cashierId)),
         eq(parcels.isDeleted, false),
         sql`${parcels.method} <> ${PaymentMethod.CREDIT}`,
       ),

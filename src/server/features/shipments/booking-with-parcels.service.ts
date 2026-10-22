@@ -150,6 +150,9 @@ export async function createBookingWithParcelsSvc(
       })
     : null;
   const resolvedCashierSessionId: string | null = activeSession ? activeSession.id : null;
+  if (body.cashierSessionId && body.cashierSessionId !== resolvedCashierSessionId) {
+    throw BadRequest('The authorized cashier session has changed. Refresh and try again.');
+  }
 
   const input: CreateBookingWithParcelsInput = {
     senderId: body.senderId,

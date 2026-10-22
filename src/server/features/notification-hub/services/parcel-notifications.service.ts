@@ -1,4 +1,5 @@
 import { NotFound } from '@/server/utils/http-error';
+import type { ParcelCallNotificationFailure } from '@/shared/notification-hub';
 import { recordAuditLog } from '../../audit/logger';
 import {
   createNotificationDispatchRepo,
@@ -8,6 +9,7 @@ import {
 import { getParcelStatusSmsEventCode } from '../sms-event-definitions';
 import { dispatchSmsEventSvc } from './sms-events.service';
 import { dispatchSingleMessage } from './dispatch-message.service';
+import { buildParcelNotificationFailure } from '../utils';
 function buildCallCenterMessage(input: {
   outcome: string;
   trackingCode: string;
@@ -82,6 +84,7 @@ export async function sendParcelStatusNotificationSvc(input: {
   sendSms?: boolean;
   sendEmail?: boolean;
   includeSecondReceiver?: boolean;
+  isResend?: boolean;
 }) {
   const parcel = await getParcelRecipientsRepo(input.companyId, input.parcelId);
   if (!parcel) throw NotFound('Parcel not found');
@@ -95,6 +98,7 @@ export async function sendParcelStatusNotificationSvc(input: {
 
   let sentCount = 0;
   let failedCount = 0;
+  const failures: ParcelCallNotificationFailure[] = [];
 
   if (input.sendSms) {
     const eventCode = getParcelStatusSmsEventCode(input.outcome);
@@ -123,7 +127,10 @@ export async function sendParcelStatusNotificationSvc(input: {
         },
       });
       if (result.status === 'sent') sentCount += 1;
-      else failedCount += 1;
+      else {
+        failedCount += 1;
+        failures.push(buildParcelNotificationFailure('sms', recipient.role, result.errorMessage));
+      }
     }
   }
 
@@ -161,6 +168,13 @@ export async function sendParcelStatusNotificationSvc(input: {
       });
       if (!createdDispatch) {
         failedCount += 1;
+        failures.push(
+          buildParcelNotificationFailure(
+            'email',
+            recipient.role,
+            'Failed to create notification dispatch record',
+          ),
+        );
         continue;
       }
 
@@ -174,7 +188,10 @@ export async function sendParcelStatusNotificationSvc(input: {
         body,
       });
       if (result.status === 'sent') sentCount += 1;
-      else failedCount += 1;
+      else {
+        failedCount += 1;
+        failures.push(buildParcelNotificationFailure('email', recipient.role, result.errorMessage));
+      }
     }
   }
 
@@ -190,6 +207,7 @@ export async function sendParcelStatusNotificationSvc(input: {
       trackingCode: parcel.trackingCode,
       sendSms: Boolean(input.sendSms),
       sendEmail: Boolean(input.sendEmail),
+      isResend: Boolean(input.isResend),
       sentCount,
       failedCount,
     },
@@ -200,5 +218,6 @@ export async function sendParcelStatusNotificationSvc(input: {
     trackingCode: parcel.trackingCode,
     sentCount,
     failedCount,
+    failures,
   };
 }

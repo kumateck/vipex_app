@@ -2,3 +2,4 @@ export { normalizeChannel, normalizeEventCode, renderTemplate } from './notifica
 export { assertDispatchCanBeRetried } from './notification-dispatch-retry';
 export { resolveMnotifyApiRoot } from './mnotify-api-url';
 export { getSmsEventBodyError } from './sms-event-body';
+export { buildParcelNotificationFailure } from './parcel-notification-failure';

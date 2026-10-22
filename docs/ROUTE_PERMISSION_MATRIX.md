@@ -1,5 +1,12 @@
 # Route Permission Matrix
 
+Sticker payment verification (`GET /v1/shipments/parcels/sticker-payment`) accepts any existing
+booking-create, self-service-complete, sender-payment, receiver-payment, consignment-read,
+outgoing-parcel-read, or parcel-read permission. It additionally requires the `sticker_print` module
+and authenticated company/source-or-destination scope (company-wide parcel readers/head office
+may verify other branches in the same company). No new permission is granted automatically.
+See [API scope and rejection rules](api/IDENTITY_AND_OPERATIONS.md#sticker-payment-verification).
+
 Last generated: 2026-10-17
 
 `/customer-messages` requires `CanReadCustomerMessages`; handling changes additionally
@@ -8,6 +15,13 @@ authenticated user. Internal ticket permissions grant no inbox access. See
 [Customer website messages](CUSTOMER_WEBSITE_MESSAGES.md).
 
 Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`).
+
+Saved call outcome notification resends use
+`POST /v1/notification-hub/events/parcel-status-call/resend`: authentication, the
+`notification_hub` module, and either `CanSendCallCenterNotifications` or
+`CanReadCallCenterParcelStatus` are required. The server additionally checks authenticated
+company/destination branch, the current caller assignment, and a matching saved call outcome.
+The `/parcels/status` page permission is unchanged; no retry or parcel-update grant is added.
 
 Charge-agent selectors use existing workflow permissions: booking options at
 `GET /shipments/bookings/charge-agent-options` require `CanCreateBookingWithParcels`; self-service

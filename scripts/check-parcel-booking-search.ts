@@ -15,21 +15,26 @@ const client = postgres(databaseUrl, {
     default_transaction_read_only: true,
     statement_timeout: 15000,
     jit: 'off',
-    ...(serial ? { max_parallel_workers_per_gather: 0 } : {}),
+    ...(serial ? { max_parallel_workers_per_gather: '0' } : {}),
   },
 });
 (globalThis as typeof globalThis & { __vipex_sql__?: typeof client }).__vipex_sql__ = client;
 
 try {
   const [identity] = await client`select current_database() as database,
-    current_setting('transaction_read_only') as read_only`;
+    current_setting('transaction_read_only') as read_only,
+    current_setting('max_parallel_workers_per_gather') as parallel_workers,
+    current_setting('jit') as jit`;
+  if (identity?.read_only !== 'on') throw new Error('Read-only diagnostic session is required');
+  if (serial && identity.parallel_workers !== '0')
+    throw new Error('Serial diagnostic session did not disable parallel workers');
   const code = process.argv
     .slice(2)
     .find((argument) => !argument.startsWith('--'))
     ?.trim();
   const [sample] = code
     ? await client`select booking_code, company_id, source_id, destination_id from parcels
-        where booking_code = ${code} and not is_deleted limit 1`
+        where lower(booking_code) = lower(${code}) and not is_deleted limit 1`
     : await client`select booking_code, company_id, source_id, destination_id from parcels
         where not is_deleted limit 1`;
   console.log(JSON.stringify({ identity, serial, sampleFound: Boolean(sample) }));
@@ -41,7 +46,7 @@ try {
       const response = await listParcelsRepo({
         companyId: sample.company_id,
         [side]: side === 'sourceId' ? sample.source_id : sample.destination_id,
-        search: sample.booking_code,
+        search: code ?? sample.booking_code,
         limit: 50,
         offset: 0,
         includeDeleted: false,

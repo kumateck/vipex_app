@@ -11,6 +11,7 @@ import {
 } from '../api/parcel.api';
 import type { ContactOutcome } from '../components/parcel-status/types';
 import { useMainReceiverChange } from '../components/parcel-status/use-main-receiver-change';
+import { getCallOutcomeNotificationFeedback } from '../utils';
 
 export function useParcelCallOutcome(refreshQueues: () => Promise<void>) {
   const [selectedParcel, setSelectedParcel] = useState<ParcelSearchRow | null>(null);
@@ -99,12 +100,14 @@ export function useParcelCallOutcome(refreshQueues: () => Promise<void>) {
           includeSecondReceiver:
             !mainReceiverChange.enabled && (useSecondReceiver || Boolean(secondReceiverId)),
         }).unwrap();
-        if (notification.failedCount > 0) {
-          toast.warning(
-            `Outcome saved. Notifications sent: ${notification.sentCount}, failed: ${notification.failedCount}.`,
-          );
+        const feedback = getCallOutcomeNotificationFeedback(notification);
+        if (feedback.kind === 'warning') {
+          toast.warning(feedback.message, {
+            description: feedback.description,
+            duration: feedback.duration,
+          });
         } else {
-          toast.success(`Outcome saved. Notifications sent: ${notification.sentCount}.`);
+          toast.success(feedback.message);
         }
       } catch (error) {
         toast.warning(

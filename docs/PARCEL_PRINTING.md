@@ -8,9 +8,57 @@ Self-service completion retains a completed-booking panel on web, desktop and mo
 **Print Sticker** and a positive whole-number copy input. It prints only the saved parcel's sticker;
 retrying a print never resubmits completion. Web/desktop retain the shared sticker module/session
 gates and routing. Mobile retains print retry and a separate usage-log retry, and can retry loading
-destination names before printing. Self-service labels with no receiver amount show **PENDING** or
-**CREDIT**, since completion itself records no sender payment. See
-[Self-Service Booking](SELF_SERVICE_BOOKING.md#payment-and-printing) for workflow and QA scenarios.
+destination names before printing. Every sticker attempt verifies the saved parcel payment state
+with the server before opening a browser/phone print dialog or submitting a desktop print job.
+See [Self-Service Booking](SELF_SERVICE_BOOKING.md#payment-and-printing) for completion workflows.
+
+### Verified sticker payment status
+
+Only **PAID**, **TO BE PAID**, and **CREDIT** can be printed, on web, desktop and mobile. Unknown,
+missing, `PENDING`, and `UNPAID` states block printing; no status defaults to **PAID**. A form's
+selected payment option or planned sender contribution is not proof of payment.
+
+Each attempt requests `GET /v1/shipments/parcels/sticker-payment` with the saved booking and tracking
+codes. The server reads a consistent snapshot of the parcel, active non-credit principal payments
+(excluding voided payments), and its posted sender credit ledger. It returns:
+
+- **PAID** only when recorded sender and receiver principal payments exactly cover the charge.
+- **TO BE PAID** with the current receiver balance only when the saved receiver allocation is
+  positive and the sender's required contribution is already covered. An uncollected planned split
+  contribution blocks printing. Receiver payments reduce the amount; full settlement becomes PAID.
+- **CREDIT** only when the saved parcel uses credit and its matching sender/parcel credit ledger
+  entry covers the charge. Selecting credit without the posted entry is insufficient.
+
+Unpaid sender bookings, unconfirmed split contributions, missing/zero/invalid charges, overpayment,
+inconsistent amounts, missing credit approval, deleted/cancelled parcels and unavailable payment
+verification block sticker printing. Errors are visible and retry rechecks the server. There is no
+cached/offline fallback. A previous successful print does not authorize the next attempt. The
+returned identifiers must match the parcel being printed. Sticker markup is absent until verification
+succeeds; renderers also reject unknown status or inconsistent amount/status pairs.
+
+The endpoint requires authentication, a permitted booking/payment/reprint workflow, the same company
+and a source/destination branch (or company-wide parcel reader/head office), and the `sticker_print`
+company module. Mobile now enforces that company module through the same server check. Existing
+cashier-session and receipt-tax gates remain. Receipt-only printing follows its existing workflow.
+Verification creates no payment, booking, print-usage entry or handover; blocked attempts send no
+print job and no sticker usage log. Successfully printed mobile labels retain separate usage-log retry.
+
+Original, automatic, duplicate, sequential/parallel desktop and mobile printing all use this check.
+After payment is recorded, staff can retry from the completed-booking panel: fresh verification
+supplies the current status/receiver amount instead of the completion-time snapshot. Existing paper
+labels and older installed bundles cannot be changed by this code. Deploy the verification endpoint
+before the new web/desktop bundle and mobile build; an absent endpoint blocks updated clients.
+
+QA: print settled sender/receiver payments, full receiver-pay, settled split, and approved credit.
+Block unpaid sender completion, unsettled split, credit without ledger approval, zero/invalid charge,
+overpayment, unknown/legacy labels, deleted/cancelled and out-of-scope records, disabled module,
+network/server failure and mismatched identifiers. Void a payment between attempts and confirm the
+next attempt is blocked. Record the missing sender payment and retry without completing the booking
+again. Repeat browser, desktop original/duplicate/parallel and multiple mobile copies; verify no
+print job or usage log is created on failure and receiver balances/CS/QR remain correct on success.
+Automated coverage includes `parcel-sticker-payment.rules.test.ts`, `.service.test.ts`,
+`parcel-sticker-payment-route.spec.ts`, `sticker-payment.test.ts`,
+`thermal-sticker-template.test.tsx`, `sticker-html.test.ts` and completion sticker tests.
 
 When `callSender` is true, portrait and landscape parcel stickers print a prominent black-on-white
 `CS` mark beside the receiver block. Receiver name and phone remain visible. The mark is present
@@ -36,12 +84,18 @@ and value line has at least 1.1x line spacing and about 0.5 mm padding from the 
 receiver name prints at 5 mm for names up to 12 characters, stepping down to 4.4 mm, 3.8 mm,
 and 3.2 mm for longer names, so the receiver telephone always prints in full beneath it. The
 to-be-paid amount prints at 4 mm with space above the payment note. Location names longer than
-10 characters print smaller so two-word locations usually fit on one line. The header is 22 mm
-with a 21 mm QR code. Landscape stickers are unchanged.
+10 characters print smaller. Sticker locations always occupy a single line, truncating with an
+ellipsis when they exceed the available column width. This applies to portrait and landscape
+browser/desktop stickers (including reprints), and mobile stickers, including self-service
+completion. The saved location name remains complete. The header is 22 mm with a 21 mm QR code.
 QA: print portrait to-be-paid and paid stickers with a short receiver name (`ADU EVANS`), a
 long receiver name (23+ characters), a long sender name, a two-word location, and a long
 destination, with and without the CS mark; confirm no text touches or is cut by a border line
 on browser, desktop, and mobile output.
+Also print short, blank, and long locations such as `Suame Mbrom VIP Bus Station Behind the Goil
+Filling Station` on original/reprinted portrait and landscape stickers and mobile copies. Verify
+the location stays on one line, long names end with an ellipsis, blank names show `-`, and the
+destination, sender, telephone, and parcel details remain visible.
 
 ## QR codes and logos in print documents
 
@@ -76,12 +130,28 @@ needed with this profile; in the browser dialog use the matching roll, no margin
 Paid invoices, unpaid acknowledgement notes, duplicate reprints and home-delivery receipts keep
 the original 198 mm wide artwork, including its header, bordered amounts and QR position. Once
 fonts and images load, browser and desktop use the same preparation: measure the artwork,
-rotate it 90 degrees across the roll and scale it to fit a 72 mm printable area, centered on
-80 mm paper. Long/wrapped content is measured before fitting. Roll length follows the scaled
+rotate it **90 degrees to the left (counterclockwise)** across the roll and scale it to fit a 72 mm printable area, centered on
+80 mm paper. Fitting is automatic in both clients: compact artwork is enlarged and taller artwork
+is reduced proportionally to fill the same 72 mm printable width. Long/wrapped content is measured
+before fitting. Roll length follows the scaled
 artwork width with 2 mm clearance at each end. Desktop uses the matching custom paper size,
 portrait orientation, no margins and 100% native scale, so the artwork is not scaled twice or
 centered on an A5-sized sheet outside the roll. Single and parallel receipt jobs both use this
 geometry. Missing/invalid artwork fails preparation; it never sends a cropped substitute.
+The transform translates the rotated artwork down by its scaled original width so the left
+rotation does not send the receipt above the page. Its four corners stay inside the printable
+area, with 4 mm side clearance and at least 2 mm feed clearance. This replaces the earlier
+clockwise rotation. Paper orientation stays portrait in the driver because the artwork itself
+is rotated. Update both the web client and desktop build to apply the shared preparation.
+
+Deployment troubleshooting: desktop version **0.1.51** (published 21 September 2026) predates
+roll-paper preparation and the left-rotation fix. The production Windows update feed still
+advertised that version when checked on 19 October 2026. The hosted website can display the new
+paper-format choice inside an older installed desktop shell; saving that choice does not update
+its native printing code. An installer containing `prepareReceiptPaper` and the shared
+`prepareLandscapeReceipt` must be published, installed and restarted before testing routed output.
+Check the installed desktop version as well as the website deployment. Changing scale in printer
+preferences alone cannot add missing native roll preparation.
 
 The profile is local to web/desktop printing. Digital receipts remain A5; mobile sticker printing,
 sticker routing/copies, A4 reports, payments and permissions are unchanged. This change addresses
@@ -91,10 +161,16 @@ Windows driver behavior and physical output still require acceptance on the bran
 QA: save/reload this profile with XP-80C; print an unpaid acknowledgement matching the browser
 sample, paid invoice, partial payment, duplicate, storage and home-delivery receipt. Confirm the
 full border, logo, all customer/parcel/payment details and terms fit on one sheet, scan the QR,
-and compare browser and routed desktop output. Repeat with long names/details and a parallel
+and compare browser and routed desktop output. With the paper held in its feed direction,
+the receipt header must be along the left edge, matching a 90-degree left turn; no narrow strip
+of unrotated text or clockwise output is acceptable. Check compact and tall receipts both fill the
+72 mm printable width without cutting the border, preserving their proportions. Repeat with long names/details and a parallel
 sticker job; confirm only stickers receive their chosen copy count. Switch back to A5 and each
 vertical profile to verify their layouts. Test missing images, failed printer and cancellation;
 no parcel/payment is resubmitted. Automated geometry/render checks do not replace XP-80C hardware QA.
+Release QA: verify the installer was built from a commit containing both preparation functions,
+install it on a workstation running 0.1.51, restart the app and confirm its reported version has
+changed. Repeat the routed print test with the existing saved browser-style receipt preference.
 
 ## Xprinter vertical receipts
 

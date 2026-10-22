@@ -23,6 +23,13 @@ and production rollout of migration `0080`.
 
 Last audited at the mounted route-group level: 2026-10-08.
 
+Sticker printing now verifies saved payment state through
+`GET /v1/shipments/parcels/sticker-payment`. Only verified PAID, TO BE PAID with a receiver balance,
+or ledger-approved CREDIT can print; unknown/unpaid states and verification outages block the job.
+See [Identity and parcel operations](api/IDENTITY_AND_OPERATIONS.md#sticker-payment-verification)
+and [Parcel Printing](PARCEL_PRINTING.md#verified-sticker-payment-status) for access, failure behavior,
+web/desktop/mobile coverage and rollout order.
+
 The API reference is split by domain:
 
 - [Identity and parcel operations](api/IDENTITY_AND_OPERATIONS.md)
@@ -95,6 +102,14 @@ Parcel list/search responses include `senderPaidPrincipalPsw` and `receiverPaidP
 non-voided principal totals by payer in pesewas. Both are zero when that payer has no principal
 payment. Super Search uses these fields only for delivered-parcel payer badges; see
 [Parcel operations](PARCEL_OPERATIONS.md). Delivery fees, storage, and voided payments are excluded.
+
+`GET /v1/shipments/parcels` retains its case-insensitive search, company/branch filters and
+pagination response. To prevent PostgreSQL parallel-query shared-memory failures from producing
+500 responses, app connections send `max_parallel_workers_per_gather: '0'` as a **string**;
+the driver silently omits numeric `0`. Deploy/restart the backend to replace existing connections.
+No migration, permission change or parcel repair is required. The read-only booking-search
+diagnostic reports and verifies the effective session settings; see
+[Parcel search performance](PARCEL_OPERATIONS.md#parcel-search-performance) for failure cases and QA.
 
 Parcel list/search responses include `riderUserId` and `riderName` from the parcel's delivery
 record (both `null` when there is none or no rider is assigned). `GET
@@ -269,6 +284,27 @@ permission and an assignment to the caller at the destination branch. The call t
 the action is audited, and the parcel leaves the active calling queue. Other PATCH payloads
 remain ordinary parcel updates.
 
+`POST /v1/notification-hub/events/parcel-status-call` returns
+`{ parcelId, trackingCode, sentCount, failedCount, failures }`, where each failure is
+`{ channel: 'sms' | 'email', recipientType: 'receiver' | 'second_receiver', message }`.
+The additive failure details contain bounded, redacted provider diagnostics; successful sends
+return an empty array. Provider rejection remains a notification result, separate from saving
+the call outcome. mNotify HTTP 5xx errors report unconfirmed delivery acceptance and must not
+trigger automatic resends. Existing permissions/module gates and missing-contact skip behavior
+are unchanged. See [Notification Hub](NOTIFICATION_HUB_MODULE.md#call-center-integration).
+
+`POST /v1/notification-hub/events/parcel-status-call/resend` accepts
+`{ parcelId, expectedOutcome: 'pickup' | 'delivery' | 'follow_up', sendSms, sendEmail,
+includeSecondReceiver? }` and returns the same notification result. `sendSms` and `sendEmail`
+are required booleans; at least one must be true. Company, destination branch, and caller
+assignment are checked from the authenticated session. A completed call and a matching current
+saved outcome are required. The handler does not repeat contact recording or mutate the parcel.
+Missing scope/no channels returns 400, missing authentication 401, missing permission/module 403,
+missing/deleted/out-of-scope/reassigned parcel 404, changed/uncalled/progressed outcome 409, and
+malformed input 422. Provider failures return notification failed counts/details without automatic
+retry. The existing call-center notification permissions/module gate apply. Each explicit resend
+creates new dispatch records and marks its notification audit metadata `isResend: true`.
+
 The web bulk outcome form saves through `POST /v1/shipments/parcels/bulk-call-outcome` first.
 Its **Send SMS** checkbox defaults on; when checked, it then uses the existing
 `POST /v1/notification-hub/events/parcel-status-call` for each server-confirmed parcel ID, with
@@ -300,6 +336,21 @@ of sync. Apply migration `0074` before deploying this server behavior; older del
 without snapshots use the legacy status and payment fallback.
 
 ## Contract Authority
+
+`POST /v1/payments/collect-sender-and-process` assigns first processing confirmation to the
+authenticated cashier's active session, replacing a provisional parcel entry-session link and
+preserving the creator. This covers paid, split, and zero-payment To Be Paid confirmation,
+including self-service bookings. Parcel locking gives concurrent confirmations one owner;
+repeating confirmation preserves ownership. Missing/deleted/wrong-company/wrong-source-branch
+parcels return 404 even without a payment; missing active sessions return 403. First processing
+adds `PARCEL_SENDER_PROCESSED` audit metadata with current/prior session IDs. Immediate delegated
+creation rejects a changed authorized session with 400 before persistence. Schemas/permissions
+are unchanged.
+
+Daily Cashier Sales To Be Paid rows and current-session totals require recorded session ownership,
+with report date/location derived from the session/owning cashier rather than parcel creation.
+Pending, deleted, unlinked, and contradictory processor/session records are excluded; historical
+valid links need no backfill. See [cashier confirmation ownership](CASHIER_PAYMENTS_AND_SHIFTS.md#confirmation-owns-the-to-be-paid-report).
 
 Swagger UI at `/docs` and OpenAPI JSON at `/docs/json` from the running server are authoritative for exact methods, schemas, validation, and response bodies. These documents explain the stable domain surface and access rules.
 

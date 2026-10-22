@@ -73,3 +73,26 @@ Recommended notification policies:
 - Every log record includes `environment` and `service` fields.
 - Server 5xx errors trigger Discord alerts with environment-specific webhooks.
 - Duplicate alerts are throttled with `DISCORD_ALERT_COOLDOWN_MS`.
+
+## Production API failure diagnostics
+
+Every handled API 5xx writes an `api-server-error` structured error record to the normal
+application log before attempting Discord delivery. It includes request ID, URL path without
+query parameters, HTTP method/status, framework/public codes and the original infrastructure
+code (including PostgreSQL SQLSTATE wrapped by a Drizzle error). Safe database identifiers
+such as table, column, constraint and routine are included when provided by the driver.
+Raw SQL, bind parameters, customer values, original messages and stacks are excluded from
+production failure records. Development retains its verbose `[LOCAL_500]` diagnostic.
+
+Previously the detailed local logger returned immediately in production, so an unavailable
+Discord webhook could leave only `discord-alert-failed` in Docker logs. HTTP 404 on that
+warning is the webhook's status, not the original application's HTTP status. It does not
+change the API response. Current structured failure logging works without a webhook and is
+not affected by the alert cooldown. Deploy/restart the backend to enable it.
+
+QA: reproduce a reconciliation Find Transaction failure and match its public response request
+ID to `api-server-error` in fresh Docker logs. Verify wrapped SQLSTATE `53100`/`42P01` is visible
+without the booking search, SQL, contacts or bind parameters. Test with no webhook and failed
+alert delivery; the original 500 must still be logged. Verify 4xx errors are not logged as
+server failures and the existing public error envelope remains unchanged. Automated coverage:
+`tests/server/server-error-log.spec.ts` and `tests/server/error-handler.contract.spec.ts`.

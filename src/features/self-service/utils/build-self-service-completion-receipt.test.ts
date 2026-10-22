@@ -67,7 +67,6 @@ describe('completed self-service sticker data', () => {
       callSender: false,
       senderPaidCedis: 0,
       receiverToPayCedis: 30,
-      stickerStatusLabel: 'PENDING',
     });
   });
 
@@ -80,7 +79,6 @@ describe('completed self-service sticker data', () => {
     ).toMatchObject({
       senderPaidCedis: 0,
       receiverToPayCedis: 0,
-      stickerStatusLabel: 'PENDING',
     });
   });
 

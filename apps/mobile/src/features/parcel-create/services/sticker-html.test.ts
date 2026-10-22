@@ -12,20 +12,41 @@ const sticker: MobileSticker = {
   destinationLocation: 'Asafo',
   parcelDetails: '1 box',
   amountCedis: 40,
+  paymentStatusLabel: 'TO BE PAID',
   copies: 2,
 };
 
 describe('mobile to-be-paid sticker', () => {
-  test('does not label unpaid self-service completion as paid or demand zero receiver payment', () => {
-    const html = buildMobileStickerHtml({
-      ...sticker,
-      amountCedis: 0,
-      paymentStatusLabel: 'PENDING',
-    });
-    expect(html).toContain('PENDING');
-    expect(html).not.toContain('TO BE PAID');
-    expect(html).not.toContain('GHS 0.00');
-    expect(html).not.toContain('PAYMENT DUE UPON RECEIPT');
+  test.each(['PENDING', 'UNPAID', 'unknown', undefined])(
+    'rejects unverified state %s before producing any HTML',
+    (status) => {
+      expect(() =>
+        buildMobileStickerHtml({
+          ...sticker,
+          amountCedis: 0,
+          paymentStatusLabel: status as MobileSticker['paymentStatusLabel'],
+        }),
+      ).toThrow('requires a verified');
+    },
+  );
+  test.each(['PAID', 'CREDIT'] as const)(
+    'prints explicit %s without a receiver payment note',
+    (status) => {
+      const html = buildMobileStickerHtml({
+        ...sticker,
+        amountCedis: 0,
+        paymentStatusLabel: status,
+      });
+      expect(html).toContain(`>${status}<`);
+      expect(html).not.toContain('GHS 0.00');
+      expect(html).not.toContain('PAYMENT DUE UPON RECEIPT');
+    },
+  );
+  test('rejects inconsistent known statuses and amounts', () => {
+    expect(() => buildMobileStickerHtml({ ...sticker, paymentStatusLabel: 'CREDIT' })).toThrow(
+      'do not match',
+    );
+    expect(() => buildMobileStickerHtml({ ...sticker, amountCedis: 0 })).toThrow('do not match');
   });
   test('prints each requested copy with a scannable QR and escaped customer data', () => {
     const html = buildMobileStickerHtml(sticker);
