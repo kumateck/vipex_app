@@ -57,7 +57,11 @@ export function ParcelReceiptActions({
   const stickerRef = useRef<HTMLDivElement>(null);
   const desktopStickerRef = useRef<HTMLDivElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
-  const verification = useParcelStickerVerification(data.bookingCode, data.trackingCode);
+  const verification = useParcelStickerVerification(
+    data.bookingCode,
+    data.trackingCode,
+    mode === 'sender-payment' && !hasPrinted ? data.confirmedStickerPayment : undefined,
+  );
   const [queueInvoiceAfterSticker, setQueueInvoiceAfterSticker] = useState(false);
   const [selectedStickerCopies, setSelectedStickerCopies] = useState(() =>
     normalizeStickerCopies(stickerCopies),
@@ -102,13 +106,14 @@ export function ParcelReceiptActions({
   const printSticker = useCallback(
     async (withInvoice = false) => {
       if (!(await verification.verify())) {
-        onPrintComplete?.();
+        if (withInvoice) printInvoice();
+        else onPrintComplete?.();
         return;
       }
       setQueueInvoiceAfterSticker(withInvoice);
       printStickerDocument();
     },
-    [verification.verify, printStickerDocument, onPrintComplete],
+    [verification.verify, printStickerDocument, printInvoice, onPrintComplete],
   );
   const printStickerViaDesktop = useParcelDesktopStickerPrint({
     bookingCode: data.bookingCode,
@@ -179,11 +184,9 @@ export function ParcelReceiptActions({
       return;
     }
     if (canPrintStickerViaDesktop) {
-      void printStickerViaDesktop(selectedStickerCopies).then(async (printed) => {
-        if (printed) {
-          await printInvoiceViaDesktop();
-          onAutoPrintComplete?.();
-        } else onPrintComplete?.();
+      void printStickerViaDesktop(selectedStickerCopies).then(async () => {
+        await printInvoiceViaDesktop();
+        onAutoPrintComplete?.();
       });
       return;
     }
@@ -193,7 +196,6 @@ export function ParcelReceiptActions({
     canPrintInvoiceViaDesktop,
     canPrintStickerViaDesktop,
     handlePrintStickerOnly,
-    onPrintComplete,
     hasPrintableReceipt,
     isStickerPrintEnabled,
     missingPaidTax,
@@ -205,6 +207,8 @@ export function ParcelReceiptActions({
     selectedStickerCopies,
   ]);
   const handlePrintBothParallelDesktop = useParcelDesktopParallelPrint({
+    missingPaidTax,
+    printInvoiceOnly: printInvoiceViaDesktop,
     onPrintBlocked: onPrintComplete,
     bookingCode: data.bookingCode,
     trackingCode: data.trackingCode,

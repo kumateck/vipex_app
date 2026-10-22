@@ -40,6 +40,12 @@ describe('Sender Payments print document selection', () => {
     const receipt = buildReceipt(0, 30);
 
     expect(receipt.amountPaidCedis).toBe(0);
+    expect(receipt.confirmedStickerPayment).toEqual({
+      bookingCode: PARCEL.bookingCode,
+      trackingCode: PARCEL.trackingCode,
+      status: 'TO BE PAID',
+      amountCedis: 30,
+    });
     expect(
       isToBePaidDeliveryReceipt({
         amountPaidCedis: receipt.amountPaidCedis ?? 0,
@@ -53,6 +59,12 @@ describe('Sender Payments print document selection', () => {
     const receipt = buildReceipt(30, 0);
 
     expect(receipt.amountPaidCedis).toBe(30);
+    expect(receipt.confirmedStickerPayment).toEqual({
+      bookingCode: PARCEL.bookingCode,
+      trackingCode: PARCEL.trackingCode,
+      status: 'PAID',
+      amountCedis: 0,
+    });
     expect(
       isToBePaidDeliveryReceipt({
         amountPaidCedis: receipt.amountPaidCedis ?? 0,
@@ -60,5 +72,13 @@ describe('Sender Payments print document selection', () => {
         senderPaidCedis: receipt.senderPaidCedis,
       }),
     ).toBe(false);
+  });
+  test('successful split collection confirms the remaining receiver amount for the sticker', () => {
+    const receipt = buildReceipt(10, 20);
+    expect(receipt.amountPaidCedis).toBe(10);
+    expect(receipt.confirmedStickerPayment).toMatchObject({
+      status: 'TO BE PAID',
+      amountCedis: 20,
+    });
   });
 });

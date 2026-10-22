@@ -1146,6 +1146,17 @@ stored `plannedToBePaidPsw` value is already reduced as principal payments are c
 and list queries must not subtract those payments from it again. For example, a GHS 150 charge with
 a GHS 100 sender payment leaves GHS 50 available for receiver collection.
 
+**Sender Payments printing:** after Collect Payment or receiver-pay confirmation succeeds, the
+web/desktop client uses that completed cashier transaction for the first sticker and receipt print.
+No second sticker-payment lookup is required. A failed collection does not authorize printing.
+Initial unpaid bookings still require settlement; reprinting does not collect money again and
+loads the current saved payment state. Partial receiver settlement prints TO BE PAID with the
+remaining principal, even when `plannedToBePaidPsw` has already been reduced; full settlement
+prints PAID. Approved credit prints CREDIT. These rules are shared by creation receipts, Sender
+Payments, Consignments and outgoing In Transit print actions. Receipt-only jobs do not require
+sticker verification; a sticker error in a combined job does not cancel a valid receipt.
+See [Parcel Printing](PARCEL_PRINTING.md#verified-sticker-payment-status) for failures and QA.
+
 Storage settlement uses the parcel's persisted `receivedAt` timestamp. For legacy parcels where
 that field is null, the earliest audited transition to `ARRIVED_AT_DESTINATION` is the effective
 received time. The detail response and storage settlement use the same effective timestamp, so the

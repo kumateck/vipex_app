@@ -37,7 +37,9 @@ export function verifyStickerPaymentRecord(record: StickerPaymentRecord): Verifi
   if (outstanding < 0) throw blocked();
   const base = { bookingCode: record.bookingCode, trackingCode: record.trackingCode };
   if (outstanding === 0) return { ...base, status: 'PAID', amountCedis: 0 };
-  if (planned > 0 && sender >= charge - planned && outstanding <= planned) {
+  // Payment processing rewrites this field to the remaining receiver balance.
+  // Receiver payments must not be counted again as a missing sender contribution.
+  if (planned > 0 && outstanding <= planned) {
     return { ...base, status: 'TO BE PAID', amountCedis: outstanding / 100 };
   }
   if (record.method === PaymentMethod.CREDIT && planned === 0 && credit === charge) {

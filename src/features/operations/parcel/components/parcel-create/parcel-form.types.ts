@@ -1,3 +1,5 @@
+import type { VerifiedStickerPayment } from '@/shared/printing';
+
 export type PaymentResponsibility = 'SENDER' | 'RECEIVER' | 'SPLIT';
 export type SenderSettlementMode = 'PAY_NOW' | 'CREDIT';
 
@@ -54,6 +56,7 @@ export type ReceiptSummary = {
     senderPaidCedis: number;
     receiverToPayCedis: number;
     amountPaidCedis?: number;
+    confirmedStickerPayment?: VerifiedStickerPayment;
     issuedAt: string;
     taxBreakdown?: {
       vatCedis: number;
