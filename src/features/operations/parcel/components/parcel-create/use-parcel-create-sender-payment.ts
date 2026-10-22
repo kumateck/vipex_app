@@ -9,6 +9,7 @@ import {
 } from '../../api/parcel.api';
 import { mergePaidParcelsIntoReceipt } from './parcel-create-print.utils';
 import type { PendingSenderPaymentParcel, ReceiptSummary } from './parcel-form.types';
+import { buildConfirmedCashierStickerPayment } from '../../utils';
 
 type UseParcelCreateSenderPaymentArgs = {
   onPaidReceiptsReady: (receipt: ReceiptSummary) => void;
@@ -84,6 +85,7 @@ export function useParcelCreateSenderPayment({
             amountPaidCedis: parcel.senderDueCedis,
             senderPaidCedis: parcel.senderDueCedis,
             taxBreakdown: result.payment?.amounts,
+            confirmedStickerPayment: buildConfirmedCashierStickerPayment(parcel),
             issuedAt: new Date().toISOString(),
           };
         }),

@@ -25,7 +25,10 @@ Last audited at the mounted route-group level: 2026-10-08.
 
 Sticker printing now verifies saved payment state through
 `GET /v1/shipments/parcels/sticker-payment`. Only verified PAID, TO BE PAID with a receiver balance,
-or ledger-approved CREDIT can print; unknown/unpaid states and verification outages block the job.
+or ledger-approved CREDIT can print. Initial bookings and reprints use this endpoint; the first
+web/desktop print after successful cashier collection/confirmation uses that completed transaction
+without a second GET. Unknown/unpaid states and verification outages block stickers requiring
+the lookup, while an otherwise valid receipt can still print.
 See [Identity and parcel operations](api/IDENTITY_AND_OPERATIONS.md#sticker-payment-verification)
 and [Parcel Printing](PARCEL_PRINTING.md#verified-sticker-payment-status) for access, failure behavior,
 web/desktop/mobile coverage and rollout order.

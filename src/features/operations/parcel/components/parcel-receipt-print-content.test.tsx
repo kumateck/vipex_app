@@ -82,6 +82,28 @@ describe('parcel sticker CS propagation', () => {
 });
 
 describe('parcel duplicate printing', () => {
+  test.each([
+    ['PAID', 0],
+    ['TO BE PAID', 20],
+    ['CREDIT', 0],
+  ] as const)(
+    'uses the current %s settlement instead of a stale pending page value',
+    (status, amountCedis) => {
+      const html = renderReceipt(
+        { ...receipt, stickerStatusLabel: 'PENDING' as ReceiptPrintData['stickerStatusLabel'] },
+        true,
+        {
+          bookingCode: receipt.bookingCode,
+          trackingCode: receipt.trackingCode,
+          status,
+          amountCedis,
+        },
+      );
+      expect(html.match(new RegExp(`>${status}<`, 'g'))).toHaveLength(2);
+      expect(html.match(/DUPLICATE/g)).toHaveLength(3);
+      expect(html).not.toContain('>PENDING<');
+    },
+  );
   test('marks both sticker outputs and the receiver receipt', () => {
     const html = renderReceipt(
       {

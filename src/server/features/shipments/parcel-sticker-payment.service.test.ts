@@ -55,6 +55,24 @@ describe('sticker payment verification scope and freshness', () => {
     );
     expect(calls).toBe(2);
   });
+  test('reprints follow partial and full receiver settlement without another collection', async () => {
+    let current = { ...record, senderPaidPsw: 2000, plannedToBePaidPsw: 3000 };
+    const deps = { load: async () => current, ensureModule: async () => moduleState };
+    expect(await getVerifiedStickerPayment(input, user, deps)).toMatchObject({
+      status: 'TO BE PAID',
+      amountCedis: 30,
+    });
+    current = { ...current, receiverPaidPsw: 1000, plannedToBePaidPsw: 2000 };
+    expect(await getVerifiedStickerPayment(input, user, deps)).toMatchObject({
+      status: 'TO BE PAID',
+      amountCedis: 20,
+    });
+    current = { ...current, receiverPaidPsw: 3000, plannedToBePaidPsw: 0 };
+    expect(await getVerifiedStickerPayment(input, user, deps)).toMatchObject({
+      status: 'PAID',
+      amountCedis: 0,
+    });
+  });
   test('a failed lookup or disabled module never falls back to the old label', async () => {
     await expect(
       getVerifiedStickerPayment(input, user, {

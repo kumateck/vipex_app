@@ -23,6 +23,10 @@ describe('server verified sticker payment states', () => {
     [{ plannedToBePaidPsw: 5000 }, 'TO BE PAID', 50],
     [{ senderPaidPsw: 2000, plannedToBePaidPsw: 3000 }, 'TO BE PAID', 30],
     [{ senderPaidPsw: 2000, receiverPaidPsw: 1000, plannedToBePaidPsw: 3000 }, 'TO BE PAID', 20],
+    // The payment service rewrites plannedToBePaidPsw to charge - all paid principal.
+    [{ senderPaidPsw: 2000, receiverPaidPsw: 1000, plannedToBePaidPsw: 2000 }, 'TO BE PAID', 20],
+    [{ receiverPaidPsw: 1000, plannedToBePaidPsw: 4000 }, 'TO BE PAID', 40],
+    [{ senderPaidPsw: 2000, receiverPaidPsw: 3000, plannedToBePaidPsw: 0 }, 'PAID', 0],
     [{ method: PaymentMethod.CREDIT, creditPsw: 5000 }, 'CREDIT', 0],
   ] as const)('uses saved settlement %j', (changes, status, amountCedis) => {
     expect(verifyStickerPaymentRecord({ ...base, ...changes })).toEqual({
