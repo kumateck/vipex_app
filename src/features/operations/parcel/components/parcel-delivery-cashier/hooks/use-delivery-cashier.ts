@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import { formatDateTime } from '@/lib/dates';
 import { useAuthStore } from '@/stores/auth-store';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   type ParcelSearchRow,
   useFinalizeDoorstepAtOfficeMutation,
@@ -17,6 +18,9 @@ import type { PaginationRequestDto } from '@/server/types/pagination.types';
 export function useDeliveryCashier() {
   const { onReturnToPickup, isReturningToPickup } = useHomeDeliveryPickup();
   const user = useAuthStore((state) => state.user);
+  const canManageSecondReceivers = (user?.permissions ?? []).includes(
+    PermissionKeys.CanManageParcelSecondReceiver,
+  );
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
   const cashierUserId = user?.id ?? '';
@@ -152,6 +156,7 @@ export function useDeliveryCashier() {
   };
 
   return {
+    canManageSecondReceivers,
     companyId,
     branchId,
     searchInput,

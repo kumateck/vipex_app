@@ -325,12 +325,51 @@ email; customer notifications remain available only from the call outcome. The s
 parcels outside the staff member's company and destination branch. Web only; mobile has no
 equivalent page.
 
-Delivery Cashier also has **Upcoming handovers: second receivers**, showing Address Collected
-and Dispatched parcels at the cashier's destination branch. Search by booking/tracking or receiver,
+Delivery Cashier separates its queues into **Finalization** and **Upcoming Handovers** tabs on
+web and Electron desktop. **Finalization** is selected when the page opens and shows only
+completed rider handovers for money receipt and finalization, including the existing Return to
+Pickup action. Only the selected queue is visible. **Upcoming Handovers** is shown only with
+`CanManageParcelSecondReceiver`; without it, only Finalization is available. Tabs support keyboard
+navigation through the shared tabs component. Mobile screens are unchanged.
+
+The **Upcoming Handovers** tab has **Upcoming handovers: second receivers**, showing Address Collected
+and Dispatched parcels at the cashier's destination branch. Search by booking/tracking or sender/
+receiver name and phone,
 then use **Add Second Receiver** or **Change Second Receiver**. This uses the same permission,
 validation, customer reuse, removal, card clearing, OTP expiry and audit rules above, without
 requiring a separate `CanCreateCustomers` grant. The finalization queue remains separate and
 only contains completed rider handovers. Staff must save the contact before the rider confirms.
+
+Upcoming Handovers follows Super Search's grouped, labeled columns: **Parcel Reference** (booking,
+tracking, consignment and any storage-fee badge), **Customers** (sender, main receiver and second
+receiver, each with both available telephone numbers, plus Call Sender when applicable), **Parcel
+Description** (details and content), **Route & Delivery** (stage, assigned rider, delivery address,
+source branch/location and destination branch/pickup location), **Payment** (the same parcel value
+and paid/to-be-paid display as Super Search, plus **Delivery fee** and **Delivery fee to collect**),
+and **Dates** (created and received). Delivery fee is the configured charge; Delivery fee to collect
+uses the server's outstanding delivery-fee balance, falling back to the configured fee only when
+the balance is unavailable. A recorded zero balance stays zero. To be paid remains the parcel
+principal amount shown by Super Search, separately from the delivery fee.
+The delivery address is the home-delivery dropoff address; pickup location is separately labeled
+and is not substituted for a missing address. Long names, descriptions and addresses wrap without
+truncation; the shared table scrolls horizontally on narrow screens. Missing values show `-`, a
+missing second receiver shows `Not added`, and a missing rider shows `Not assigned`. A missing fee
+shows `-`, while a recorded zero fee shows `GHS 0.00`; missing/invalid dates show `-`.
+**View Details** opens the shared parcel details dialog beside the existing second-receiver action.
+These fields use the existing parcel-list response; no additional request per row, endpoint,
+permission, money collection or handover rule is introduced. Finalization remains the first tab.
+
+QA: open Delivery Cashier and verify Finalization is selected with no upcoming-handovers table
+below it; switch tabs with the pointer and keyboard and verify only the selected queue appears.
+Without `CanManageParcelSecondReceiver`, verify the Upcoming Handovers tab is absent. On narrow
+and desktop widths, verify both tab labels fit and each selected table remains scrollable. Verify
+search and pagination in each queue, second-receiver editing, finalization, and Return to Pickup
+still work; a queue-load failure must retain that queue's existing error behavior.
+Compare all grouped fields with Super Search and the parcel details dialog, including both phones
+for all three customers, parcel content, destination address versus pickup location, delivery fee,
+paid/unpaid/partial payments, rider and dates. Cover missing data, invalid dates, zero fees, long
+unbroken descriptions/addresses, and a parcel without a second receiver; verify View Details opens
+the selected parcel and saving a second receiver refreshes that row's contact information.
 
 On mobile, Assigned Deliveries → Confirm handover asks **Who is receiving the parcel?** and
 lets the rider select the main receiver or the cashier-added second receiver. Riders cannot
