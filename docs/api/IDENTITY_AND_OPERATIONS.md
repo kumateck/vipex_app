@@ -114,6 +114,9 @@ already be reduced by sender/receiver payments; do not derive a new sender short
 The returned amount is charge minus recorded sender and receiver principal, so partial receiver
 settlement remains TO BE PAID and full settlement becomes PAID.
 CREDIT requires a matching posted sender/parcel credit ledger entry and saved credit method.
+Existing payments and credit entries count for historical confirmations as well; no new
+confirmation or non-null `processedBy` is required. Aggregate subqueries retain explicit outer
+parcel/company/sender references so valid saved payments are not incorrectly returned as zero.
 Unknown/missing/zero charges, unpaid sender shares, overpayment and credit without ledger approval
 are rejected. Verification excludes delivery/storage fees, creates no financial record or print log,
 and does not authorize handover. See [Parcel Printing](../PARCEL_PRINTING.md#verified-sticker-payment-status)

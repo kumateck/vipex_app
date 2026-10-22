@@ -29,6 +29,8 @@ or ledger-approved CREDIT can print. Initial bookings and reprints use this endp
 web/desktop print after successful cashier collection/confirmation uses that completed transaction
 without a second GET. Unknown/unpaid states and verification outages block stickers requiring
 the lookup, while an otherwise valid receipt can still print.
+The verifier also recognises payments/credit already saved for older confirmed parcels; corrected
+query correlation avoids falsely reading those records as zero. No financial backfill is required.
 See [Identity and parcel operations](api/IDENTITY_AND_OPERATIONS.md#sticker-payment-verification)
 and [Parcel Printing](PARCEL_PRINTING.md#verified-sticker-payment-status) for access, failure behavior,
 web/desktop/mobile coverage and rollout order.
