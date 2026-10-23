@@ -29,6 +29,8 @@ describe('Company SMS settings', () => {
     for (const definition of SMS_EVENT_DEFINITIONS) {
       expect(definition.variables).toContain('branch');
       expect(definition.variables).toContain('location');
+      expect(definition.variables).toContain('locationName');
+      expect(definition.variables).toContain('locationPhone');
     }
   });
 
@@ -56,6 +58,7 @@ describe('Company SMS settings', () => {
         recipientPhone: '0240000000',
         branch: 'Accra Central',
         location: 'Front Desk',
+        locationPhone: '0300000001',
         date: new Date('2026-08-29T12:00:00.000Z'),
       }),
     ).toEqual({
@@ -65,6 +68,8 @@ describe('Company SMS settings', () => {
       recipientPhone: '0240000000',
       branch: 'Accra Central',
       location: 'Front Desk',
+      locationName: 'Front Desk',
+      locationPhone: '0300000001',
       date: '2026-08-29',
     });
 
@@ -74,6 +79,8 @@ describe('Company SMS settings', () => {
       recipientPhone: '',
       branch: '',
       location: '',
+      locationName: '',
+      locationPhone: '',
     });
   });
 

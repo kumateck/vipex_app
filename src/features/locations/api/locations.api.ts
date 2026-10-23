@@ -18,6 +18,7 @@ import { toCreateLocationPayload, toUpdateLocationPayload } from '../utils/locat
 export interface LocationOption {
   id: string;
   name: string;
+  telephone?: string | null;
   branchId: string;
   canSend: boolean;
   canReceive: boolean;

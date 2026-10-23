@@ -16,6 +16,7 @@ export function toCreateLocationPayload(
 
   return {
     name: input.name.trim(),
+    ...(input.telephone !== undefined ? { telephone: input.telephone?.trim() || null } : {}),
     canSend: input.canSend ?? true,
     canReceive: input.canReceive ?? true,
     branchId,
@@ -27,6 +28,7 @@ export function toCreateLocationPayload(
 export function toUpdateLocationPayload(input: LocationMutationInput): LocationUpdatePayload {
   return {
     name: input.name.trim(),
+    ...(input.telephone !== undefined ? { telephone: input.telephone?.trim() || null } : {}),
     ...(input.canSend !== undefined ? { canSend: input.canSend } : {}),
     ...(input.canReceive !== undefined ? { canReceive: input.canReceive } : {}),
   };

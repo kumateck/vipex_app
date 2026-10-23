@@ -1,0 +1,22 @@
+/* These comparison tables need horizontal scrolling rather than global cell wrapping. */
+table.parcel-analytics-table[data-slot='table'] {
+  min-width: max-content;
+}
+
+table.parcel-analytics-table[data-slot='table'] > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+  max-width: none;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+table.parcel-analytics-table button[data-variant='link']:not(:disabled) {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Keep intrinsic table widths inside their own scroll containers, including Radix's viewport. */
+.parcel-analytics-content {
+  min-width: 0;
+  contain: inline-size;
+}

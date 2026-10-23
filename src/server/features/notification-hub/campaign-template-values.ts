@@ -5,6 +5,7 @@ export function buildCampaignTemplateValues(input: {
   recipientPhone?: string | null;
   branch?: string | null;
   location?: string | null;
+  locationPhone?: string | null;
   date?: Date;
 }) {
   return {
@@ -13,7 +14,8 @@ export function buildCampaignTemplateValues(input: {
     recipientName: input.recipientName ?? '',
     recipientPhone: input.recipientPhone ?? '',
     branch: input.branch ?? '',
-    location: input.location ?? '',
+    ...buildSmsLocationVariables(input),
     date: (input.date ?? new Date()).toISOString().slice(0, 10),
   };
 }
+import { buildSmsLocationVariables } from '@/shared/notification-hub';

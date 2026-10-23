@@ -80,6 +80,7 @@ export const locationsRoutes = new Elysia({ name: 'locations' })
         companyId: UUID,
         branchId: UUID,
         name: NonEmpty255,
+        telephone: t.Optional(t.Union([t.String({ maxLength: 30 }), t.Null()])),
         createdBy: UUID,
         canSend: t.Optional(t.Boolean()),
         canReceive: t.Optional(t.Boolean()),
@@ -92,6 +93,7 @@ export const locationsRoutes = new Elysia({ name: 'locations' })
     params: t.Object({ id: UUID }),
     body: t.Object({
       name: t.Optional(NonEmpty255),
+      telephone: t.Optional(t.Union([t.String({ maxLength: 30 }), t.Null()])),
       canSend: t.Optional(t.Boolean()),
       canReceive: t.Optional(t.Boolean()),
     }),

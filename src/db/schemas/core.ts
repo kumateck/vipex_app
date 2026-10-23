@@ -76,6 +76,7 @@ export const locations = pgTable(
       .notNull()
       .references(() => branches.id),
     name: varchar('name', { length: 255 }).notNull(),
+    telephone: varchar('telephone', { length: 30 }),
     canSend: boolean('can_send').notNull().default(true),
     canReceive: boolean('can_receive').notNull().default(true),
     isDeleted: boolean('is_deleted').notNull().default(false),

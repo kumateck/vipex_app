@@ -6,6 +6,8 @@ All paths are relative to `/v1`.
 
 - `GET /reports/daily-cashier-sales`
 - `GET /reports/daily-parcel-audit`
+- `GET /reports/parcel-analytics`
+- `GET /reports/parcel-analytics/details`
 - `GET /reports/daily-cashier-sales/cashiers`
 - `GET /reports/accounting/storage-waivers`
 - `GET /reports/daily-cash-confirmations`
@@ -56,3 +58,21 @@ Accounting financial-statement endpoints remain under `/accounting/reports/*`.
   rows. Existing permission and cashier/branch restrictions apply before any route aggregation.
 
 See [Reporting Module](../REPORTING_MODULE.md) and the [Report Route Permission Matrix](../permissions/ROUTE_PERMISSION_REPORTS.md).
+
+## Parcel analytics
+
+Both parcel analytics endpoints require `CanViewReportParcelsStatusSummary`. Required
+query fields are inclusive UTC booking dates `from`, `to`, and `basis=source|destination`.
+Optional fields are `branchId`, `sourceId`, `destinationId`, and numeric current `status`
+(0–20). Head office may select all company branches; other users are locked to their
+authenticated branch under the chosen basis, including on drill-down requests.
+Ranges must contain 1–366 valid calendar days. Missing authentication, permission, or
+company/branch context rejects. Details accepts integer `page` (1–10000), returning
+at most 50 rows with `hasMore`. Summary returns aggregate `totals`, `statuses`,
+`branches`, `branchOptions`, zero-filled `trend`, `aging`, `previousParcels`,
+`volumeGrowthPct`, applied `filters`, and `generatedAt`. An empty cohort returns zero
+metrics, zero status/day buckets, and no branch rows.
+
+Status and receiver balances are current even for historical booking periods. Monetary
+fields are pesewas. See [Parcel Analytics](../PARCEL_ANALYTICS.md) for exact calculations,
+response fields, aging exclusions, failure cases, and test scenarios.

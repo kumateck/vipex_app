@@ -25,7 +25,7 @@ export const CreateLocationBody = t.Object({
   // Make branchId required to enforce branch-wise uniqueness and FK
   branchId: UUID,
   address: t.Optional(t.String({ maxLength: 500 })),
-  telephone: t.Optional(t.String({ maxLength: 30 })),
+  telephone: t.Optional(t.Union([t.String({ maxLength: 30 }), t.Null()])),
 });
 
 export const UpdateLocationBody = t.Object({
@@ -34,12 +34,13 @@ export const UpdateLocationBody = t.Object({
   canReceive: t.Optional(t.Boolean()),
   branchId: t.Optional(UUID),
   address: t.Optional(t.String({ maxLength: 500 })),
-  telephone: t.Optional(t.String({ maxLength: 30 })),
+  telephone: t.Optional(t.Union([t.String({ maxLength: 30 }), t.Null()])),
 });
 
 export const LocationDto = t.Object({
   id: UUID,
   name: NonEmptyString255,
+  telephone: t.Union([t.String({ maxLength: 30 }), t.Null()]),
   canSend: t.Boolean(),
   canReceive: t.Boolean(),
   companyId: UUID,

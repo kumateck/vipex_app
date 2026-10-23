@@ -106,3 +106,13 @@ Source-branch sender reassociation uses `GET /shipments/parcels/:id/sender-candi
 existing customer matching the exact telephone can be selected; stale sender IDs and sender
 credit history are rejected. The change is audited and does not merge customer profiles or
 move payments. See [Parcel Operations](PARCEL_OPERATIONS.md) for the correction workflow.
+
+Parcel analytics at `/reports/parcels/analytics` uses the parcel reports prefix rule
+(`CanViewReportParcelsStatusSummary`). Both summary and drill-down APIs enforce that
+permission plus authenticated company/branch scope. See
+[Report permissions](permissions/ROUTE_PERMISSION_REPORTS.md#parcel-analytics).
+
+Parcel Tax Data Generation (`/accounting/tax-data`) resolves to `CanReadAccounting`
+through the accounting read prefix and accounting module gate. API confirmation
+additionally requires `CanConfirmParcelTaxData`; see
+[platform/finance permissions](permissions/ROUTE_PERMISSION_PLATFORM_FINANCE.md#parcel-tax-data).
