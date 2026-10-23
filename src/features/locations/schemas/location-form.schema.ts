@@ -4,6 +4,7 @@ const nonEmpty255 = z.string().min(1, 'Required').max(255);
 
 export const createLocationSchema = z.object({
   name: nonEmpty255,
+  telephone: z.string().trim().max(30, 'Telephone must be at most 30 characters'),
   canSend: z.boolean(),
   canReceive: z.boolean(),
   branchId: nonEmpty255,
@@ -11,6 +12,7 @@ export const createLocationSchema = z.object({
 
 export const editLocationSchema = z.object({
   name: nonEmpty255,
+  telephone: z.string().trim().max(30, 'Telephone must be at most 30 characters'),
   canSend: z.boolean(),
   canReceive: z.boolean(),
 });

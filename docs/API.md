@@ -90,6 +90,13 @@ They block protected content, but keep the saved session for Retry, when this ch
 request is temporarily unavailable. A confirmed invalid refresh session or denied device clears
 the local login. The same refresh operation is shared with ordinary web/desktop API requests.
 
+`GET /v1/reports/parcel-analytics` and `/v1/reports/parcel-analytics/details` provide live
+global, branch, and status parcel KPIs plus paginated drill-down. Both require
+`CanViewReportParcelsStatusSummary` and authenticated company/branch scope. Required
+filters are `from`, `to` (inclusive booking dates, maximum 366 days), and
+`basis=source|destination`. See [Parcel Analytics](PARCEL_ANALYTICS.md) for calculations,
+responses, validation, clients, and limitations.
+
 `GET /v1/reports/daily-parcel-audit?date=YYYY-MM-DD` provides the current payment and delivery
 state for parcels created on that Ghana calendar date. Head office may add `branchId`; other users
 are scoped to their own branch. It requires `CanViewReportParcelsDailyAudit`. See
@@ -517,3 +524,27 @@ is isolated to one parcel and audited atomically. Sender credit history blocks r
 pending Accounts reconciliation. See [Identity and operations APIs](api/IDENTITY_AND_OPERATIONS.md).
 Booking customer-name popups on web/mobile reuse existing lookup and customer PATCH endpoints;
 no customer-directory read grant is needed for minimal booking lookup.
+
+## Parcel tax data generation
+
+`GET /v1/accounting/tax-data/options`, `/counts`, and `/records` support daily
+booking-cohort tax selection by source/destination route. Options return `{fromBranches,toBranches}`;
+`destinationBranchId` narrows the destination and `maxOccurrences` (1–500) caps total records
+across pages. Counts remain the full paid-amount/occurrence distribution. `POST /v1/accounting/tax-data/export` returns an XLSX
+attachment; `/confirm` marks selected parcel tax flags with transactional audit.
+All require accounting module access, `CanReadAccounting`, and authenticated
+company/source-branch scope; confirmation additionally requires `CanConfirmParcelTaxData`.
+See [Parcel Tax Data Generation](PARCEL_TAX_DATA.md) for queries, responses, validation,
+recorded tax definitions, optimistic revalidation, and supported clients.
+
+## Location contact and SMS template variables
+
+`POST /v1/locations/` and `PATCH /v1/locations/:id` accept optional `telephone` (string up
+to 30 characters or null). Values are trimmed; null/blank clears and omission preserves on
+update. GET detail/list/options responses include nullable `telephone`. Existing location
+grants apply. Migration `0089_location_telephone` must run before this backend is deployed.
+
+SMS settings event catalogs and bulk-template validation now accept `locationName` and
+`locationPhone`. These resolve from the appropriate assigned location, with no branch-phone
+fallback. Missing values render empty. No default template bodies or request shapes for
+SMS sending change. See [SMS location context](NOTIFICATION_HUB_MODULE.md#location-name-and-telephone-sms-variables).

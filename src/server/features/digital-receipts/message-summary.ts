@@ -1,4 +1,5 @@
 import type { ReceiptKind } from '@/shared/digital-receipts/channels';
+import { buildSmsLocationVariables } from '@/shared/notification-hub';
 import type { ReceiptSummary } from './receipt-document.service';
 
 export const SMS_EVENT_BY_KIND = {
@@ -25,6 +26,7 @@ export function buildReceiptMessageVariables(input: {
   recipientName: string;
   bookingCode: string;
   summary: ReceiptSummary;
+  locationContext?: { location: string | null; locationPhone: string | null } | null;
   token: string;
   url: string;
 }) {
@@ -35,6 +37,10 @@ export function buildReceiptMessageVariables(input: {
     balance: money(input.summary.balanceCedis),
     destination: input.summary.destinationBranch,
     branch: input.summary.destinationBranch,
+    ...buildSmsLocationVariables({
+      location: input.locationContext?.location,
+      locationPhone: input.locationContext?.locationPhone,
+    }),
     location: input.summary.destinationLocation,
     receiptToken: input.token,
     receiptUrl: input.url,

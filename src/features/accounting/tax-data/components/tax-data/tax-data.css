@@ -1,0 +1,17 @@
+.tax-data-content {
+  min-width: 0;
+  contain: inline-size;
+}
+table.tax-data-table[data-slot='table'] {
+  min-width: max-content;
+}
+table.tax-data-table[data-slot='table'] > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+  max-width: none;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+table.tax-data-table button[data-variant='link']:not(:disabled) {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}

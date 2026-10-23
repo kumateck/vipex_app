@@ -109,3 +109,13 @@ Financial, operational, people, customer, parcel, inventory, and audit report ro
 | `/reports/audit/suspicious`            | `CanViewReportAuditSuspicious`           |
 | `/reports/audit/deleted`               | `CanViewReportAuditDeleted`              |
 | `/reports/audit/roles`                 | `CanViewReportAuditRoles`                |
+
+## Parcel analytics
+
+`/reports/parcels/analytics` resolves through the shared `/reports/parcels/` read rule
+to `CanViewReportParcelsStatusSummary`. This is a prefix-resolved route, not a new
+exact override. Both `GET /v1/reports/parcel-analytics` and its `/details` endpoint
+require the same permission and authenticated company scope. Head office may select
+company branches; other users are forced to their own branch for the chosen source/
+destination basis. Missing company/branch context fails closed. No BI module gate
+or new permission is added. See [Parcel Analytics](../PARCEL_ANALYTICS.md).

@@ -15,6 +15,7 @@ export type ListLocationParams = {
 export type LocationOptionRow = {
   id: string;
   name: string;
+  telephone: string | null;
   branchId: string;
   canSend: boolean;
   canReceive: boolean;
@@ -55,6 +56,7 @@ export async function listLocationsRepo(p: ListLocationParams) {
         name: branches.name,
       },
       name: locations.name,
+      telephone: locations.telephone,
       canSend: locations.canSend,
       canReceive: locations.canReceive,
       isDeleted: locations.isDeleted,
@@ -83,6 +85,7 @@ export async function getLocationRepo(id: string) {
         name: branches.name,
       },
       name: locations.name,
+      telephone: locations.telephone,
       canSend: locations.canSend,
       canReceive: locations.canReceive,
       isDeleted: locations.isDeleted,
@@ -117,6 +120,7 @@ export async function listLocationOptionsRepo(p: {
     .select({
       id: locations.id,
       name: locations.name,
+      telephone: locations.telephone,
       canSend: locations.canSend,
       canReceive: locations.canReceive,
       branchId: locations.branchId,

@@ -16,7 +16,7 @@ const PARCEL_STATUS_VARIABLES = [
   'outcome',
   'branch',
   'branchPhone',
-  'location',
+  ...SMS_LOCATION_VARIABLES,
 ];
 
 const DIGITAL_RECEIPT_VARIABLES = [
@@ -27,7 +27,7 @@ const DIGITAL_RECEIPT_VARIABLES = [
   'destination',
   'receiptUrl',
   'branch',
-  'location',
+  ...SMS_LOCATION_VARIABLES,
 ];
 
 export const SMS_EVENT_DEFINITIONS = [
@@ -45,7 +45,7 @@ export const SMS_EVENT_DEFINITIONS = [
       'queueCode',
       'branchName',
       'branch',
-      'location',
+      ...SMS_LOCATION_VARIABLES,
       'trackingCode',
       'bookingCode',
     ],
@@ -58,7 +58,7 @@ export const SMS_EVENT_DEFINITIONS = [
     recipient: 'Selected primary or second receiver',
     defaultBody:
       '{{receiverName}}, your parcel pickup verification code is {{otp}}. It expires in {{expiresInMinutes}} minutes. Do not share this code.',
-    variables: ['receiverName', 'otp', 'expiresInMinutes', 'branch', 'location'],
+    variables: ['receiverName', 'otp', 'expiresInMinutes', 'branch', ...SMS_LOCATION_VARIABLES],
     smsType: 'otp',
   },
   {
@@ -150,3 +150,4 @@ export function getParcelStatusSmsEventCode(outcome: string): SmsEventCode {
   if (normalized === 'follow_up') return 'parcel_status_call_follow_up';
   return 'parcel_status_call_contacted';
 }
+import { SMS_LOCATION_VARIABLES } from '@/shared/notification-hub';
