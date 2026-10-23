@@ -13,6 +13,7 @@ const variables = buildReceiptMessageVariables({
     destinationBranch: 'Kumasi',
     destinationLocation: 'Adum',
   },
+  locationContext: { location: 'Adum', locationPhone: '0300000001' },
   token: 'a'.repeat(64),
   url: `https://vipexparcels.com/receipt/${'a'.repeat(64)}`,
 });
@@ -25,6 +26,9 @@ describe('digital receipt message', () => {
       amountPaid: 'GH₵ 40.00',
       balance: 'GH₵ 12.50',
       destination: 'Kumasi',
+      location: 'Adum',
+      locationName: 'Adum',
+      locationPhone: '0300000001',
     });
   });
 
@@ -42,6 +46,26 @@ describe('digital receipt message', () => {
     }
   });
 
+  test('keeps the home-delivery address alias while using the pickup location contact', () => {
+    const values = buildReceiptMessageVariables({
+      recipientName: 'Customer',
+      bookingCode: 'BOOK',
+      summary: {
+        amountPaidCedis: 0,
+        balanceCedis: 0,
+        destinationBranch: 'Kumasi',
+        destinationLocation: 'Home delivery address',
+      },
+      locationContext: { location: 'Adum desk', locationPhone: '0300000001' },
+      token: 't',
+      url: 'u',
+    });
+    expect(values).toMatchObject({
+      location: 'Home delivery address',
+      locationName: 'Adum desk',
+      locationPhone: '0300000001',
+    });
+  });
   test('falls back to a generic greeting for a blank name', () => {
     expect(
       buildReceiptMessageVariables({

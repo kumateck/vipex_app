@@ -111,3 +111,21 @@ Coverage: `saved-parcel-call-outcome.test.ts`, `parcel-call-resend.service.test.
 - [ ] Parcel status save without notification toggles still works.
 - [ ] Existing procurement/fleet/wallet/reconciliation pages still load.
 - [ ] `bunx tsc --noEmit` passes.
+
+## Location contact variables (2026-10-23)
+
+- [ ] Apply `0089_location_telephone`; existing names/capabilities remain and telephone is null.
+- [ ] Save a location telephone, including a leading-zero or international number; verify detail,
+      list, options, and edit round-trip it. Blank/null clears; omitted PATCH preserves it.
+- [ ] Edit an existing customized SMS event and bulk template; insert `{{locationName}}` and
+      `{{locationPhone}}`, save, and verify both are accepted. Original bodies stay unchanged.
+- [ ] In a mocked/log-only workflow, verify bulk SMS uses the sender's location; parcel call/OTP
+      uses the parcel pickup location; queue uses its queue location. Branch phone must differ
+      in the fixture and must not be substituted for locationPhone.
+- [ ] With no location/telephone, verify empty output and no unresolved tokens. A deleted,
+      foreign-company or wrong-branch location must not provide contact data.
+- [ ] Verify digital receipts retain the legacy location label/address, while locationName and
+      locationPhone show the assigned pickup contact; no pickup location yields empty new tokens.
+- [ ] Check location create/edit and SMS variable buttons at desktop and narrow widths.
+      Native mobile uses server SMS substitution and adds no administration screen.
+- [ ] Run isolated integration test `SMS_LOCATION_TEST=1 TEST_DATABASE_URL=postgres://localhost/vipex_sms_location_test bun test tests/server/sms-location.spec.ts` on the named empty local DB only.

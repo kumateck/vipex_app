@@ -77,7 +77,13 @@ export async function dispatchSmsEventSvc(input: {
   if (!definition) return { status: 'failed', errorMessage: 'Unknown application SMS event' };
   const template = await getNotificationTemplateByCodeRepo(input.companyId, 'sms', definition.code);
   const messageTemplate = template?.body ?? definition.defaultBody;
-  const body = renderTemplate(messageTemplate, input.variables);
+  const body = renderTemplate(messageTemplate, {
+    ...buildSmsLocationVariables({
+      location: String(input.variables.location ?? ''),
+      locationPhone: String(input.variables.locationPhone ?? ''),
+    }),
+    ...input.variables,
+  });
 
   return sendSmsSvc({
     companyId: input.companyId,
@@ -94,3 +100,4 @@ export async function dispatchSmsEventSvc(input: {
     validationError: getSmsEventBodyError(definition.smsType, messageTemplate),
   });
 }
+import { buildSmsLocationVariables } from '@/shared/notification-hub';

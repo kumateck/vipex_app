@@ -29,11 +29,13 @@ This directory is the canonical documentation set for the current Vipex applicat
 ## Finance and Commercial
 
 - [Accounting](ACCOUNTING_MODULE.md)
+- [Parcel tax data generation](PARCEL_TAX_DATA.md)
 - [Customer and CRM](CRM_SYSTEM.md)
 - [Customer website enquiries, complaints and feedback](CUSTOMER_WEBSITE_MESSAGES.md)
 - [Customer wallet and credit](CUSTOMER_WALLET_CREDIT_MODULE.md)
 - [Customer wallet and credit QA](CUSTOMER_WALLET_CREDIT_QA_CHECKLIST.md)
 - [Reporting](REPORTING_MODULE.md)
+- [Parcel analytics](PARCEL_ANALYTICS.md)
 - [Notification hub](NOTIFICATION_HUB_MODULE.md)
 
 ## People and Supply Chain

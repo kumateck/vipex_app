@@ -12,6 +12,7 @@ const parcel = {
   branch: 'Circle',
   branchPhone: '0300000000',
   location: null,
+  locationPhone: null,
   primary: {
     id: 'main',
     name: 'Receiver',
@@ -73,7 +74,10 @@ describe('call outcome notification failure details', () => {
       expect.objectContaining({
         eventCode: 'parcel_status_call_pickup',
         phone: parcel.primary.phone,
-        variables: expect.objectContaining({ branchPhone: parcel.branchPhone }),
+        variables: expect.objectContaining({
+          branchPhone: parcel.branchPhone,
+          locationPhone: parcel.locationPhone,
+        }),
       }),
     );
   });

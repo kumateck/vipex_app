@@ -191,6 +191,7 @@ const catalog = [
   ['CanCreateAccountingTaxComponents', 'Create accounting setup tax components', 'Accounting'],
   ['CanUpdateAccountingTaxComponents', 'Update accounting setup tax components', 'Accounting'],
   ['CanDeleteAccountingTaxComponents', 'Delete accounting setup tax components', 'Accounting'],
+  ['CanConfirmParcelTaxData', 'Confirm selected parcel tax data', 'Accounting'],
   ['CanCreateTaxFilingPeriod', 'Create tax filing period', 'Accounting'],
   ['CanMarkTaxFilingPeriodUnderReview', 'Mark tax filing period under review', 'Accounting'],
   ['CanSubmitTaxFilingPeriod', 'Submit tax filing period', 'Accounting'],

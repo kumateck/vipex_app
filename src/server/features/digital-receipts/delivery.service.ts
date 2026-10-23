@@ -9,6 +9,7 @@ import {
 } from '@/shared/digital-receipts/channels';
 import { dispatchSmsEventSvc, dispatchWhatsAppEventSvc } from '../notification-hub/service';
 import type { DeliveryResult } from '../notification-hub/types';
+import { getParcelSmsLocationRepo } from '../notification-hub/sms-location.repository';
 import { getWhatsAppAvailabilitySvc } from '../whatsapp-messaging/availability.service';
 import { sendReceiptEmailSvc } from './email-delivery.service';
 import {
@@ -112,10 +113,11 @@ export async function sendDigitalReceiptSvc(input: {
   const requested = normalizeReceiptChannels(input.channels).filter(isDigitalReceiptChannel);
   if (!requested.length) throw Conflict('Choose at least one of SMS, WhatsApp or email');
 
-  const [receipt, recipients, whatsapp] = await Promise.all([
+  const [receipt, recipients, whatsapp, locationContext] = await Promise.all([
     buildReceiptSvc({ ...input, issuedAt: new Date() }),
     loadReceiptRecipientsSvc(input.companyId, input.parcelId, input.kind),
     requested.includes('whatsapp') ? getWhatsAppAvailabilitySvc(input.companyId) : null,
+    getParcelSmsLocationRepo(input.companyId, input.parcelId),
   ]);
 
   const token = generateOpaqueToken();
@@ -136,6 +138,7 @@ export async function sendDigitalReceiptSvc(input: {
       recipientName: recipient.name,
       bookingCode: receipt.bookingCode,
       summary: receipt.summary,
+      locationContext,
       token,
       url,
     });

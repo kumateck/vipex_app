@@ -1,4 +1,4 @@
-import { Conflict, NotFound } from '../../utils/http-error';
+import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import {
   createLocationRepo,
   findLocationByNameRepo,
@@ -9,6 +9,14 @@ import {
   updateLocationRepo,
   type ListLocationParams,
 } from './repository';
+
+function telephonePatch(telephone: string | null | undefined) {
+  if (telephone === undefined) return {};
+  const value = telephone?.trim() || null;
+  if (value && value.length > 30)
+    throw BadRequest('Location telephone must be at most 30 characters');
+  return { telephone: value };
+}
 
 export async function listLocationsSvc(p: ListLocationParams) {
   return listLocationsRepo(p);
@@ -32,27 +40,30 @@ export async function createLocationSvc(input: {
   companyId: string;
   branchId: string;
   name: string;
+  telephone?: string | null;
   createdBy: string;
   canSend?: boolean;
   canReceive?: boolean;
 }) {
+  const contact = telephonePatch(input.telephone);
   const dup = await findLocationByNameRepo(input.branchId, input.name);
   if (dup && !dup.isDeleted) throw Conflict('Location name already exists for this branch');
   if (dup && dup.isDeleted) {
     const row = await updateLocationRepo(dup.id, {
       name: input.name,
+      ...contact,
       isDeleted: false,
       canSend: input.canSend ?? true,
       canReceive: input.canReceive ?? true,
     });
     return { id: row?.id ?? dup.id };
   }
-  const created = await createLocationRepo({ ...input, isDeleted: false });
+  const created = await createLocationRepo({ ...input, ...contact, isDeleted: false });
   return { id: created?.id };
 }
 export async function updateLocationSvc(
   id: string,
-  patch: { name?: string; canSend?: boolean; canReceive?: boolean },
+  patch: { name?: string; telephone?: string | null; canSend?: boolean; canReceive?: boolean },
 ) {
   const cur = await getLocationRepo(id);
   if (!cur) throw NotFound('Location not found');
@@ -61,7 +72,7 @@ export async function updateLocationSvc(
     if (dup && dup.id !== id && !dup.isDeleted)
       throw Conflict('Location name already exists for this branch');
   }
-  const updated = await updateLocationRepo(id, patch);
+  const updated = await updateLocationRepo(id, { ...patch, ...telephonePatch(patch.telephone) });
   if (!updated) throw NotFound('Location not found');
   return { id: updated.id };
 }

@@ -85,3 +85,13 @@ HR and payroll have independent company-module gates and granular permissions.
 Provider administration, template management, campaign creation/approval/send, retry, and call-center notification actions are separately authorized.
 
 See the corresponding canonical module documents in the [Documentation Hub](../README.md).
+
+## Parcel tax data generation
+
+The five `/accounting/tax-data/*` endpoints provide branch options, count by principal-paid
+amount, route-filtered parcel snapshots capped by `maxOccurrences` across pages, XLSX export,
+and audited parcel-flag confirmation. Options return `{fromBranches,toBranches}`;
+`destinationBranchId` selects the destination. Count distributions ignore the amount/cap.
+They require the accounting module, `CanReadAccounting`, and authenticated company/source
+branch. Only confirmation adds `CanConfirmParcelTaxData`. No filing-state transition is
+performed. See [full API and behavior contract](../PARCEL_TAX_DATA.md#api).

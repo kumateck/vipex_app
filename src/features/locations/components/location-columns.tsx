@@ -25,6 +25,11 @@ export function createLocationColumns(): ColumnDef<Location>[] {
       header: 'Branch',
     },
     {
+      accessorKey: 'telephone',
+      header: 'Telephone',
+      cell: ({ row }) => row.original.telephone || '—',
+    },
+    {
       id: 'canSend',
       header: 'Sending',
       accessorFn: (row) => (row.canSend === false ? 'No' : 'Yes'),

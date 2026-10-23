@@ -40,6 +40,7 @@ export async function sendPickupQueueNotificationSvc(input: {
   queueNumber: number;
   branchName: string;
   locationName: string;
+  locationPhone?: string | null;
 }): Promise<{ sent: boolean }> {
   try {
     const parcel = await getParcelRecipientsRepo(input.companyId, input.parcelId);
@@ -60,6 +61,7 @@ export async function sendPickupQueueNotificationSvc(input: {
         branchName: input.branchName,
         branch: input.branchName,
         location: input.locationName,
+        locationPhone: input.locationPhone,
         trackingCode: parcel.trackingCode,
         bookingCode: parcel.bookingCode,
       },
@@ -119,6 +121,7 @@ export async function sendParcelStatusNotificationSvc(input: {
           branch: parcel.branch,
           branchPhone: parcel.branchPhone,
           location: parcel.location,
+          locationPhone: parcel.locationPhone,
         },
         metadataJson: {
           parcelId: parcel.parcelId,

@@ -24,6 +24,7 @@ interface EditLocationFormProps extends LocationFormBaseProps {
 export type LocationFormProps = CreateLocationFormProps | EditLocationFormProps;
 export type LocationFormValues = {
   name: string;
+  telephone: string;
   branchId?: string;
   canSend: boolean;
   canReceive: boolean;

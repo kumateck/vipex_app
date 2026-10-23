@@ -25,7 +25,7 @@ export function useLocationForm({ mode, initialData, onSubmit }: LocationFormPro
     formState: { errors },
   } = useForm<LocationFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', branchId: '', canSend: true, canReceive: true },
+    defaultValues: { name: '', telephone: '', branchId: '', canSend: true, canReceive: true },
     mode: 'onSubmit',
   });
 
@@ -33,12 +33,13 @@ export function useLocationForm({ mode, initialData, onSubmit }: LocationFormPro
     if (mode === 'edit' && initialData) {
       reset({
         name: initialData.name ?? '',
+        telephone: initialData.telephone ?? '',
         canSend: initialData.canSend ?? true,
         canReceive: initialData.canReceive ?? true,
       });
       return;
     }
-    reset({ name: '', branchId: '', canSend: true, canReceive: true });
+    reset({ name: '', telephone: '', branchId: '', canSend: true, canReceive: true });
   }, [initialData, mode, reset]);
 
   const submit = async (values: LocationFormValues) => {
@@ -46,13 +47,19 @@ export function useLocationForm({ mode, initialData, onSubmit }: LocationFormPro
       const normalized = normalizeOptionalFields(values, ['branchId'] as const);
       await onSubmit({
         name: normalized.name,
+        telephone: values.telephone,
         branchId: normalized.branchId as string,
         canSend: values.canSend,
         canReceive: values.canReceive,
       });
       return;
     }
-    await onSubmit({ name: values.name, canSend: values.canSend, canReceive: values.canReceive });
+    await onSubmit({
+      name: values.name,
+      telephone: values.telephone,
+      canSend: values.canSend,
+      canReceive: values.canReceive,
+    });
   };
 
   return {
