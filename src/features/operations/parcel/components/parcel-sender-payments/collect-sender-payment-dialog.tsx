@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -35,6 +36,10 @@ type CollectSenderPaymentDialogProps = {
   onMtnPaymentFlowChange: (value: MtnPaymentFlow) => void;
   momoTransactionId: string;
   onMomoConfirmed: (momoTransactionId: string) => void;
+  printReceipt: boolean;
+  onPrintReceiptChange: (checked: boolean) => void;
+  printSticker: boolean;
+  onPrintStickerChange: (checked: boolean) => void;
   isSubmitting: boolean;
   receiptDelivery?: ReceiptDelivery;
   onClose: () => void;
@@ -52,6 +57,10 @@ export function CollectSenderPaymentDialog({
   onMtnPaymentFlowChange,
   momoTransactionId,
   onMomoConfirmed,
+  printReceipt,
+  onPrintReceiptChange,
+  printSticker,
+  onPrintStickerChange,
   isSubmitting,
   receiptDelivery,
   onClose,
@@ -166,6 +175,29 @@ export function CollectSenderPaymentDialog({
             </p>
           ) : null}
 
+          <fieldset className="space-y-3" disabled={isSubmitting}>
+            <legend className="mb-2 text-sm font-medium">Print documents</legend>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="sender-print-receipt"
+                checked={printReceipt}
+                onCheckedChange={(checked) => onPrintReceiptChange(checked === true)}
+              />
+              <Label htmlFor="sender-print-receipt">Print receipt</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="sender-print-sticker"
+                checked={printSticker}
+                onCheckedChange={(checked) => onPrintStickerChange(checked === true)}
+              />
+              <Label htmlFor="sender-print-sticker">Print sticker</Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Select at least one document to continue.
+            </p>
+          </fieldset>
+
           {receiptDelivery ? (
             <ReceiptDeliveryPicker delivery={receiptDelivery} disabled={isSubmitting} />
           ) : null}
@@ -180,6 +212,7 @@ export function CollectSenderPaymentDialog({
             onClick={() => void onSubmit()}
             disabled={
               isSubmitting ||
+              (!printReceipt && !printSticker) ||
               (senderDuePsw > 0 &&
                 isMtnPayment(paymentMethod) &&
                 mtnPaymentFlow === 'automated' &&
@@ -190,7 +223,7 @@ export function CollectSenderPaymentDialog({
               ? 'Processing...'
               : parcel && senderDuePsw > 0
                 ? 'Collect Payment'
-                : 'Print Receipts'}
+                : 'Confirm and Print'}
           </Button>
         </DialogFooter>
       </DialogContent>
