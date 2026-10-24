@@ -587,3 +587,19 @@ Rules:
   inside the outer border, and leaves bottom cut clearance on the 100 mm stock.
 - Test parcel-detail values at short, medium, and maximum supported lengths on both browser and
   desktop printing; no label or value may be clipped by the next row or the paper cut boundary.
+
+### Sender Payments confirmation print choices
+
+On web and desktop Sender Payments, each collection/confirmation dialog starts with
+**Print receipt** and **Print sticker** unchecked. The cashier must select at least one;
+the confirmation button and submit handler block processing when neither is selected.
+Receipt only prints the receipt (or receiver-pay acknowledgement), sticker only prints
+the sticker, and selecting both prints both after successful processing. Opening another
+confirmation resets both choices. Existing amount validation and automated MTN payment
+confirmation requirements still apply. Failed processing does not start printing.
+These choices control physical printing independently of optional digital receipt delivery;
+mobile and the Create Parcel payment dialog are unchanged.
+
+QA: Verify neither selected blocks confirmation; receipt only, sticker only, and both
+produce exactly the chosen documents; clearing both disables confirmation again; reopening
+starts unchecked; failed payment prints nothing; automated MTN still requires confirmation.

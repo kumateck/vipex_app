@@ -1598,3 +1598,19 @@ The Call Outcome queue also supports a server-side Payment type filter: All, Pai
 Partial. The filter uses the parcel charge and outstanding planned-to-be-paid amount, and applies
 before pagination so totals and page navigation remain accurate. QA: verify each payment type across
 multiple pages, including a split-payment parcel under Partial.
+
+### Sender Payments confirmation print choices
+
+On web and desktop Sender Payments, each collection/confirmation dialog starts with
+**Print receipt** and **Print sticker** unchecked. The cashier must select at least one;
+the confirmation button and submit handler block processing when neither is selected.
+Receipt only prints the receipt (or receiver-pay acknowledgement), sticker only prints
+the sticker, and selecting both prints both after successful processing. Opening another
+confirmation resets both choices. Existing amount validation and automated MTN payment
+confirmation requirements still apply. Failed processing does not start printing.
+These choices control physical printing independently of optional digital receipt delivery;
+mobile and the Create Parcel payment dialog are unchanged.
+
+QA: Verify neither selected blocks confirmation; receipt only, sticker only, and both
+produce exactly the chosen documents; clearing both disables confirmation again; reopening
+starts unchecked; failed payment prints nothing; automated MTN still requires confirmation.
