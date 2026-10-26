@@ -482,6 +482,15 @@ After creation, an eligible sending or full cashier can choose to print. The cur
 | Zero charge or credit | Sticker only.                     |
 
 Sticker quantity requirements and current implementation gaps are documented in [Parcel Printing](PARCEL_PRINTING.md).
+Cashier-created credit parcels proceed directly to Processed after the credit charge is posted.
+Legacy credit parcels still awaiting sender confirmation have zero cash due; confirmation/printing
+must not create a principal payment. The server rejects principal collection for credit parcels,
+including requests from older clients. Credit repayments belong to the customer credit account.
+Credit receipts print an acknowledgement with **PAYMENT STATUS: CREDIT** and the amount charged
+to the account; sticker verification labels the parcel **CREDIT**. Reprints load current recorded
+payments rather than inferring payment from a zero receiver balance. Existing erroneous cash rows
+must be reconciled before they stop appearing as paid. See the historical repair procedure and
+QA scenarios in [Parcel printing](PARCEL_PRINTING.md#credit-printing-and-historical-repair).
 
 ## Operational Lifecycle
 

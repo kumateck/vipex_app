@@ -57,6 +57,7 @@ export type SenderCashierParcel = {
   receiverPhone2?: string | null;
   chargePsw: number;
   plannedToBePaidPsw: number;
+  method?: number;
   status: number;
   callSender?: boolean;
   createdAt: string;

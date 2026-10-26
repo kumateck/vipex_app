@@ -1,4 +1,4 @@
-import { PaymentComponent, Payer } from '@/db/schemas/enums';
+import { PaymentComponent, Payer, PaymentMethod } from '@/db/schemas/enums';
 import type { PaymentRow } from '../payments/repository';
 
 type ReceiptPayment = Pick<
@@ -11,15 +11,29 @@ type ReceiptPayment = Pick<
   | 'nhilPsw'
   | 'covidPsw'
   | 'taxTotalPsw'
->;
+> &
+  Partial<Pick<PaymentRow, 'method' | 'voidedAt'>>;
 
 export function summarizeSenderReceiptPayments(rows: ReceiptPayment[]) {
   const principal = rows.filter(
-    (row) => row.component === PaymentComponent.PRINCIPAL && row.payer === Payer.SENDER,
+    (row) =>
+      row.component === PaymentComponent.PRINCIPAL &&
+      row.payer === Payer.SENDER &&
+      row.method !== PaymentMethod.CREDIT &&
+      !row.voidedAt,
   );
   if (!principal.length) return null;
 
   return sumRecordedReceiptPayments(principal);
+}
+
+export function buildSenderReceiptReprintTax(method: number, rows: ReceiptPayment[]) {
+  const recorded = summarizeSenderReceiptPayments(rows);
+  if (recorded && recorded.grossAmountPsw > 0) return recorded;
+  if (method === PaymentMethod.CREDIT) {
+    return { ...sumRecordedReceiptPayments([]), settlementMode: 'CREDIT' as const };
+  }
+  return null;
 }
 
 export function sumRecordedReceiptPayments(rows: ReceiptPayment[]) {

@@ -44,6 +44,7 @@ export function buildParcelCreateReceipt({
         bookingCode: parcel.bookingCode ?? response.bookingId,
         trackingCode: parcel.trackingCode ?? '-',
         callSender: formParcel?.callSender ?? false,
+        settlementMode: formParcel?.senderSettlementMode === 'CREDIT' ? 'CREDIT' : undefined,
         parcelDetails: formParcel?.parcelDetails ?? '-',
         parcelContent: formParcel?.parcelContent ?? null,
         parcelValueCedis: amount?.value ?? 0,

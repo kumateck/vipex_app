@@ -41,6 +41,7 @@ export type ReceiptSummary = {
     bookingCode: string;
     trackingCode: string;
     callSender?: boolean;
+    settlementMode?: 'CREDIT';
     parcelDetails: string;
     parcelContent?: string | null;
     parcelValueCedis?: number | null;

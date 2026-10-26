@@ -1,4 +1,5 @@
 export type InvoiceA5TemplateProps = {
+  settlementMode?: 'CREDIT';
   bookingCode: string;
   issuedAtLabel: string;
   parcelDetails: string;
