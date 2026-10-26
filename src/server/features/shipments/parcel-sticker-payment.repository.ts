@@ -1,6 +1,7 @@
+import { effectiveChargeAmountSql } from '../customers/credit-settlement';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { parcels, payments, customerCreditTransactions } from '@/db/schemas';
+import { parcels, payments } from '@/db/schemas';
 import {
   PaymentComponent,
   PaymentMethod,
@@ -40,11 +41,11 @@ export function buildStickerPaymentQuery(
       senderPaidPsw: paid(Payer.SENDER),
       receiverPaidPsw: paid(Payer.RECIPIENT),
       creditPsw:
-        sql<number>`coalesce((select sum(${customerCreditTransactions.signedAmountPsw}) from ${customerCreditTransactions}
-      where ${customerCreditTransactions.referenceId} = ${parcelColumn('id')}
-      and ${customerCreditTransactions.companyId} = ${parcelColumn('companyId')}
-      and ${customerCreditTransactions.customerId} = ${parcelColumn('senderId')}
-      and ${customerCreditTransactions.sourceType} = ${CustomerCreditSourceType.PARCEL}), 0)`.mapWith(
+        sql<number>`coalesce((select sum(${effectiveChargeAmountSql()}) from customer_credit_transactions cct
+      where cct."reference_id" = ${parcelColumn('id')}
+        and cct."company_id" = ${parcelColumn('companyId')}
+        and cct."customer_id" = ${parcelColumn('senderId')}
+        and cct.source_type = ${CustomerCreditSourceType.PARCEL} and cct.transaction_type = 0), 0)`.mapWith(
           Number,
         ),
     })

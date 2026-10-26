@@ -73,6 +73,7 @@ import { receiptReprintRoutes } from './features/receipt-reprint/receipt-reprint
 import { parcelStickerPaymentRoutes } from './features/shipments/parcel-sticker-payment.routes';
 import { whatsappMessagingRoutes, whatsappWebhookRoutes } from './features/whatsapp-messaging';
 import { digitalReceiptRoutes, publicReceiptRoutes } from './features/digital-receipts';
+import { maintenanceRoutes } from './features/maintenance';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -96,6 +97,7 @@ export const app = new Elysia()
   .group('/v1', (v1) =>
     v1
       .use(api)
+      .group('/maintenance', (r) => r.use(maintenanceRoutes))
       .group('/users', (r) => r.use(usersRoutes).use(usersInviteRoutes))
       .group('/branches', (r) => r.use(branchesRoutes))
       .group('/locations', (r) => r.use(locationsRoutes))

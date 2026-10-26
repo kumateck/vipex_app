@@ -1,7 +1,4 @@
-import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { CustomerDebtSettlement } from '@/features/customers/credit-settlement';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
@@ -13,56 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import {
-  useCreateCustomerWalletPaymentMutation,
-  useListCustomerWalletAccountsQuery,
-} from '../../api/customer-wallet-credit.api';
+import { useWalletPaymentCustomer } from '../../hooks';
 
 export function CustomerWalletPaymentCreatePage() {
-  const navigate = useNavigate();
-  const [customerId, setCustomerId] = useState('__none__');
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [amountCedis, setAmountCedis] = useState('');
-  const [referenceId, setReferenceId] = useState('');
-  const [notes, setNotes] = useState('');
-
-  const customerQuery = useMemo(
-    () => ({ page: 1, pageSize: 100, search: customerSearch.trim() || undefined }),
-    [customerSearch],
-  );
-
-  const { data: customerData } = useListCustomerWalletAccountsQuery(customerQuery);
-  const customers = customerData?.data ?? [];
-  const [createPayment, { isLoading }] = useCreateCustomerWalletPaymentMutation();
-
-  const onSubmit = async () => {
-    if (customerId === '__none__') {
-      toast.error('Select a customer');
-      return;
-    }
-
-    const parsedAmount = Number(amountCedis);
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      toast.error('Enter a valid amount');
-      return;
-    }
-
-    try {
-      await createPayment({
-        customerId,
-        amountCedis: parsedAmount,
-        referenceId: referenceId.trim() || null,
-        notes: notes.trim() || null,
-      }).unwrap();
-      toast.success('Payment posted');
-      navigate('/customer-wallet-credit/accounts');
-    } catch (error) {
-      toast.error(getApplicationErrorMessage(error, '') || 'Failed to post payment');
-    }
-  };
-
+  const { customerId, setCustomerId, customerSearch, setCustomerSearch, customers, cancel } =
+    useWalletPaymentCustomer();
   return (
     <ScrollableWrapper>
       <div className="w-full p-4 space-y-4">
@@ -97,44 +50,13 @@ export function CustomerWalletPaymentCreatePage() {
                   </SelectContent>
                 </Select>
               </Field>
-
-              <Field>
-                <FieldLabel>Amount (Cedis)</FieldLabel>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={amountCedis}
-                  onChange={(event) => setAmountCedis(event.target.value)}
-                />
-              </Field>
-
-              <Field>
-                <FieldLabel>Reference</FieldLabel>
-                <Input
-                  value={referenceId}
-                  onChange={(event) => setReferenceId(event.target.value)}
-                />
-              </Field>
-
-              <Field className="md:col-span-2">
-                <FieldLabel>Notes</FieldLabel>
-                <Textarea
-                  rows={4}
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                />
-              </Field>
             </FieldGroup>
 
+            {customerId !== '__none__' ? (
+              <CustomerDebtSettlement key={customerId} customerId={customerId} channel="finance" />
+            ) : null}
             <div className="flex gap-2">
-              <Button onClick={onSubmit} disabled={isLoading}>
-                Save payment
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => navigate('/customer-wallet-credit/accounts')}
-              >
+              <Button variant="outline" onClick={cancel}>
                 Cancel
               </Button>
             </div>

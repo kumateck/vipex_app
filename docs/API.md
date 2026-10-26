@@ -2,6 +2,32 @@
 
 Base URL: `/v1`
 
+System Admin maintenance endpoints:
+
+- `GET /maintenance/scripts`: all nine supported booking-code operations, descriptors,
+  allowed fields, operation-specific repair confirmation text and source references.
+- `GET /maintenance/runs`: latest 20 company-scoped runs, status and results.
+- `POST /maintenance/runs`: `{ operationId, params, mode: "preview" | "execute",
+previewRunId?, confirmNoCashReceived?, confirmRepair? }`.
+  IDs: `trace-credit-parcel`, `repair-credit-print-payment`, `scan-credit-conflicts`,
+  `check-parcel-booking-search`, `inspect-cleared-delivery-fee`,
+  `backfill-parcel-customer-names`, `restore-reversed-parcel-balance`,
+  `fix-reversed-booking-to-be-paid`, `repair-parcel-financial-state`.
+  Operations accept `{ bookingCode }`; conflicts may use `{}` for the company scan.
+  New adapters accept case-insensitive booking/tracking codes and reject ambiguous matches.
+  Execute requires a successful same-admin/company preview from the last ten minutes and an
+  unchanged plan. Credit-print repair requires `confirmNoCashReceived: true`; other repairs
+  require `confirmRepair: true` for the specific confirmation returned in their descriptor.
+  Blocked/already-correct previews return `readyToApply: false` and cannot be executed.
+
+Every endpoint requires authentication and the **current active System Admin role**, checked in
+the database. Other role permissions cannot grant access. Company and actor come from that user.
+Unknown scripts/parameters are rejected; no commands, shell paths, SQL or database URLs are
+accepted. Successful requests return a run with `id`, `operationId`, `params`, `mode`, `status`,
+timestamps and `result: { summary, details, readyToApply }`. Failures are audited and returned as
+400/409 (404 for a missing/foreign parcel); unauthenticated/non-admin access returns 401/403. Repairs and their success audits commit
+atomically. See [System Maintenance Scripts](SYSTEM_MAINTENANCE.md).
+
 `POST /self-service/sessions` issues a branch-bound, single-use 15-minute token persisted in
 PostgreSQL (migration `0087`). All subsequent public self-service calls require
 `x-self-service-session`; the server remains the expiry authority. Missing, expired, used, or
@@ -557,3 +583,34 @@ SMS settings event catalogs and bulk-template validation now accept `locationNam
 `locationPhone`. These resolve from the appropriate assigned location, with no branch-phone
 fallback. Missing values render empty. No default template bodies or request shapes for
 SMS sending change. See [SMS location context](NOTIFICATION_HUB_MODULE.md#location-name-and-telephone-sms-variables).
+
+### Customer parcel credit settlement
+
+- `GET /v1/customers?customerType=0|1`: filters Individual/Business before paging;
+  still requires `CanReadCustomers` and company scope.
+- `GET /v1/customers/:id/credit/parcels` (`CanReadCustomers`) and
+  `GET /v1/customer-wallet-credit/accounts/:customerId/open-parcels`
+  (`CanCreateCustomerWalletCreditPayments`, enabled `customer_wallet_credit`) return
+  all outstanding parcels with booking/tracking codes and integer pesewa totals.
+- Both `POST /v1/customers/:id/credit/payments` (`CanUpdateCustomers`) and
+  `POST /v1/customer-wallet-credit/accounts/:customerId/payments` (finance permission
+  and module above) require `{ parcelIds: string[], amountCedis: number|string,
+referenceId?: string|null, notes?: string|null }`. Select 1–200 distinct owned
+  parcels and pay their exact outstanding sum. No partial or unallocated payment.
+  Return `{ id, allocatedAmountPsw, unallocatedAmountPsw: 0, allocations }`.
+  Validation/mismatch: 400; unavailable/settled/conflicting payment: 409; foreign
+  customer: 404. Existing unallocated payment credit also returns 409 for finance
+  review. Payment, allocations, and audit commit atomically.
+- `PATCH /v1/parcels/:id/credit-charge` (`CanUpdateParcels`) accepts
+  `{ chargeCedis, expectedChargePsw, reason }`. Positive two-decimal charge up to
+  GHS 100,000, reason 3–500 characters, unpaid fully CREDIT parcel only. Returns
+  `{ id, chargePsw }`; 400 for invalid values, 404 for a foreign/missing parcel,
+  409 for stale/paid/inconsistent credit or insufficient approved credit. Appends
+  an adjustment to the original charge, updates parcel amount, and records audit
+  in one transaction. Generic parcel updates/cash corrections cannot bypass it.
+- New parcel charges must be at least GHS 0.01, including agent completion of
+  self-service drafts. Unpriced drafts are not yet booked parcels.
+
+Web and desktop expose these flows. Other API clients must adopt explicit parcel
+selection; old amount-only credit payment requests are rejected. Details and
+failure handling: [Customer Wallet & Credit Control](CUSTOMER_WALLET_CREDIT_MODULE.md).

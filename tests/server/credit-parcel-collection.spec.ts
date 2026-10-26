@@ -81,6 +81,17 @@ describe.skipIf(process.env.CREDIT_COLLECTION_TEST !== '1')(
       ],
     });
 
+    test.each([0, -1, 0.001])(
+      'new booking rejects invalid charge %s without financial writes',
+      async (chargeCedis) => {
+        const body = booking();
+        body.parcels[0]!.chargeCedis = chargeCedis;
+        await expect(createBookingWithParcelsSvc(body)).rejects.toMatchObject({ status: 400 });
+        await assertNoFinancialWrites();
+        expect(await db.select().from(customerCreditTransactions)).toEqual([]);
+      },
+    );
+
     test('cashier creation posts credit and processes with no cash or tax row', async () => {
       const result = await createBookingWithParcelsSvc(booking());
       const saved = await fixture.readParcel(result.parcels[0]!.id);

@@ -5,6 +5,7 @@ import {
 } from '@/shared/permissions/path-access';
 import { inferRequiredModuleByPath } from '@/shared/company-modules/route-modules';
 import { ROUTES, type MenuItem } from './navigation';
+import { withMaintenanceNavigation } from './maintenance-navigation';
 
 export type ModuleState = { code: string; isEnabled: boolean };
 
@@ -87,8 +88,9 @@ export function filterRoutesByPermissions(
   routes: typeof ROUTES,
   allowedPermissions: Set<string>,
   enabledModules: Set<string>,
+  roleName?: string | null,
 ) {
-  return routes
+  return withMaintenanceNavigation(routes, roleName)
     .map((group) => {
       const menu = group.menu
         .map((item) => filterSidebarTreeByPermissions(item, allowedPermissions, enabledModules))

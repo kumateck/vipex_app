@@ -1,3 +1,4 @@
+import { parcelCreditChargeRoutes } from './parcel-credit-charge.routes';
 import { parcelStorageClearanceRoutes } from './parcel-storage-clearance.routes';
 import { shelfPickerReassignmentRoutes } from './shelf-picker-reassignment.routes';
 import { Elysia, t } from 'elysia';
@@ -90,6 +91,7 @@ function emptyParcelList(query: { page?: number; pageSize?: number }) {
 
 export const parcelsRoutes = new Elysia({ name: 'parcels' })
   .use(authPlugin)
+  .use(parcelCreditChargeRoutes)
   .get(
     '/financial-repair/preview',
     async ({ query, user }) => {

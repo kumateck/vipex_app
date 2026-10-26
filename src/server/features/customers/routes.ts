@@ -25,6 +25,7 @@ import {
   updateCustomerCardCtrl,
 } from './controller';
 import { findOrCreateCustomerSvc } from './service';
+import { listCreditParcelsSvc } from './credit-settlement';
 
 export const customersRoutes = new Elysia({ name: 'customers' })
   .use(authPlugin)
@@ -61,6 +62,7 @@ export const customersRoutes = new Elysia({ name: 'customers' })
         filters: {
           companyId: user!.companyId!,
           includeDeleted: query.includeDeleted ?? null,
+          customerType: query.customerType,
         },
       }),
     {
@@ -68,6 +70,7 @@ export const customersRoutes = new Elysia({ name: 'customers' })
         ...PaginationRequestQueryProps,
         companyId: t.Optional(UUID),
         includeDeleted: t.Optional(t.Boolean()),
+        customerType: t.Optional(t.Integer({ minimum: 0, maximum: 1 })),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
       detail: { tags: ['Customers'], summary: 'List/search customers' },
@@ -278,6 +281,22 @@ export const customersRoutes = new Elysia({ name: 'customers' })
     },
   )
   .get(
+    '/:id/credit/parcels',
+    ({ params, user }) =>
+      listCreditParcelsSvc({
+        customerId: params.id,
+        companyId: user!.companyId!,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: {
+        tags: ['Customers'],
+        summary: 'List all outstanding credit parcels for settlement',
+      },
+    },
+  )
+  .get(
     '/:id/credit/open-items',
     async ({ params, query, user }) =>
       listCustomerCreditOpenItemsCtrl({
@@ -333,6 +352,7 @@ export const customersRoutes = new Elysia({ name: 'customers' })
       const result = await postCustomerCreditPaymentCtrl({
         customerId: params.id,
         companyId: user!.companyId!,
+        parcelIds: body.parcelIds,
         amountCedis: (body as { amountCedis: number | string }).amountCedis,
         notes: (body as { notes?: string | null }).notes,
         referenceId: (body as { referenceId?: string | null }).referenceId,
@@ -344,9 +364,10 @@ export const customersRoutes = new Elysia({ name: 'customers' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({
+        parcelIds: t.Array(UUID, { minItems: 1, maxItems: 200, uniqueItems: true }),
         amountCedis: t.Union([t.Number(), t.String()]),
-        notes: t.Optional(t.Union([t.String(), t.Null()])),
-        referenceId: t.Optional(t.Union([t.String(), t.Null()])),
+        notes: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+        referenceId: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateCustomers)],
       detail: { tags: ['Customers'], summary: 'Record customer credit payment' },
