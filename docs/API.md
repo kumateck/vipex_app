@@ -138,7 +138,12 @@ caller's company. Details were not company-checked before October 2026. See
 
 `GET /v1/shipments/parcels/:id/receipt-reprint-tax` returns the summed, non-voided sender
 principal payment and recorded tax amounts for a receipt reprint, or `null` when no such payment
-exists. It requires authentication plus one of `CanReadConsignments`, `CanReadParcelOutgoing`, or
+exists on a non-credit parcel. A credit parcel without active non-credit sender principal payments
+returns the same numeric tax fields at zero plus `settlementMode: "CREDIT"`. Voided and credit-method
+payment rows are excluded. Web/desktop reprints always request fresh data, even when their page
+snapshot shows zero paid; lookup failures cancel the reprint. The client renders the credit response
+as an acknowledgement and never interprets a zero receiver balance as proof of payment.
+It requires authentication plus one of `CanReadConsignments`, `CanReadParcelOutgoing`, or
 `CanReadParcels`. The parcel must belong to the user's company; users without broad parcel read
 permission must be at head office or the parcel's source branch. Missing or out-of-scope
 parcels return 404. The endpoint is read-only and is used by web and desktop reprint actions, not
@@ -353,7 +358,11 @@ without snapshots use the legacy status and payment fallback.
 authenticated cashier's active session, replacing a provisional parcel entry-session link and
 preserving the creator. This covers paid, split, and zero-payment To Be Paid confirmation,
 including self-service bookings. Parcel locking gives concurrent confirmations one owner;
-repeating confirmation preserves ownership. Missing/deleted/wrong-company/wrong-source-branch
+principal collection for a parcel whose saved method is CREDIT returns 409 before creating a
+payment or tax item. This guard also covers the generic payment creation endpoint. A legacy credit
+parcel can be confirmed with no amount; account repayments use the customer credit workflow.
+Credit booking requests with a sender payment or receiver balance return 400.
+Repeating confirmation preserves ownership. Missing/deleted/wrong-company/wrong-source-branch
 parcels return 404 even without a payment; missing active sessions return 403. First processing
 adds `PARCEL_SENDER_PROCESSED` audit metadata with current/prior session IDs. Immediate delegated
 creation rejects a changed authorized session with 400 before persistence. Schemas/permissions

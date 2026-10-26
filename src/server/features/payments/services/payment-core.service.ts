@@ -10,6 +10,7 @@ import { updateParcelRepo } from '../../shipments/parcels.repository';
 import { recordPaymentTaxJournalItemSvc } from '../../accounting/service';
 import type { DbExecutor, PaymentCreateInput } from '../types/payment.types';
 import { toPaymentAmounts, computeProfileTaxBreakdown } from '../utils/payment-tax';
+import { assertCreditPrincipalNotCollected } from '../utils';
 
 export const STORAGE_PAYMENT_NOTE_PREFIX = 'STORAGE_CHARGE';
 
@@ -26,6 +27,7 @@ export async function createPaymentCore(input: PaymentCreateInput, executor: DbE
   if (parcel.isDeleted) {
     throw BadRequest('Cannot collect payment for deleted parcel');
   }
+  assertCreditPrincipalNotCollected(parcel.method, input.component);
   if (input.cashierType === CashierType.SENDING && parcel.sourceId !== input.branchId) {
     throw Forbidden('Sender cashier can only collect payment for parcels created in their branch');
   }

@@ -12,6 +12,7 @@ export { buildReceiverReceiptData } from './build-receiver-receipt-data';
 export { buildConfirmedCashierStickerPayment } from './confirmed-cashier-sticker-payment';
 export { loadStickerPaymentForPrint } from './sticker-payment-source';
 export { buildInvoiceA5Props, computeParcelReceiptTax } from './build-invoice-a5-props';
+export { resolveReceiptReprint } from './resolve-receipt-reprint';
 export {
   buildHomeDeliveryReceiptA5Props,
   type HomeDeliveryReceiptSource,

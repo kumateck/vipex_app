@@ -68,7 +68,10 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
     const senderDueCedis = getSenderDuePsw(selectedParcel) / 100;
     const amountValue = Number(amount);
     const totalChargeCedis = selectedParcel.chargePsw / 100;
-    const receiverToPayCedis = Math.max(totalChargeCedis - senderDueCedis, 0);
+    const receiverToPayCedis =
+      selectedParcel.method === PaymentMethod.CREDIT
+        ? 0
+        : Math.max(totalChargeCedis - senderDueCedis, 0);
 
     if (senderDueCedis > 0 && (Number.isNaN(amountValue) || amountValue <= 0)) {
       toast.error('Enter a valid payment amount');

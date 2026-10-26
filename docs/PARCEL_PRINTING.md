@@ -358,6 +358,80 @@ retained. A missing/voided payment, missing confirmation date, failed request, o
 cancels printing visibly. No payment, delivery, or tax write occurs. The existing cashier-session
 and desktop receipt-paper routing apply; mobile has no equivalent screen.
 
+### Credit printing and historical repair
+
+A credit booking is a charge to the customer's account, not cash collected by the parcel cashier.
+Cashier-created credit bookings now proceed directly to Processed. A legacy CREATED credit parcel
+has zero cash due at Sender Payments; confirming and printing creates no principal payment. The
+payment service rejects principal collection for any saved CREDIT parcel before payment/tax writes,
+so stale web, desktop, mobile and direct API requests cannot repeat this error. Delivery/storage
+fee collection retains its existing rules. Credit booking requests cannot also include a sender
+payment or receiver balance. Credit repayments remain in the customer credit ledger.
+
+Credit receipt output is an acknowledgement with **PAYMENT STATUS: CREDIT**, the original amount
+charged to the sender's account, and a notice that no parcel payment was collected. It does not
+claim the recipient must pay that amount and does not print a paid tax invoice. This applies to
+A5, landscape 80 mm and vertical 58/80 mm receipt layouts. The original creation selection remains
+sticker-only for credit, while explicit receipt/reprint selections can print the acknowledgement.
+Credit stickers always use the server verifier rather than a locally fabricated PAID confirmation.
+
+Receipt reprints always reload active non-credit sender principal payments and recorded tax.
+When none exist for a CREDIT parcel, the endpoint explicitly identifies credit with zero payment
+amounts. When a genuine recorded parcel payment exists it remains evidence of payment until
+reconciled. Network/permission failures cancel receipt reprints. Customer-account repayment
+allocations are separate from parcel payment rows; these acknowledgements describe the original
+credit booking, not an account balance or an account-payment receipt.
+
+Read-only production trace on 2026-10-26 for **AO4858124I** found a GHS 50 credit charge at
+18:57:13 UTC on 2026-10-24 and a GHS 50 cash principal row at 19:00:40 UTC. The customer confirmed
+that printing created the cash row and no cash was received. That row explains the verifier's
+PAID result. Its GHS 8.33 tax item was unfiled with no posted journal, and the credit charge had no
+repayment allocation. A read-only repair dry run passed. No production repair was applied.
+The same company scan found a second credit/cash conflict, **SO2981368C**. Its cash receipt
+requires separate confirmation before repair; the presence of both records alone does not prove
+that its cash collection was erroneous.
+
+Use `scripts/trace-credit-parcel.ts <booking-or-tracking-code>` for a bounded, read-only trace.
+`--scan-company <company-id>` lists up to 200 current credit/cash conflicts with a total count;
+each candidate requires evidence that cash was not received before repair. Do not bulk-void real
+collections. Both scripts use only the configured `DATABASE_URL` and do not print its credentials.
+
+The guarded repair script defaults to a read-only connection/transaction. Dry run for this case:
+
+```sh
+bun run scripts/repair-credit-print-payment.ts AO4858124I \
+  --company tsewbv18o1935sa4v1dlahq2 \
+  --payment-id zygedu5gla75usghf4vhi0tl --expected-amount-psw 5000
+```
+
+After reviewing that output, append `--apply --actor-user-id COMPANY_USER_ID
+--reason 'Printing created a cash payment; no cash was received' --confirm-no-cash-received`.
+Use a real actor from the same company. Apply runs one serializable transaction, locks the parcel,
+payment, credit charge and tax items, soft-voids the exact cash row, excludes its unfiled tax item,
+and writes the native tax exclusion audit plus an audit record containing the original payment/tax values. It preserves transit,
+the original credit charge, and parcel balances. Repeating the same repair makes no new changes.
+Missing/mismatched company/code/amounts, extra active principal rows, credit allocations, reviewed
+or filed tax, tax periods, posted payment journals, saved daily cash confirmations, or a different
+prior void abort the transaction for Accounts review. Audit failure also rolls everything back.
+Deploy the prevention fix before running a reviewed repair, then reprint the corrected documents;
+existing paper labels and old application bundles do not change automatically.
+
+QA: create a GHS 50 credit booking and print/reprint stickers and receipts repeatedly; assert no
+cash payment or tax item is created and CREDIT remains visible. Confirm a legacy CREATED credit
+parcel without collecting cash, and submit a stale positive-amount collection request (409, no
+financial writes). Repeat paid cash, receiver-pay, split, storage and delivery-fee workflows.
+Check credit A5/landscape/58/80 mm duplicates, CS/QR, missing payments, request failures and retry.
+Automated coverage: `credit-parcel-printing.spec.tsx` and existing sticker/receipt scenarios.
+`credit-print-repair-script.spec.ts` requires `CREDIT_PRINT_REPAIR_TEST_DATABASE_URL` pointing only
+to the dedicated local `127.0.0.1/vipex_credit_print_repair_test` database; it exercises dry-run,
+atomic repair, idempotency, unsafe-state rejection and rollback on audit failure. It refuses
+production URLs and is skipped without that explicit test URL.
+`credit-parcel-collection.spec.ts` runs the real booking and payment services with
+`CREDIT_COLLECTION_TEST=1` and `TEST_DATABASE_URL` set to an empty local
+`vipex_cashier_attribution_test` database. It verifies credit creation, rejection of the phantom
+cash request and generic principal creation, no-amount confirmation/retry, and rejection of mixed
+credit/cash booking requests. The fixture refuses other database names or remote hosts.
+
 **Existing storage-tax mismatch:** the original receiver handover flow computes a combined
 principal-plus-storage tax box for printing but does not persist that combined breakdown.
 Storage payments are recorded as `OTHER` with zero tax. Therefore storage-inclusive duplicates

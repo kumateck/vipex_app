@@ -1,6 +1,7 @@
 import type { SenderCashierParcel } from '../../api/parcel.api';
 import type { ReceiptPrintData } from '../parcel-receipt.types';
 import { buildConfirmedCashierStickerPayment } from '../../utils';
+import { PaymentMethod } from '@/db/schemas/enums';
 
 type SenderPaymentTaxBreakdown = {
   vatCedis: number;
@@ -32,7 +33,8 @@ export function buildSenderReceiptData({
   destinationLocationName,
   taxBreakdown,
 }: BuildSenderReceiptDataArgs): ReceiptPrintData {
-  const amountPaidCedis = senderDueCedis > 0 ? amountValue : 0;
+  const isCredit = parcel.method === PaymentMethod.CREDIT;
+  const amountPaidCedis = !isCredit && senderDueCedis > 0 ? amountValue : 0;
 
   return {
     bookingCode: parcel.bookingCode,
@@ -57,11 +59,14 @@ export function buildSenderReceiptData({
     senderPaidCedis: amountPaidCedis,
     receiverToPayCedis,
     amountPaidCedis,
-    confirmedStickerPayment: buildConfirmedCashierStickerPayment({
-      bookingCode: parcel.bookingCode,
-      trackingCode: parcel.trackingCode,
-      receiverToPayCedis,
-    }),
+    settlementMode: isCredit ? 'CREDIT' : undefined,
+    confirmedStickerPayment: isCredit
+      ? undefined
+      : buildConfirmedCashierStickerPayment({
+          bookingCode: parcel.bookingCode,
+          trackingCode: parcel.trackingCode,
+          receiverToPayCedis,
+        }),
     issuedAt: new Date().toISOString(),
     taxBreakdown,
   };

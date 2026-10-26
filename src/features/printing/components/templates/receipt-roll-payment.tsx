@@ -6,6 +6,16 @@ import { isToBePaidDeliveryReceipt } from './invoice-a5-template.utils';
 export function ReceiptRollPayment(props: InvoiceA5TemplateProps) {
   const money = props.formatMoney;
   const unpaid = isToBePaidDeliveryReceipt(props);
+  if (props.settlementMode === 'CREDIT')
+    return (
+      <>
+        <strong>PAYMENT STATUS: CREDIT</strong>
+        <ReceiptRollAmount
+          label="Amount charged to credit account"
+          value={money(props.totalChargeCedis)}
+        />
+      </>
+    );
   if (unpaid)
     return (
       <>

@@ -65,6 +65,7 @@ export function buildInvoiceA5Props(
     data.payerType ? data.payerTelephone2 : data.senderTelephone2,
   );
   return {
+    settlementMode: data.settlementMode,
     bookingCode: data.bookingCode,
     issuedAtLabel: formatDate(data.issuedAt),
     cashierName: options.cashierName,
@@ -82,7 +83,10 @@ export function buildInvoiceA5Props(
     senderTelephone: formatTelephonePair(data.senderTelephone, data.senderTelephone2),
     receiverName: data.receiverName,
     receiverTelephone: formatTelephonePair(data.receiverTelephone, data.receiverTelephone2),
-    paymentModeLabel: getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis),
+    paymentModeLabel:
+      data.settlementMode === 'CREDIT'
+        ? 'Credit'
+        : getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis),
     totalChargeCedis: data.totalChargeCedis,
     senderPaidCedis: data.senderPaidCedis,
     receiverToPayCedis: data.receiverToPayCedis,
