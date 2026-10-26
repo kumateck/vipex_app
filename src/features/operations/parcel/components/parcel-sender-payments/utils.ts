@@ -1,4 +1,8 @@
-import { ParcelReconciliationActionType, ParcelReconciliationCaseType } from '@/db/schemas/enums';
+import {
+  ParcelReconciliationActionType,
+  ParcelReconciliationCaseType,
+  PaymentMethod,
+} from '@/db/schemas/enums';
 import { formatDateTime } from '@/lib/dates';
 import type { SenderCashierParcel } from '../../api/parcel.api';
 import { RECON_ACTION_OPTIONS } from './constants';
@@ -22,6 +26,7 @@ export function formatSenderParcelDate(isoDate: string) {
 }
 
 export function getSenderDuePsw(parcel: SenderCashierParcel) {
+  if (parcel.method === PaymentMethod.CREDIT) return 0;
   return Math.max(parcel.chargePsw - (parcel.plannedToBePaidPsw ?? 0), 0);
 }
 

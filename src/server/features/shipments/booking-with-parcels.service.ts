@@ -12,6 +12,7 @@ import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
 import { getCustomerCreditSummarySvc, getCustomerSvc } from '../customers/service';
 import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
+import { assertCreditBookingUncollected } from '../payments/utils/credit-collection-policy';
 
 export type CreateBookingWithParcelsBody = {
   senderId: string;
@@ -101,6 +102,7 @@ export async function createBookingWithParcelsSvc(
         `Parcel ${index + 1}: Sender payment and receiver to-be-paid cannot exceed the parcel charge`,
       );
     }
+    assertCreditBookingUncollected(parcel.method, senderPaymentCedis, plannedToBePaidCedis);
   });
 
   const creditParcels = normalizedParcels.filter(
@@ -179,7 +181,7 @@ export async function createBookingWithParcelsSvc(
       const status =
         body.requireActiveCashierSession &&
         p.status === ParcelStatus.CREATED &&
-        chargePsw <= plannedToBePaidPsw
+        (chargePsw <= plannedToBePaidPsw || p.method === PaymentMethod.CREDIT)
           ? ParcelStatus.PROCESSED
           : p.status;
 

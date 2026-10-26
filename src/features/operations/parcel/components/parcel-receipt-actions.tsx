@@ -72,7 +72,8 @@ export function ParcelReceiptActions({
   const [logStickerPrint] = useLogParcelStickerPrintMutation();
   const qrUrl = buildParcelTrackingUrl(data.trackingCode);
   const hasPaidAmount = (data.amountPaidCedis ?? data.senderPaidCedis) > 0;
-  const hasPrintableReceipt = hasPaidAmount || data.receiverToPayCedis > 0;
+  const hasPrintableReceipt =
+    hasPaidAmount || data.receiverToPayCedis > 0 || data.settlementMode === 'CREDIT';
   const missingPaidTax = hasPaidAmount && !data.taxBreakdown;
   const tax = useParcelReceiptTax(data);
   const printInvoice = useManagedReactPrint({

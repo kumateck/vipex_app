@@ -5,6 +5,7 @@ export type ReceiptPrintData = {
   trackingCode: string;
   callSender?: boolean;
   stickerStatusLabel?: StickerPaymentStatus;
+  settlementMode?: 'CREDIT';
   /** Supplied only after a successful cashier collect/confirm request. */
   confirmedStickerPayment?: VerifiedStickerPayment;
   parcelDetails: string;

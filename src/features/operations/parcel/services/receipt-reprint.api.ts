@@ -1,6 +1,7 @@
 import { api } from '@/services/api';
 
 export type ReceiptReprintTax = {
+  settlementMode?: 'CREDIT';
   grossAmountPsw: number;
   vatPsw: number;
   getfundPsw: number;

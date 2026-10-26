@@ -1,5 +1,10 @@
 # Digital Receipts
 
+Sender credit booking copies render a credit acknowledgement with zero collected payment,
+matching the physical receipt. A zero receiver balance does not prove sender payment. Customer
+credit repayments remain separate account transactions; this document describes the original
+credit booking. See [Parcel printing](PARCEL_PRINTING.md#credit-printing-and-historical-repair).
+
 Status: implemented on branch `feature/whatsapp-receipts` (web + server). The public page lives in `vipex_website` (`/receipt/:token`). Mobile is not implemented.
 
 ## Purpose

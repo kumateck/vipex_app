@@ -1,5 +1,6 @@
 import type { ReceiptPrintData } from '@/features/operations/parcel/components/parcel-receipt.types';
 import { buildReceiverReceiptData } from '@/features/operations/parcel/utils/build-receiver-receipt-data';
+import { PaymentMethod } from '@/db/schemas/enums';
 
 /** Fields of the parcel search row that printed receipts are built from. */
 export type ReceiptParcelRow = {
@@ -11,6 +12,7 @@ export type ReceiptParcelRow = {
   parcelValuePsw: number | null;
   chargePsw: number;
   plannedToBePaidPsw: number;
+  method?: number;
   senderName: string | null;
   senderPhone: string | null;
   senderPhone2: string | null;
@@ -52,7 +54,9 @@ export function buildSenderReceiptData(
 ): ReceiptPrintData {
   const totalChargeCedis = Math.max(row.chargePsw ?? 0, 0) / 100;
   const receiverToPayCedis = Math.max(row.plannedToBePaidPsw ?? 0, 0) / 100;
-  const plannedSenderPaidCedis = Math.max(totalChargeCedis - receiverToPayCedis, 0);
+  const isCredit =
+    row.method === PaymentMethod.CREDIT && (!recorded || recorded.grossAmountPsw <= 0);
+  const plannedSenderPaidCedis = isCredit ? 0 : Math.max(totalChargeCedis - receiverToPayCedis, 0);
   const base: ReceiptPrintData = {
     bookingCode: row.bookingCode,
     trackingCode: row.trackingCode,
@@ -72,6 +76,7 @@ export function buildSenderReceiptData(
     senderPaidCedis: plannedSenderPaidCedis,
     receiverToPayCedis,
     amountPaidCedis: plannedSenderPaidCedis,
+    settlementMode: isCredit ? 'CREDIT' : undefined,
     issuedAt: row.createdAt.toISOString(),
   };
   if (plannedSenderPaidCedis === 0 || !recorded || recorded.grossAmountPsw <= 0) return base;

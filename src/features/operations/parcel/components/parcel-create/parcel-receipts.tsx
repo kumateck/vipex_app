@@ -56,7 +56,11 @@ export function ParcelReceipts({ receipt, autoPrint = false }: ParcelReceiptsPro
                 <p className="text-xs text-muted-foreground">Booking: {parcel.bookingCode}</p>
               </div>
               <Badge variant="outline">
-                {parcel.receiverToPayCedis > 0 ? 'Receiver to pay' : 'Sender paid'}
+                {parcel.settlementMode === 'CREDIT'
+                  ? 'Credit'
+                  : parcel.receiverToPayCedis > 0
+                    ? 'Receiver to pay'
+                    : 'Sender paid'}
               </Badge>
             </div>
             <ParcelReceiptActions
