@@ -55,13 +55,14 @@ export const customerWalletCreditApi = api.injectEndpoints({
 
     createCustomerWalletPayment: builder.mutation<
       {
-        creditTransactionId: string;
+        id: string;
         allocatedAmountPsw: number;
         unallocatedAmountPsw: number;
         allocations: Array<{ chargeTransactionId: string; amountPsw: number }>;
       },
       {
         customerId: string;
+        parcelIds: string[];
         amountCedis: number | string;
         notes?: string | null;
         referenceId?: string | null;

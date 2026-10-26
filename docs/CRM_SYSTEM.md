@@ -248,15 +248,33 @@ Notes:
 
 ## Debt Payment Allocation
 
-Credit payment posting now allocates automatically to oldest outstanding credit charges first (FIFO):
+On a customer's Payments tab, select parcels by booking code and enter the exact
+sum of their outstanding balances. The server requires `parcelIds` on
+`POST /:id/credit/payments`; it no longer distributes an arbitrary amount by FIFO.
+Partial settlement, excess amounts, duplicate parcel IDs, and unallocated payment
+balances are rejected. An older partial allocation may be cleared by paying the
+parcel's full remaining balance. The settlement list includes all outstanding dates.
 
-- One credit payment transaction is created for the amount paid.
-- Allocation rows are created per satisfied charge item.
-- Partial payments are distributed across multiple open charges until exhausted.
-- Endpoint response includes:
-  - allocated amount
-  - unallocated remainder
-  - allocation breakdown
+`GET /:id/credit/parcels` requires `CanReadCustomers` and returns outstanding amounts
+grouped by parcel with booking/tracking codes. Posting requires
+`CanUpdateCustomers`. Both endpoints enforce the authenticated company. Repayment,
+allocations, and audit share one transaction, and concurrent submissions cannot
+allocate the same outstanding amount twice. Unknown/mismatched customers return
+404; already settled or unavailable parcels return 409; amount mismatch returns 400.
+
+Accounts staff can also use Finance → Customer Wallet & Credit Control → Create
+Payment with that module's dedicated permissions. See
+[CUSTOMER_WALLET_CREDIT_MODULE.md](CUSTOMER_WALLET_CREDIT_MODULE.md) for the API
+contract, failures, permissions, and unpaid credit-charge adjustment workflow.
+
+The Customers list now has Individual and Business tabs. The `customerType` filter
+(0 or 1) is applied on the server before pagination and counting. Search and tab
+changes reset pagination. Existing records keep their recorded customer type.
+
+Credit ledger entries remain immutable: credit-charge corrections append an
+ADJUSTMENT whose `referenceId` identifies the original CHARGE. Effective open charge
+amounts include these adjustments before subtracting allocations. New parcel
+creation and charge updates reject zero charges (minimum GHS 0.01).
 
 ## Defaults and Compatibility
 

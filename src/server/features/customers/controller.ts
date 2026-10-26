@@ -25,6 +25,7 @@ import {
 export type ListCustomersQuery = PaginationRequestDto<{
   companyId: string;
   includeDeleted?: boolean | null;
+  customerType?: number;
 }>;
 
 export async function listCustomersCtrl(
@@ -37,6 +38,7 @@ export async function listCustomersCtrl(
     companyId: q.filters?.companyId ?? '',
     search: pagination.search ?? null,
     includeDeleted: q.filters?.includeDeleted ?? null,
+    customerType: q.filters?.customerType,
     sort: pagination.sort ?? null,
   });
   return {

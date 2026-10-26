@@ -1,5 +1,13 @@
 # Route Permission Matrix
 
+`/settings/maintenance` and `/v1/maintenance/*` are restricted to the **System Admin role**, not
+a grantable permission. Navigation and page guard use the role name; each API call rechecks the
+active user and non-deleted role in the database and scopes operations/history to that company.
+The same restriction applies to all nine booking-code maintenance operations, including name
+backfill, reversal/payment/balance repairs and search/delivery-fee inspections. Execution requires
+a fresh preview and the operation-specific confirmation. There is no additional module gate or
+mobile-native page. See [System maintenance](SYSTEM_MAINTENANCE.md).
+
 Sticker payment verification (`GET /v1/shipments/parcels/sticker-payment`) accepts any existing
 booking-create, self-service-complete, sender-payment, receiver-payment, consignment-read,
 outgoing-parcel-read, or parcel-read permission. It additionally requires the `sticker_print` module
@@ -116,3 +124,19 @@ Parcel Tax Data Generation (`/accounting/tax-data`) resolves to `CanReadAccounti
 through the accounting read prefix and accounting module gate. API confirmation
 additionally requires `CanConfirmParcelTaxData`; see
 [platform/finance permissions](permissions/ROUTE_PERMISSION_PLATFORM_FINANCE.md#parcel-tax-data).
+
+### Customer parcel debt settlement and credit charge editing
+
+| Route                                                              | Permission / gate                                                                               |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `GET /v1/customers?customerType=0\|1`                              | `CanReadCustomers`; authenticated company                                                       |
+| `GET /v1/customers/:id/credit/parcels`                             | `CanReadCustomers`; authenticated company                                                       |
+| `POST /v1/customers/:id/credit/payments`                           | `CanUpdateCustomers`; selected owned parcels and exact total                                    |
+| `GET /v1/customer-wallet-credit/accounts/:customerId/open-parcels` | `CanCreateCustomerWalletCreditPayments`; `customer_wallet_credit` enabled                       |
+| `POST /v1/customer-wallet-credit/accounts/:customerId/payments`    | `CanCreateCustomerWalletCreditPayments`; `customer_wallet_credit` enabled; exact selected total |
+| `PATCH /v1/parcels/:id/credit-charge`                              | `CanUpdateParcels`; authenticated company; unpaid fully CREDIT parcel                           |
+
+The CRM payment form and parcel charge action are hidden without their respective
+mutation permissions. Finance staff use Finance → Customer Wallet & Credit Control
+→ Create Payment; these operational permissions are separate from the System Admin
+maintenance console. Amount-only payment calls and generic credit-charge edits are rejected.

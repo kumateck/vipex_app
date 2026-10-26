@@ -1,5 +1,6 @@
 import { and, asc, count, desc, eq, gte, ilike, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
+import { effectiveChargeAmountSql } from './credit-settlement';
 import {
   cards,
   customerCards,
@@ -39,6 +40,7 @@ export type ListCustomerParams = {
   companyId: string;
   search?: string | null;
   includeDeleted?: boolean | null;
+  customerType?: number;
   sort?: SortField[] | null;
 };
 
@@ -49,6 +51,7 @@ export async function listCustomersRepo(
     eq(customers.companyId, p.companyId),
   ];
   if (!p.includeDeleted) whereParts.push(eq(customers.isDeleted, false));
+  if (p.customerType != null) whereParts.push(eq(customers.customerType, p.customerType));
   if (p.search) {
     whereParts.push(
       or(
@@ -582,7 +585,7 @@ export async function listCustomerOpenCreditChargesRepo(input: {
         cct.created_at,
         cct.reference_id,
         cct.notes,
-        cct.signed_amount_psw::bigint AS charge_amount_psw
+        ${effectiveChargeAmountSql()}::bigint AS charge_amount_psw
       FROM customer_credit_transactions cct
       WHERE cct.customer_id = ${input.customerId}
         AND cct.company_id = ${input.companyId}

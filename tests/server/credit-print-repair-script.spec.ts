@@ -13,26 +13,34 @@ if (url) {
 
 describe.skipIf(!url)('credit printing repair script on isolated PostgreSQL', () => {
   let sql: ReturnType<typeof postgres>;
-  const run = async (apply = false, extra: string[] = []) => {
+  const run = async (apply = false, extra: string[] = [], bookingOnly = false) => {
     const process = Bun.spawn(
       [
         'bun',
         'run',
         'scripts/repair-credit-print-payment.ts',
         'AO4858124I',
-        '--company',
-        'test-company',
-        '--payment-id',
-        'test-payment',
-        '--expected-amount-psw',
-        '5000',
+        ...(bookingOnly
+          ? []
+          : [
+              '--company',
+              'test-company',
+              '--payment-id',
+              'test-payment',
+              '--expected-amount-psw',
+              '5000',
+            ]),
         ...(apply
           ? [
               '--apply',
-              '--actor-user-id',
-              'test-actor',
-              '--reason',
-              'Confirmed printing created cash row; no cash received',
+              ...(bookingOnly
+                ? []
+                : [
+                    '--actor-user-id',
+                    'test-actor',
+                    '--reason',
+                    'Confirmed printing created cash row; no cash received',
+                  ]),
               '--confirm-no-cash-received',
             ]
           : []),
@@ -104,6 +112,57 @@ describe.skipIf(!url)('credit printing repair script on isolated PostgreSQL', ()
     const before = await state();
     const result = await run();
     expect(result.code).toBe(0);
+    expect(await state()).toEqual(before);
+  });
+  test('booking code alone discovers the correct payment without changing records', async () => {
+    const before = await state();
+    expect((await run(false, [], true)).code).toBe(0);
+    expect(await state()).toEqual(before);
+  });
+  test('booking-only apply records a system maintenance repair and is idempotent', async () => {
+    expect((await run(true, [], true)).code).toBe(0);
+    const after = await state();
+    expect(after.payment.voided_at).not.toBeNull();
+    expect(after.payment.voided_by).toBeNull();
+    expect(after.tax.filing_status).toBe(3);
+    expect(after.audit[0]!.actor_user_id).toBeNull();
+    expect(after.audit[0]!.metadata.actorAttribution).toBe('system-maintenance');
+    expect(after.audit[0]!.metadata.paymentId).toBe('test-payment');
+    expect(after.taxAudit).toHaveLength(1);
+    expect(Number(after.credit.signed_amount_psw)).toBe(5000);
+    expect((await run(true, [], true)).code).toBe(0);
+    expect(await state()).toEqual(after);
+  });
+  test('booking-only repair refuses ambiguous company matches', async () => {
+    await sql`insert into parcels values ('another-parcel','another-company','AO4858124I','another-sender',4,false,5000,0,5)`;
+    const before = await state();
+    expect((await run(true, [], true)).code).toBe(1);
+    expect(await state()).toEqual(before);
+    expect((await run(true)).code).toBe(0);
+  });
+  test.each([
+    [
+      'multiple principal payments',
+      `insert into payments (id, parcel_id, company_id, component, payer, method, gross_amount_psw) values ('second','test-parcel','test-company',0,0,0,5000)`,
+    ],
+    ['wrong amount', `update payments set gross_amount_psw = 4000`],
+    ['noncash payment', `update payments set method = 1`],
+    ['gateway-linked payment', `update payments set momo_transaction_id = 'gateway-reference'`],
+    [
+      'another prior void',
+      `update payments set voided_at = now(), void_reason = 'Another correction'`,
+    ],
+    ['missing credit', `delete from customer_credit_transactions`],
+    ['non-credit parcel', `update parcels set method = 0`],
+  ])('booking-only repair refuses %s', async (_name, change) => {
+    await sql.unsafe(change);
+    const before = await state();
+    expect((await run(true, [], true)).code).toBe(1);
+    expect(await state()).toEqual(before);
+  });
+  test('booking-only apply still requires no-cash confirmation', async () => {
+    const before = await state();
+    expect((await run(false, ['--apply'], true)).code).toBe(1);
     expect(await state()).toEqual(before);
   });
   test('repair is atomic, preserves credit/transit and is idempotent', async () => {

@@ -1,0 +1,1 @@
+export { maintenanceRoutes } from './routes';

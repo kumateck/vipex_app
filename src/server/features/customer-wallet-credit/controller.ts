@@ -30,12 +30,18 @@ export async function listCustomerWalletApprovalsCtrl(
 export async function postCustomerWalletPaymentCtrl(
   user: AuthUser,
   customerId: string,
-  body: { amountCedis: number | string; notes?: string | null; referenceId?: string | null },
+  body: {
+    parcelIds: string[];
+    amountCedis: number | string;
+    notes?: string | null;
+    referenceId?: string | null;
+  },
 ) {
   return postCustomerWalletPaymentSvc({
     companyId: user.companyId!,
     customerId,
     actorUserId: user.sub,
+    parcelIds: body.parcelIds,
     amountCedis: body.amountCedis,
     notes: body.notes ?? null,
     referenceId: body.referenceId ?? null,

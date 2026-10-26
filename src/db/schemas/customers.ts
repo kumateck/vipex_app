@@ -119,6 +119,9 @@ export const customerCreditTransactions = pgTable(
     byCustomer: index('customer_credit_transactions_customer_idx').on(t.customerId),
     byCompany: index('customer_credit_transactions_company_idx').on(t.companyId),
     byCreated: index('customer_credit_transactions_created_idx').on(t.createdAt),
+    byAdjustmentReference: index('customer_credit_transactions_adjustment_reference_idx')
+      .on(t.companyId, t.customerId, t.referenceId)
+      .where(sql`${t.transactionType} = 2`),
   }),
 );
 

@@ -75,6 +75,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     routesWithDashboard,
     allowedPermissions,
     enabledModules,
+    user?.role?.name,
   );
 
   const workspaceGroup = filteredRoutes.find((group) => group.title === 'Workspace');
