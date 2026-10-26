@@ -1,3 +1,4 @@
+import { getParcelPaymentStatus } from '@/shared/shipments/parcel-payment-status';
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import { db } from '@/db/config';
 import { recordAuditLog } from '../audit/logger';
@@ -878,6 +879,9 @@ export async function listCustomerTransactionsSvc(input: {
         status: row.status,
         chargePsw: row.chargePsw,
         method: row.method,
+        paymentStatus: getParcelPaymentStatus(row),
+        paidPrincipalPsw: row.paidPrincipalPsw,
+        creditPaidPsw: row.creditPaidPsw,
         transactionRole: isSender ? ('SENDER' as const) : ('RECEIVER' as const),
         createdAt: row.createdAt,
       };

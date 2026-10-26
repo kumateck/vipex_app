@@ -1,3 +1,4 @@
+import { mapChargeCorrectionHistory } from './parcel-charge-correction-history';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { parcelStatusLabel } from '@/shared/shipments/parcel-status-labels';
 import { asRecord, humanize, joinParts, money, text } from './parcel-history-format';
@@ -53,6 +54,8 @@ export function isArrivalAudit(entry: AuditEntry) {
 }
 
 export function mapAuditEntry(entry: AuditEntry): ParcelHistoryDraft[] {
+  const chargeCorrection = mapChargeCorrectionHistory(entry);
+  if (chargeCorrection) return chargeCorrection;
   if (TABLE_SOURCED_PREFIXES.some((prefix) => entry.action.startsWith(prefix))) return [];
   const meta = asRecord(entry.metadata);
   const message = text(entry.message);

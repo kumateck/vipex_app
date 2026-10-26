@@ -36,3 +36,4 @@ export * from './operations-exceptions-briefs';
 export * from './management-daily-briefs';
 // export * from './shifts';
 // export * from './shifts';
+export * from './parcel-charge-corrections';
