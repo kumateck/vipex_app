@@ -43,27 +43,47 @@
 10. An older payment with unallocated credit must block a new collection for finance review.
 11. Simulate audit failure: payment and allocations must both roll back.
 
-## Customer tabs and credit charge changes
+## Customer tabs, payment labels and zero-charge correction approvals
 
-1. Customers → Individual/Business: verify type filtering, search, counts, and pagination.
-   Change tab on page 2: it must reset to page 1 without mixing customer types.
-2. Create a parcel with zero/negative charge, including self-service agent completion and
-   direct booking API requests: reject. GHS 0.01 remains valid.
-3. Parcel details → Charges → Update credit charge: increase/reduce an unpaid CREDIT
-   parcel with a reason. Verify parcel amount, account balance, open items, wallet total,
-   and sticker credit verification agree. Original charge rows must be unchanged.
-4. Reject stale expected charges, zero, fractional pesewas, amounts over GHS 100,000,
-   missing/ambiguous credit records, any allocation, and any active principal payment.
-5. Try an increase beyond the credit limit or for a blocked customer: reject. Reductions
-   remain allowed. After debt settlement, credit-charge editing must fail.
-6. Users without `CanUpdateParcels` cannot call the charge endpoint. Payment/open-parcel
-   endpoints require their respective CRM/finance permissions and tenant scope.
-7. Apply migration 0090 in a test database and confirm the adjustment lookup index exists.
+1. Customers → Individual/Business: verify type filtering, search, counts, pagination reset.
+2. Customer Transactions: show Paid/To Be Paid/Partial/Credit using recorded principal
+   payments and credit allocations. Void a cash payment and confirm it no longer counts.
+   CREDIT with a phantom cash row must still show Credit until fully settled in credit ledger.
+3. Zero cash charge must show Charge missing, never Paid. Zero CREDIT shows Credit plus
+   Charge missing. Pending requests do not change either label.
+4. New zero/negative parcel charges are rejected, including self-service completion and APIs.
+5. Grant CanUpdateParcelCharge only: Request charge correction appears on zero charge in
+   Parcel Details → Payments → Charges. Positive charges have no correction button. Enter
+   a positive amount, reason and explicitly confirm CREDIT. No person/staff selectors.
+6. Submit and verify 202/PENDING_APPROVAL: parcel amount/method and customer ledger unchanged.
+   A second pending request must fail. The parcel sender must have approved available credit.
+7. Grant CanApproveParcelCharge to another active user. Open Parcel Charge Approvals; verify
+   booking, customer, proposed CREDIT amount, requester and reason. Approve and apply: parcel,
+   credit charge and audit change together. Confirm the request is no longer pending.
+8. Even with both grants, self-review must fail. General parcel-update/reconciliation permissions
+   alone must not allow requests or approvals. Revoke a role grant and retry with an old session.
+9. Reject with a reason: parcel finances unchanged, rejection audited, new proposal permitted.
+10. Change charge, sender, method, credit eligibility/limit or add a payment before approval:
+    approval must fail. Existing credit entries, conflicting reconciliation, deleted/delivered/
+    returned/cancelled/disposed parcels and electronic methods must also be blocked.
+11. Send concurrent requests/reviews and repeat approval: only one pending request and one
+    debt charge. Simulate audit failure and confirm parcel, ledger and request status roll back.
+12. Verify foreign company requests/parcels are inaccessible. Inspect request history for actual
+    requester/reviewer attribution; none may be supplied by the request body.
+13. Apply migration 0091 in a test database and validate pending uniqueness, positive charge,
+    review-state and independent-review constraints. Deploy the migration before the code.
+14. Parcel Details → History must show requested/approved/rejected events, old/new amount and
+    method, reason, actual requester/approver and timestamps after completion. Approval page
+    retains review notes and history; pending/rejected events must not imply a financial update.
+15. Manually verify narrow/wide layouts, dialog keyboard focus and loading/error/retry states
+    when browser automation is unavailable.
 
-Automated coverage: `tests/server/customer-credit-settlement.spec.ts` (dedicated local
-PostgreSQL only), `tests/utils/customer-credit-settlement.spec.tsx`, and
-`tests/utils/parcel-charge-policy.spec.ts`. Browser interaction/responsive checks above
-remain manual when browser automation is disabled.
+Automated coverage: `parcel-charge-approvals.spec.ts` uses CHARGE_APPROVAL_TEST=1 and the empty
+local `vipex_charge_approval_test` database; exercises the actual migration, installed name
+trigger, request/approval API, locks, audit rollback and payment labels. Debt settlement retains
+`customer-credit-settlement.spec.ts` on its dedicated local database. UI/money checks include
+`parcel-payment-status.spec.ts`, `customer-credit-settlement.spec.tsx` and
+`parcel-charge-policy.spec.ts`. Never run write tests on production DATABASE_URL.
 
 ## Approvals
 

@@ -473,10 +473,12 @@ export async function updateParcelSvc(
     setPatch.parcelValuePsw =
       patch.parcelValueCedis != null ? Number(toPesewas(patch.parcelValueCedis)) : 0;
   if (
-    cur.method === PaymentMethod.CREDIT &&
+    (cur.method === PaymentMethod.CREDIT || cur.chargePsw === 0) &&
     (patch.chargeCedis !== undefined || (patch.method !== undefined && patch.method !== cur.method))
   ) {
-    throw Conflict('Use Update credit charge to keep the parcel and customer ledger consistent');
+    throw Conflict(
+      'Zero-charge and credit corrections require the dedicated charge approval workflow',
+    );
   }
   if (patch.chargeCedis !== undefined) {
     const chargeValidationError = getParcelChargeValidationError({
@@ -732,8 +734,10 @@ export async function requestParcelReconciliationCaseSvc(input: {
     | undefined;
 
   if (isOriginalSessionAmountCorrection(actionType)) {
-    if (parcel.method === PaymentMethod.CREDIT)
-      throw Conflict('Use Update credit charge for credit parcels');
+    if (parcel.method === PaymentMethod.CREDIT || parcel.chargePsw === 0)
+      throw Conflict(
+        'Zero-charge corrections require Request charge correction and independent charge approval',
+      );
     if (!input.cashierSessionId) throw BadRequest('Original cashier session is required');
     if (!parcel.createdBy) throw BadRequest('Parcel has no originating cashier to reconcile');
 
@@ -944,8 +948,10 @@ export async function executeParcelReconciliationCaseSvc(input: {
     const targetParcels: ParcelRow[] = [];
 
     if (isOriginalSessionAmountCorrection(actionType)) {
-      if (primaryParcel.method === PaymentMethod.CREDIT)
-        throw Conflict('Use Update credit charge for credit parcels');
+      if (primaryParcel.method === PaymentMethod.CREDIT || primaryParcel.chargePsw === 0)
+        throw Conflict(
+          'Zero-charge corrections require Request charge correction and independent charge approval',
+        );
       if (
         existing.originalChargePsw == null ||
         existing.proposedChargePsw == null ||

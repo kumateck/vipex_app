@@ -698,9 +698,9 @@ QA: Verify neither selected blocks confirmation; receipt only, sticker only, and
 produce exactly the chosen documents; clearing both disables confirmation again; reopening
 starts unchecked; failed payment prints nothing; automated MTN still requires confirmation.
 
-Credit charge corrections append ledger adjustments referencing the original charge.
-Sticker verification includes those adjustments and compares the effective charge
-with the current parcel amount. Customer debt repayments allocate in the credit
-ledger and retain the original CREDIT booking/receipt classification; they do not
-create another cashier sale. Charge edits are blocked after any credit allocation
-or active principal payment. See [Customer credit workflows](CUSTOMER_WALLET_CREDIT_MODULE.md).
+Legacy zero-charge corrections remain pending until an independent staff member approves them.
+Approval sets the positive charge and CREDIT method and posts sender credit atomically. Sticker
+verification then confirms the posted charge before printing CREDIT. Customer debt repayments
+retain the booking/receipt CREDIT classification and do not create a duplicate cashier sale.
+Existing ledger adjustments remain included in sticker verification. See
+[Customer credit workflows](CUSTOMER_WALLET_CREDIT_MODULE.md).

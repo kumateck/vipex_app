@@ -164,6 +164,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadSelfServiceBookings,
           },
           {
+            title: 'Charge Approvals',
+            url: '/parcels/charge-approvals',
+            permissionKey: PermissionKeys.CanApproveParcelCharge,
+          },
+          {
             title: 'Reconciliation Cases',
             url: '/parcels/reconciliation-cases',
             permissionKey: PermissionKeys.CanReadParcelReconciliation,

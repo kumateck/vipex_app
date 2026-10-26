@@ -1,3 +1,4 @@
+import { transactionPaidPrincipalSql, transactionCreditPaidSql } from './transaction-payment-query';
 import { and, asc, count, desc, eq, gte, ilike, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { effectiveChargeAmountSql } from './credit-settlement';
@@ -839,6 +840,8 @@ export type CustomerTransactionRow = {
   destinationId: string;
   status: number;
   chargePsw: number;
+  paidPrincipalPsw: number;
+  creditPaidPsw: number;
   method: number;
   senderId: string;
   receiverId: string;
@@ -878,6 +881,8 @@ export async function listCustomerTransactionsRepo(input: {
       destinationId: parcels.destinationId,
       status: parcels.status,
       chargePsw: parcels.chargePsw,
+      paidPrincipalPsw: transactionPaidPrincipalSql,
+      creditPaidPsw: transactionCreditPaidSql,
       method: parcels.method,
       senderId: parcels.senderId,
       receiverId: parcels.receiverId,

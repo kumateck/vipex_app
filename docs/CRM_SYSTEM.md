@@ -265,16 +265,24 @@ allocate the same outstanding amount twice. Unknown/mismatched customers return
 Accounts staff can also use Finance → Customer Wallet & Credit Control → Create
 Payment with that module's dedicated permissions. See
 [CUSTOMER_WALLET_CREDIT_MODULE.md](CUSTOMER_WALLET_CREDIT_MODULE.md) for the API
-contract, failures, permissions, and unpaid credit-charge adjustment workflow.
+contract, failures, permissions, and zero-charge correction approval workflow.
 
 The Customers list now has Individual and Business tabs. The `customerType` filter
 (0 or 1) is applied on the server before pagination and counting. Search and tab
 changes reset pagination. Existing records keep their recorded customer type.
 
-Credit ledger entries remain immutable: credit-charge corrections append an
-ADJUSTMENT whose `referenceId` identifies the original CHARGE. Effective open charge
-amounts include these adjustments before subtracting allocations. New parcel
-creation and charge updates reject zero charges (minimum GHS 0.01).
+Credit ledger entries remain immutable. Legacy zero charges can be proposed as CREDIT through
+Parcel Details and take effect only after independent approval. Dedicated role grants
+`CanUpdateParcelCharge` and `CanApproveParcelCharge` control the two steps. There are no person
+selectors; the sender owns the debt and the system records requester and approver. Positive
+charges cannot be edited through this flow. See the wallet module document for restrictions.
+New parcel creation and charge requests reject zero (minimum GHS 0.01).
+
+The transaction API includes `paymentStatus`, `paidPrincipalPsw`, and `creditPaidPsw`. The list
+shows Paid/To Be Paid/Partial based on active principal payments, or Credit until the sender's
+parcel principal debt is fully allocated. CREDIT parcels ignore phantom cash records for this
+label. Zero charges are never shown as Paid; zero cash shows Charge missing, zero CREDIT also
+has a Charge missing warning. Sender and receiver views use the same parcel-scoped calculation.
 
 ## Defaults and Compatibility
 

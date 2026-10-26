@@ -134,9 +134,22 @@ additionally requires `CanConfirmParcelTaxData`; see
 | `POST /v1/customers/:id/credit/payments`                           | `CanUpdateCustomers`; selected owned parcels and exact total                                    |
 | `GET /v1/customer-wallet-credit/accounts/:customerId/open-parcels` | `CanCreateCustomerWalletCreditPayments`; `customer_wallet_credit` enabled                       |
 | `POST /v1/customer-wallet-credit/accounts/:customerId/payments`    | `CanCreateCustomerWalletCreditPayments`; `customer_wallet_credit` enabled; exact selected total |
-| `PATCH /v1/parcels/:id/credit-charge`                              | `CanUpdateParcels`; authenticated company; unpaid fully CREDIT parcel                           |
 
 The CRM payment form and parcel charge action are hidden without their respective
 mutation permissions. Finance staff use Finance → Customer Wallet & Credit Control
 → Create Payment; these operational permissions are separate from the System Admin
 maintenance console. Amount-only payment calls and generic credit-charge edits are rejected.
+
+### Zero-charge correction approval permissions
+
+| Route / action                                                                                                       | Required permission                                        |
+| -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Parcel Details → Request charge correction (zero charge only); `PATCH /v1/shipments/parcels/:id/credit-charge`       | `CanUpdateParcelCharge`                                    |
+| `GET /v1/shipments/parcels/charge-corrections`                                                                       | Either `CanUpdateParcelCharge` or `CanApproveParcelCharge` |
+| Parcel Charge Approvals page `/parcels/charge-approvals`; `POST /v1/shipments/parcels/charge-corrections/:id/review` | `CanApproveParcelCharge`                                   |
+
+The requester cannot review their own request, even with both grants. Approval directly applies
+the charge, CREDIT status and sender debt in one transaction; there is no execution permission.
+`CanUpdateParcels`, reconciliation permissions and System Admin role name alone do not grant
+these actions. Assign the new role grants explicitly. APIs verify live active users and current
+role grants in the authenticated company; request bodies cannot supply a customer, person or actor.

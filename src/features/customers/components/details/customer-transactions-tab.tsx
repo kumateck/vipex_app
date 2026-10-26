@@ -1,3 +1,4 @@
+import { PARCEL_PAYMENT_STATUS_LABEL } from '@/shared/shipments/parcel-payment-status';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,13 @@ export function CustomerTransactionsTab({
               </p>
               <div className="flex items-center justify-between gap-2">
                 <p className="font-medium">{row.bookingCode}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">
+                    {PARCEL_PAYMENT_STATUS_LABEL[row.paymentStatus] ?? 'Payment status unavailable'}
+                  </Badge>
+                  {row.chargePsw === 0 && row.paymentStatus !== 'CHARGE_MISSING' ? (
+                    <Badge variant="destructive">Charge missing</Badge>
+                  ) : null}
                   <Badge variant={row.transactionRole === 'SENDER' ? 'default' : 'secondary'}>
                     {row.transactionRole === 'SENDER' ? 'Sender' : 'Receiver'}
                   </Badge>
