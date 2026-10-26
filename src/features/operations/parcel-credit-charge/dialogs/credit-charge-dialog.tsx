@@ -1,3 +1,4 @@
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,17 +20,33 @@ export function CreditChargeDialog(props: CreditChargeProps) {
     <Dialog open={model.open} onOpenChange={model.onOpenChange}>
       <DialogTrigger asChild>
         <Button type="button" size="sm" variant="outline">
-          Update credit charge
+          Request charge correction
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Update credit charge</DialogTitle>
+          <DialogTitle>Request charge correction</DialogTitle>
           <DialogDescription>
-            {props.bookingCode}: Only unpaid credit charges can be changed. The customer balance
-            updates with the charge.
+            {props.bookingCode}: Correct a zero charge to CREDIT. The charge and customer debt
+            change only after an authorized staff member approves.
           </DialogDescription>
         </DialogHeader>
+        <p className="text-sm">
+          Credit account: <strong>{props.senderName || 'Parcel sender'}</strong>
+        </p>
+        {model.pendingRequest ? (
+          <p role="status" className="text-sm">
+            A correction is already awaiting approval.
+          </p>
+        ) : null}
+        {model.history.isError ? (
+          <div role="alert">
+            <p>Could not check pending requests.</p>
+            <Button variant="outline" onClick={() => void model.history.refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : null}
         <fieldset disabled={model.isLoading} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="credit-charge-amount">New charge (GHS)</Label>
@@ -49,6 +66,16 @@ export function CreditChargeDialog(props: CreditChargeProps) {
               onChange={(e) => model.setReason(e.target.value)}
             />
           </div>
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="credit-charge-confirm"
+              checked={model.creditConfirmed}
+              onCheckedChange={(value) => model.setCreditConfirmed(value === true)}
+            />
+            <Label htmlFor="credit-charge-confirm" className="leading-relaxed">
+              Record this charge as CREDIT owed by the parcel sender.
+            </Label>
+          </div>
         </fieldset>
         <DialogFooter>
           <Button
@@ -64,7 +91,7 @@ export function CreditChargeDialog(props: CreditChargeProps) {
             disabled={!model.valid || model.isLoading}
             onClick={() => void model.submit()}
           >
-            {model.isLoading ? 'Saving…' : 'Update charge'}
+            {model.isLoading ? 'Saving…' : 'Submit for approval'}
           </Button>
         </DialogFooter>
       </DialogContent>

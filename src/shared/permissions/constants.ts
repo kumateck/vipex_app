@@ -65,6 +65,8 @@ const catalog = [
   ['CanRepairParcelFinancialState', 'Preview and repair parcel financial state', 'Shipments'],
   ['CanCreateParcels', 'Create parcels', 'Shipments'],
   ['CanUpdateParcels', 'Update parcels', 'Shipments'],
+  ['CanUpdateParcelCharge', 'Request correction of a zero parcel charge to credit', 'Shipments'],
+  ['CanApproveParcelCharge', 'Approve and apply zero parcel charge corrections', 'Shipments'],
   ['CanDeleteParcels', 'Delete parcels', 'Shipments'],
   [
     'CanSoftDeleteParcelsAndPayments',
@@ -832,6 +834,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/parcels/storage-clearances/execution': PermissionKeys.CanExecuteParcelStorageClearance,
   '/parcels/receive': PermissionKeys.CanReadParcelScan,
   '/parcels/delivery-reversal': PermissionKeys.CanReverseParcelDelivery,
+  '/parcels/charge-approvals': PermissionKeys.CanApproveParcelCharge,
   '/parcels/financial-repair': PermissionKeys.CanRepairParcelFinancialState,
   '/parcels/home-delivery/dispatch': PermissionKeys.CanDispatchForDelivery,
   '/parcels/home-delivery/returned': PermissionKeys.CanDispatchForDelivery,

@@ -1,26 +1,13 @@
 import { registerCreditApiCases } from '../utils/customer-credit-api-cases';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { Elysia } from 'elysia';
-import { eq } from 'drizzle-orm';
 import { db, sql, closeSql } from '@/db/config';
-import {
-  auditLogs,
-  customerCreditAllocations,
-  customerCreditTransactions,
-  customers,
-  parcels,
-} from '@/db/schemas';
+import { auditLogs, customerCreditAllocations, customerCreditTransactions } from '@/db/schemas';
 import {
   listCreditParcelsSvc,
   postCustomerCreditPaymentSvc,
-  updateCreditParcelChargeSvc,
 } from '@/server/features/customers/credit-settlement';
-import {
-  listCustomerOpenCreditChargesRepo,
-  listCustomersRepo,
-} from '@/server/features/customers/repository';
-import { listCustomerWalletAccountsRepo } from '@/server/features/customer-wallet-credit/repository';
-import { buildStickerPaymentQuery } from '@/server/features/shipments/parcel-sticker-payment.repository';
+import { listCustomersRepo } from '@/server/features/customers/repository';
 import { customersRoutes } from '@/server/features/customers/routes';
 import { customerWalletCreditRoutes } from '@/server/features/customer-wallet-credit/routes';
 import { parcelCreditChargeRoutes } from '@/server/features/shipments/parcel-credit-charge.routes';
@@ -34,20 +21,11 @@ describe.skipIf(!enabled)('exact parcel debt settlement on isolated PostgreSQL',
   const scope = { companyId: 'company', customerId: 'customer' };
   const pay = (parcelIds = ['parcel-a'], amountCedis: number | string = 50) =>
     postCustomerCreditPaymentSvc({ ...scope, createdBy: 'accounts', parcelIds, amountCedis });
-  const update = (chargeCedis: string | number = 60, expectedChargePsw = 5000) =>
-    updateCreditParcelChargeSvc({
-      companyId: 'company',
-      parcelId: 'parcel-a',
-      actorUserId: 'accounts',
-      chargeCedis,
-      expectedChargePsw,
-      reason: 'Correct agreed charge',
-    });
   const app = new Elysia()
     .use(errorHandler)
     .group('/v1/customers', (routes) => routes.use(customersRoutes))
     .group('/v1/customer-wallet-credit', (routes) => routes.use(customerWalletCreditRoutes))
-    .group('/v1/parcels', (routes) => routes.use(parcelCreditChargeRoutes));
+    .group('/v1/shipments/parcels', (routes) => routes.use(parcelCreditChargeRoutes));
   const request = async (path: string, method: string, body?: unknown, user = 'accounts') => {
     const token = await signAccessToken({
       sub: user,
@@ -171,65 +149,6 @@ describe.skipIf(!enabled)('exact parcel debt settlement on isolated PostgreSQL',
     });
     await expect(pay()).rejects.toMatchObject({ status: 400 });
     expect((await pay(['parcel-a'], 60)).allocations).toHaveLength(2);
-  });
-  test('charge updates append adjustments and keep all outstanding views consistent', async () => {
-    await update();
-    const [original] = await db
-      .select()
-      .from(customerCreditTransactions)
-      .where(eq(customerCreditTransactions.id, 'charge-parcel-a'));
-    expect(original!.signedAmountPsw).toBe(5000);
-    expect(
-      (await listCreditParcelsSvc(scope)).find((row) => row.parcelId === 'parcel-a')!
-        .outstandingAmountPsw,
-    ).toBe(6000);
-    expect(
-      (await listCustomerOpenCreditChargesRepo(scope)).find(
-        (row) => row.referenceId === 'parcel-a',
-      )!.outstandingAmountPsw,
-    ).toBe(6000);
-    const wallet = await listCustomerWalletAccountsRepo({
-      companyId: 'company',
-      limit: 30,
-      offset: 0,
-    });
-    expect(wallet.data[0]).toMatchObject({ balancePsw: 8500, outstandingPsw: 8500 });
-    const [sticker] = await buildStickerPaymentQuery('company', 'TRACK-parcel-a', 'BOOK-parcel-a');
-    expect(sticker).toMatchObject({ chargePsw: 6000, creditPsw: 6000 });
-    await expect(pay()).rejects.toMatchObject({ status: 400 });
-    await pay(['parcel-a'], 60);
-  });
-  test('supports repeated increases and reductions without changing original ledger rows', async () => {
-    await update();
-    await update(30, 6000);
-    expect(
-      (await listCreditParcelsSvc(scope)).find((row) => row.parcelId === 'parcel-a')!
-        .outstandingAmountPsw,
-    ).toBe(3000);
-    await pay(['parcel-a'], 30);
-  });
-  test('blocks settled, stale, zero, noncredit and over-limit charge changes', async () => {
-    for (const amount of [0, -1, '0.001', '60.001', 100001])
-      await expect(update(amount)).rejects.toMatchObject({ status: 400 });
-    await expect(update(60, 4900)).rejects.toMatchObject({ status: 409 });
-    await db.update(customers).set({ creditLimitPsw: 8000 }).where(eq(customers.id, 'customer'));
-    await expect(update()).rejects.toMatchObject({ status: 409 });
-    await pay();
-    await expect(update()).rejects.toMatchObject({ status: 409 });
-    await fixture.reset();
-    await db.update(parcels).set({ method: 0 }).where(eq(parcels.id, 'parcel-a'));
-    await expect(update()).rejects.toMatchObject({ status: 409 });
-  });
-  test('payment racing a charge edit produces a consistent final balance', async () => {
-    await Promise.allSettled([pay(), update()]);
-    const [parcel] = await db.select().from(parcels).where(eq(parcels.id, 'parcel-a'));
-    const allocations = await db.select().from(customerCreditAllocations);
-    if (allocations.length) expect(parcel!.chargePsw).toBe(5000);
-    else
-      expect(
-        (await listCreditParcelsSvc(scope)).find((row) => row.parcelId === 'parcel-a')!
-          .outstandingAmountPsw,
-      ).toBe(6000);
   });
   test('failed audit insert rolls back the entire settlement', async () => {
     await sql.unsafe(

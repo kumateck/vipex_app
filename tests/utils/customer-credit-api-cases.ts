@@ -24,9 +24,9 @@ export function registerCreditApiCases(app: Pick<Elysia, 'handle'>, request: Cre
     expect(
       (
         await request(
-          'parcels/parcel-a/credit-charge',
+          'shipments/parcels/parcel-a/credit-charge',
           'PATCH',
-          { chargeCedis: 60, expectedChargePsw: 5000, reason: 'Correct price' },
+          { chargeCedis: 60, expectedChargePsw: 0, method: 4, reason: 'Correct price' },
           'viewer',
         )
       ).status,

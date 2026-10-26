@@ -55,13 +55,14 @@ export const PaymentsSection = memo(function PaymentsSection({
             },
           ]}
         />
-        {parcel.method === 4 ? (
+        {parcel.chargePsw === 0 ? (
           <div className="mt-4">
             <ParcelCreditChargeAction
               key={parcel.id}
               parcelId={parcel.id}
               bookingCode={parcel.bookingCode}
               chargePsw={parcel.chargePsw}
+              senderName={parcel.senderNameSnapshot}
             />
           </div>
         ) : null}

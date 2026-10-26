@@ -1,1 +1,5 @@
-export { useUpdateCreditChargeMutation } from './credit-charge.api';
+export {
+  useUpdateCreditChargeMutation,
+  useListChargeCorrectionsQuery,
+  useReviewChargeCorrectionMutation,
+} from './credit-charge.api';

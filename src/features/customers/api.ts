@@ -120,6 +120,9 @@ export interface CustomerTransaction {
   status: number;
   chargePsw: number;
   method: number;
+  paymentStatus: import('@/shared/shipments/parcel-payment-status').ParcelPaymentStatus;
+  paidPrincipalPsw: number;
+  creditPaidPsw: number;
   transactionRole: 'SENDER' | 'RECEIVER';
   createdAt: string;
 }

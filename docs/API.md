@@ -601,13 +601,31 @@ referenceId?: string|null, notes?: string|null }`. Select 1–200 distinct owned
   Validation/mismatch: 400; unavailable/settled/conflicting payment: 409; foreign
   customer: 404. Existing unallocated payment credit also returns 409 for finance
   review. Payment, allocations, and audit commit atomically.
-- `PATCH /v1/parcels/:id/credit-charge` (`CanUpdateParcels`) accepts
-  `{ chargeCedis, expectedChargePsw, reason }`. Positive two-decimal charge up to
-  GHS 100,000, reason 3–500 characters, unpaid fully CREDIT parcel only. Returns
-  `{ id, chargePsw }`; 400 for invalid values, 404 for a foreign/missing parcel,
-  409 for stale/paid/inconsistent credit or insufficient approved credit. Appends
-  an adjustment to the original charge, updates parcel amount, and records audit
-  in one transaction. Generic parcel updates/cash corrections cannot bypass it.
+- `PATCH /v1/shipments/parcels/:id/credit-charge` (`CanUpdateParcelCharge`) accepts
+  `{ chargeCedis, expectedChargePsw: 0, method: 4, reason }` for a legacy zero charge only.
+  Returns **202** `{ id, status: "PENDING_APPROVAL" }` without changing the parcel or debt.
+  Positive charges cannot be edited. Requires approved sender credit, no principal payments
+  or existing parcel credit, no conflicting reconciliation and an eligible parcel state.
+- `GET /v1/shipments/parcels/charge-corrections` requires either `CanUpdateParcelCharge` or
+  `CanApproveParcelCharge`; query `page`, `search` (booking/tracking), `parcelId`; response
+  `{ data, hasNextPage }`, 20 per page, scoped to the current company.
+- `POST /v1/shipments/parcels/charge-corrections/:id/review` (`CanApproveParcelCharge`) accepts
+  `{ approve: boolean, note?: string }`. A different staff member must review it; rejection
+  needs a reason. Approval rechecks current state and credit availability, atomically updates
+  charge and method CREDIT, posts sender debt and audit, and returns `{ id, status: "APPROVED" }`.
+  Rejection returns status REJECTED without changing parcel finances. Invalid inputs: 400;
+  insufficient permissions/inactive staff: 403; missing/foreign records: 404; paid/changed/
+  already-reviewed or self-approved requests: 409. Only one pending request per parcel.
+  Live role grants are checked even for older native-session permission snapshots.
+- Existing `GET /v1/shipments/parcels/:id/history` includes charge request, approval/applied,
+  and rejection events with old/new charge and payment method, reasons, review notes, request
+  reference, event timestamps and actor attribution. Request/decision audits are transactional;
+  approved corrections remain visible after the charge is nonzero. Existing parcel history
+  read permissions continue to apply.
+- Customer `GET /v1/customers/:id/transactions` includes `paymentStatus` (PAID, TO_BE_PAID,
+  PARTIAL, CREDIT or CHARGE_MISSING), `paidPrincipalPsw` and `creditPaidPsw`. Status uses active
+  principal payments per parcel and credit allocations, excludes voided payments/fees, ignores
+  cash anomalies for CREDIT, and never treats a zero charge as Paid.
 - New parcel charges must be at least GHS 0.01, including agent completion of
   self-service drafts. Unpriced drafts are not yet booked parcels.
 

@@ -54,7 +54,9 @@ export const HistorySection = memo(function HistorySection({
                     </Badge>
                   </div>
                   {event.description ? (
-                    <p className="text-sm text-muted-foreground">{event.description}</p>
+                    <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                      {event.description}
+                    </p>
                   ) : null}
                   <p className="text-xs text-muted-foreground">
                     {formatWhen(event.occurredAt)}
