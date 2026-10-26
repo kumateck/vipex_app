@@ -1,19 +1,15 @@
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import type { CustomerCreditOpenItem, CustomerPayment } from '@/features/customers/api';
+import { CustomerDebtSettlement } from '@/features/customers/credit-settlement';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
+import { PermissionKeys } from '@/shared/permissions/constants';
+import type { CustomerPayment } from '@/features/customers/api';
 import type { ServerListResponse } from '@/services/rtk-query';
 import { formatMoney, paymentMethodLabel } from './customer-details.utils';
 
 type CustomerPaymentsTabProps = {
-  paymentAmount: string;
-  onPaymentAmountChange: (value: string) => void;
-  paymentNotes: string;
-  onPaymentNotesChange: (value: string) => void;
-  onPayDebt: () => Promise<void>;
-  isPostingPayment: boolean;
-  creditOpenItems: CustomerCreditOpenItem[];
+  customerId: string;
   isLoadingPayments: boolean;
   payments: ServerListResponse<CustomerPayment> | undefined;
   paymentsPage: number;
@@ -22,13 +18,7 @@ type CustomerPaymentsTabProps = {
 };
 
 export function CustomerPaymentsTab({
-  paymentAmount,
-  onPaymentAmountChange,
-  paymentNotes,
-  onPaymentNotesChange,
-  onPayDebt,
-  isPostingPayment,
-  creditOpenItems,
+  customerId,
   isLoadingPayments,
   payments,
   paymentsPage,
@@ -42,47 +32,9 @@ export function CustomerPaymentsTab({
         <CardDescription>Customer payment records and debt settlement action.</CardDescription>
       </CardHeader>
       <CardContent className="min-h-0 flex-1 space-y-3 overflow-y-auto">
-        <div className="grid gap-2 md:grid-cols-3">
-          <Input
-            placeholder="Amount (GHS)"
-            inputMode="decimal"
-            value={paymentAmount}
-            onChange={(e) => onPaymentAmountChange(e.target.value)}
-          />
-          <Input
-            placeholder="Notes (optional)"
-            value={paymentNotes}
-            onChange={(e) => onPaymentNotesChange(e.target.value)}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void onPayDebt()}
-            disabled={isPostingPayment}
-          >
-            Pay Debt
-          </Button>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-xs font-medium">Outstanding Credit Items</p>
-          {creditOpenItems.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              No outstanding credit items in selected range.
-            </p>
-          ) : (
-            creditOpenItems.map((item) => (
-              <div key={item.chargeTransactionId} className="rounded-md border p-2 text-xs">
-                <p className="font-medium">Outstanding: {formatMoney(item.outstandingAmountPsw)}</p>
-                <p className="text-muted-foreground">
-                  Charged: {formatMoney(item.chargeAmountPsw)} • Allocated:{' '}
-                  {formatMoney(item.allocatedAmountPsw)}
-                </p>
-                <p className="text-muted-foreground">{formatDateTimeShared(item.createdAt)}</p>
-              </div>
-            ))
-          )}
-        </div>
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateCustomers}>
+          <CustomerDebtSettlement key={customerId} customerId={customerId} channel="crm" />
+        </PermissionGuard>
 
         <div className="space-y-2">
           {isLoadingPayments ? <p className="text-xs text-muted-foreground">Loading...</p> : null}

@@ -31,6 +31,7 @@ export interface Customer {
 }
 
 export interface CustomerFilters {
+  customerType?: CustomerType;
   companyId?: string;
   includeDeleted?: boolean | null;
 }
@@ -445,7 +446,13 @@ export const customersApi = api.injectEndpoints({
         unallocatedAmountPsw: number;
         allocations: Array<{ chargeTransactionId: string; amountPsw: number }>;
       },
-      { customerId: string; amountCedis: number | string; notes?: string; referenceId?: string }
+      {
+        customerId: string;
+        parcelIds: string[];
+        amountCedis: number | string;
+        notes?: string;
+        referenceId?: string;
+      }
     >({
       query: ({ customerId, ...body }) => ({
         url: `/customers/${customerId}/credit/payments`,

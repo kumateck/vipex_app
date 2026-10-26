@@ -360,6 +360,11 @@ and desktop receipt-paper routing apply; mobile has no equivalent screen.
 
 ### Credit printing and historical repair
 
+System Admins can now run the trace, conflict scan and guarded repair from **Technology →
+Maintenance Scripts** (`/settings/maintenance`). Enter the booking code, preview, confirm no cash
+was received, and execute. The server uses the same repair functions as the CLI and records the
+logged-in admin. See [System Maintenance Scripts](SYSTEM_MAINTENANCE.md) for role access and QA.
+
 A credit booking is a charge to the customer's account, not cash collected by the parcel cashier.
 Cashier-created credit bookings now proceed directly to Processed. A legacy CREATED credit parcel
 has zero cash due at Sender Payments; confirming and printing creates no principal payment. The
@@ -396,17 +401,31 @@ Use `scripts/trace-credit-parcel.ts <booking-or-tracking-code>` for a bounded, r
 each candidate requires evidence that cash was not received before repair. Do not bulk-void real
 collections. Both scripts use only the configured `DATABASE_URL` and do not print its credentials.
 
-The guarded repair script defaults to a read-only connection/transaction. Dry run for this case:
+The guarded repair script needs only the booking code and defaults to a read-only
+connection/transaction. It discovers the company, the single active cash principal payment and
+the amount from the saved parcel; it checks the matching sender credit charge before any write.
+Dry run for this case:
 
 ```sh
-bun run scripts/repair-credit-print-payment.ts AO4858124I \
-  --company tsewbv18o1935sa4v1dlahq2 \
-  --payment-id zygedu5gla75usghf4vhi0tl --expected-amount-psw 5000
+bun run scripts/repair-credit-print-payment.ts AO4858124I
 ```
 
-After reviewing that output, append `--apply --actor-user-id COMPANY_USER_ID
---reason 'Printing created a cash payment; no cash was received' --confirm-no-cash-received`.
-Use a real actor from the same company. Apply runs one serializable transaction, locks the parcel,
+After reviewing that output and confirming no cash was received, apply with:
+
+```sh
+bun run scripts/repair-credit-print-payment.ts AO4858124I --apply --confirm-no-cash-received
+```
+
+Customers only provide the booking code; support runs this command with database access.
+The default audit attribution is system maintenance (`actor_user_id`, `voided_by`, and native
+tax-audit user IDs are NULL), with `executionSource: "maintenance-cli"` and
+`actorAttribution: "system-maintenance"` in audit metadata. The script never attributes the repair
+to the original cashier automatically. Operators can optionally pass `--actor-user-id COMPANY_USER_ID`
+to attribute it to a validated company user, or `--reason 'explanation'` for a custom reason.
+The earlier `--company`, `--payment-id` and `--expected-amount-psw` arguments remain optional
+constraints for operators; they are not information required from customers. A booking code
+matching multiple parcels/companies is refused until its scope can be established.
+Apply runs one serializable transaction, locks the parcel,
 payment, credit charge and tax items, soft-voids the exact cash row, excludes its unfiled tax item,
 and writes the native tax exclusion audit plus an audit record containing the original payment/tax values. It preserves transit,
 the original credit charge, and parcel balances. Repeating the same repair makes no new changes.
@@ -424,6 +443,7 @@ Check credit A5/landscape/58/80 mm duplicates, CS/QR, missing payments, request 
 Automated coverage: `credit-parcel-printing.spec.tsx` and existing sticker/receipt scenarios.
 `credit-print-repair-script.spec.ts` requires `CREDIT_PRINT_REPAIR_TEST_DATABASE_URL` pointing only
 to the dedicated local `127.0.0.1/vipex_credit_print_repair_test` database; it exercises dry-run,
+booking-code-only discovery/apply, system audit attribution, ambiguous-code rejection,
 atomic repair, idempotency, unsafe-state rejection and rollback on audit failure. It refuses
 production URLs and is skipped without that explicit test URL.
 `credit-parcel-collection.spec.ts` runs the real booking and payment services with
@@ -677,3 +697,10 @@ mobile and the Create Parcel payment dialog are unchanged.
 QA: Verify neither selected blocks confirmation; receipt only, sticker only, and both
 produce exactly the chosen documents; clearing both disables confirmation again; reopening
 starts unchecked; failed payment prints nothing; automated MTN still requires confirmation.
+
+Credit charge corrections append ledger adjustments referencing the original charge.
+Sticker verification includes those adjustments and compares the effective charge
+with the current parcel amount. Customer debt repayments allocate in the credit
+ledger and retain the original CREDIT booking/receipt classification; they do not
+create another cashier sale. Charge edits are blocked after any credit allocation
+or active principal payment. See [Customer credit workflows](CUSTOMER_WALLET_CREDIT_MODULE.md).

@@ -631,6 +631,13 @@
       "when": 1792713600000,
       "tag": "0089_location_telephone",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1793026800000,
+      "tag": "0090_credit_adjustment_reference_index",
+      "breakpoints": true
     }
   ]
 }

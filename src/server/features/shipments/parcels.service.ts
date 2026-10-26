@@ -8,6 +8,7 @@ import {
   ParcelReconciliationCaseType,
   ParcelStatus,
   PaymentComponent,
+  PaymentMethod,
 } from '@/db/schemas';
 import { auditLogs } from '@/db/schemas/audit';
 import { db } from '@/db/config';
@@ -471,15 +472,19 @@ export async function updateParcelSvc(
   if (patch.parcelValueCedis !== undefined)
     setPatch.parcelValuePsw =
       patch.parcelValueCedis != null ? Number(toPesewas(patch.parcelValueCedis)) : 0;
+  if (
+    cur.method === PaymentMethod.CREDIT &&
+    (patch.chargeCedis !== undefined || (patch.method !== undefined && patch.method !== cur.method))
+  ) {
+    throw Conflict('Use Update credit charge to keep the parcel and customer ledger consistent');
+  }
   if (patch.chargeCedis !== undefined) {
-    if (patch.chargeCedis != null) {
-      const chargeValidationError = getParcelChargeValidationError({
-        chargeCedis: Number(patch.chargeCedis),
-        plannedToBePaidCedis: fromPesewas(BigInt(cur.plannedToBePaidPsw)),
-      });
-      if (chargeValidationError) throw BadRequest(chargeValidationError);
-    }
-    setPatch.chargePsw = patch.chargeCedis != null ? Number(toPesewas(patch.chargeCedis)) : 0;
+    const chargeValidationError = getParcelChargeValidationError({
+      chargeCedis: patch.chargeCedis == null ? 0 : Number(patch.chargeCedis),
+      plannedToBePaidCedis: fromPesewas(BigInt(cur.plannedToBePaidPsw)),
+    });
+    if (chargeValidationError) throw BadRequest(chargeValidationError);
+    setPatch.chargePsw = Number(toPesewas(patch.chargeCedis!));
   }
   if (patch.pickupLocationId !== undefined) setPatch.pickupLocationId = patch.pickupLocationId;
   if (patch.method !== undefined) setPatch.method = patch.method;
@@ -548,6 +553,9 @@ export async function markParcelReceivedSvc(
 export async function setPlannedToBePaidSvc(id: string, plannedCedis: number | string) {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
+  if (cur.method === PaymentMethod.CREDIT && Number(plannedCedis) !== 0) {
+    throw Conflict('A credit parcel cannot also have an amount to collect from the receiver');
+  }
   const validationError = getParcelChargeValidationError({
     chargeCedis: fromPesewas(BigInt(cur.chargePsw)),
     plannedToBePaidCedis: Number(plannedCedis),
@@ -724,6 +732,8 @@ export async function requestParcelReconciliationCaseSvc(input: {
     | undefined;
 
   if (isOriginalSessionAmountCorrection(actionType)) {
+    if (parcel.method === PaymentMethod.CREDIT)
+      throw Conflict('Use Update credit charge for credit parcels');
     if (!input.cashierSessionId) throw BadRequest('Original cashier session is required');
     if (!parcel.createdBy) throw BadRequest('Parcel has no originating cashier to reconcile');
 
@@ -934,6 +944,8 @@ export async function executeParcelReconciliationCaseSvc(input: {
     const targetParcels: ParcelRow[] = [];
 
     if (isOriginalSessionAmountCorrection(actionType)) {
+      if (primaryParcel.method === PaymentMethod.CREDIT)
+        throw Conflict('Use Update credit charge for credit parcels');
       if (
         existing.originalChargePsw == null ||
         existing.proposedChargePsw == null ||
