@@ -97,10 +97,10 @@ Public responses must minimize personal data. Phone lookup must not expose a cus
 
 For a destination branch, the public form automatically selects its first active receiving
 location and does not let the customer change it (the location-options API orders locations by
-name, then ID). A submitted public draft must use that same first receiving location; the server
-rejects a different location even if a client is modified. Branches with no receiving locations
-cannot complete the required destination step. This keeps customer self-service location choice
-to one predictable pickup point.
+name, then ID). The server defaults an omitted location to that first location and rejects a
+different location even if a client is modified. Branches with no receiving locations cannot
+complete the required destination step. This keeps customer self-service location choice to one
+predictable pickup point.
 
 ## Draft Data
 
