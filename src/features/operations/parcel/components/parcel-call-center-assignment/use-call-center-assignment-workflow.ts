@@ -25,6 +25,7 @@ export function useCallCenterAssignmentWorkflow() {
 
   const companyId = user?.company?.id || '';
   const branchId = user?.branch?.id || '';
+  const locationId = user?.location?.id ?? user?.locationId ?? null;
   const userId = user?.id || '';
   const [listData, setListData] = useState<ParcelListResponse>({
     data: [],
@@ -72,7 +73,7 @@ export function useCallCenterAssignmentWorkflow() {
   }, [accessToken, branchId, companyId, query.page, query.pageSize, searchInput]);
   useEffect(() => {
     void fetchData();
-  }, [fetchData]);
+  }, [fetchData, locationId]);
 
   const listQuery = { data: listData, isLoading, isFetching: isLoading, refetch: fetchData };
 

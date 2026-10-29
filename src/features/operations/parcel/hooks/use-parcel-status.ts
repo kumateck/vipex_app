@@ -18,6 +18,7 @@ export function useParcelStatus() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
+  const locationId = user?.location?.id ?? user?.locationId ?? null;
 
   const [searchInput, setSearchInput] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
@@ -43,6 +44,7 @@ export function useParcelStatus() {
       filters: {
         companyId,
         destinationId: branchId,
+        locationId,
         statuses: [
           ParcelStatus.ARRIVED_AT_DESTINATION,
           ParcelStatus.RETURNED_TO_OFFICE,

@@ -320,10 +320,24 @@ the secondary phone and other active customers' primary/secondary phones. Migrat
 must be applied before deploying this endpoint. Standard/CRM customer PATCH behavior remains
 profile-only. See [Parcel Operations](PARCEL_OPERATIONS.md#correcting-a-receiver-from-a-parcel).
 
+Parcel Assignment and Call Outcome queues are scoped to the authenticated company and destination
+branch, narrowed to the user's assigned pickup location when present. A branch user without a
+location can access all locations in that branch. `/v1/shipments/parcels/assignment-staff` follows
+the same hierarchy for active officers. `/call-center`, `/call-center/assigned`, and general parcel
+searches with `assignedToCurrentUser=true` enforce this scope on the server; assigned searches
+override supplied company, destination, and location filters. Call Outcome retains its current-user
+assignment requirement. Single/bulk assignment validates both parcel and target officer scope;
+bulk assignment accepts 1–200 unique IDs and is atomic. Out-of-scope parcels return 404, invalid
+officers 400, missing queue context 403, and invalid request schemas 422. See
+[Parcel Operations](PARCEL_OPERATIONS.md#parcel-assignment-and-call-outcome-location-scope) for
+client behavior and QA scenarios.
+
 Call-center clients should use `POST /v1/shipments/parcels/:id/call-center/contact` to record
 a call outcome. For older clients, `PATCH /v1/shipments/parcels/:id` with exactly `status` 5 or
 7 and `secondReceiverId` is handled as the equivalent call outcome. It requires call-center
-permission and an assignment to the caller at the destination branch. The call time is saved,
+permission and an assignment to the caller at the destination branch and assigned location,
+when present. Single/bulk call outcomes and main-receiver changes enforce the same scope.
+The call time is saved,
 the action is audited, and the parcel leaves the active calling queue. Other PATCH payloads
 remain ordinary parcel updates.
 
