@@ -43,6 +43,10 @@ const EnvSchema = z.object({
   SENTRY_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(1),
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
   RELEASE: z.string().optional(), // e.g., git sha
+  // Oryx Monitor (optional): errors and a heartbeat are sent only when URL and KEY are both set.
+  ERROR_MONITOR_URL: z.string().optional(),
+  ERROR_MONITOR_KEY: z.string().optional(),
+  ERROR_MONITOR_INSTANCE: z.string().optional(), // e.g. vipex-prod, vipex-dev
   DISCORD_WEBHOOK_URL: z.string().url().optional(),
   DISCORD_WEBHOOK_DEVELOPMENT: z.string().url().optional(),
   DISCORD_WEBHOOK_PRODUCTION: z.string().url().optional(),

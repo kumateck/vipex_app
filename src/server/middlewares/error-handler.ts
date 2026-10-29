@@ -3,6 +3,10 @@ import { HttpStatus } from '../utils/http-status';
 import { isHttpError, type ErrorDetails } from '../utils/http-error';
 import { logServerError, type ErrorBody } from './index';
 import { sendDiscordErrorAlert } from '../services/observability/discord-alert';
+import {
+  reportRequestError,
+  type ReportableContext,
+} from '../services/observability/error-monitor/plugin';
 
 type FrameworkErrorCode = 'NOT_FOUND' | 'VALIDATION' | 'PARSE' | 'UNKNOWN';
 
@@ -165,7 +169,8 @@ const sanitizeMessage = (value: string | undefined, fallback: string): string =>
 };
 
 export function errorHandler(app: Elysia) {
-  return app.onError(({ code, error, set, request }) => {
+  return app.onError((ctx) => {
+    const { code, error, set, request } = ctx;
     const path = new URL(request.url).pathname;
     const requestId = pickRequestId(
       request.headers.get('x-request-id'),
@@ -228,6 +233,7 @@ export function errorHandler(app: Elysia) {
         stack: (error as { stack?: string }).stack,
         cause: (error as { cause?: unknown }).cause,
       });
+      reportRequestError(ctx as unknown as ReportableContext, error, error.status, requestId);
       void sendDiscordErrorAlert({
         status: error.status,
         requestId,
@@ -267,6 +273,7 @@ export function errorHandler(app: Elysia) {
       details: err.details,
       cause: err.cause,
     });
+    reportRequestError(ctx as unknown as ReportableContext, error, mapped.status, requestId);
     void sendDiscordErrorAlert({
       status: mapped.status,
       requestId,
