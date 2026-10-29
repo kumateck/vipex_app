@@ -197,14 +197,29 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   parcels with neither. Storage is computed from the company ageing policy, effective received
   time, non-voided storage payments, and waivers. The response remains paginated after filtering.
 - `GET /shipments/parcels/call-center`: require `CanReadCallCenterAssignment` and return Arrived,
-  Customer Contacted, or Returned to Office parcels for the authenticated company and destination
-  branch. Results include every payment state and are ordered unassigned first, then assigned, with
+  Customer Contacted, Returned to Office, Awaiting Pickup, Home Delivery Requested, Address
+  Collected, Dispatched, or Rider Given Parcel to Customer parcels that have not been called,
+  for the authenticated company and destination branch, narrowed to the user's location when
+  assigned. A branch-only user can see all locations in that branch. Results include every
+  payment state and are ordered unassigned first, then assigned, with
   the newest effective received time first inside each group. Pagination and search cannot broaden
-  the authenticated company or branch scope.
+  the authenticated scope. Missing company/branch context returns 403.
 - `GET /shipments/parcels/call-center/assigned`: require `CanReadCallCenterParcelStatus` and return
-  only Arrived, Customer Contacted, or Returned to Office parcels assigned to the authenticated
-  user at their company and destination branch. Callers can provide pagination and search only;
-  they cannot broaden identity scope.
+  uncalled parcels in the same statuses as `/call-center`, assigned to the authenticated user
+  at their company, destination branch, and assigned location (or all branch locations when
+  the user has no location). Callers can provide pagination and search only; they cannot broaden
+  identity scope. Missing company/branch context returns 403. The general parcel search with
+  `assignedToCurrentUser=true` enforces the same identity/location hierarchy, including when
+  listing saved outcomes, and overrides supplied company/destination/location filters.
+- `GET /shipments/parcels/assignment-staff`: active officers at the authenticated company and
+  branch; restrict to the user's location when assigned, otherwise include every branch location
+  and officers without a location. Missing company/branch returns `[]`.
+- `POST /shipments/parcels/:id/assign-call-center` and `/bulk-assign-call-center`: require
+  `CanAssignCallCenterParcels`. The single body contains `userId`; bulk also requires 1–200 unique
+  `parcelIds`. Validate parcel company/destination/pickup location and active officer
+  company/branch/location from authentication. Missing/deleted/out-of-scope parcels return 404,
+  invalid officers 400, missing context 403, and invalid bodies 422. Bulk changes are atomic.
+  Successful assignment retains existing status mapping and clears the call timestamp.
 - `GET /shipments/parcels/call-center/address-collection`: require `CanMarkDoorstepCalled` and
   return only Home Delivery Requested parcels for the authenticated company and destination branch.
   Missing company or branch identity returns an empty paginated response.
@@ -269,7 +284,9 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   Payments remain recorded. Reject missing/out-of-scope, already reversed, or inconsistent
   delivery records. Response contains the parcel ID and restored status. The action is audited.
 - `POST /shipments/parcels/bulk-call-outcome`: save one call outcome for 1–100 unique parcels assigned
-  to the authenticated call agent in their company and destination branch. The body contains
+  to the authenticated call agent in their company and destination branch, restricted to their
+  assigned pickup location when present. Single contact saves, legacy call-outcome PATCH requests,
+  and main-receiver changes apply the same location check. The body contains
   `parcelIds` and `outcome` (`follow_up`, `pickup`, or `delivery`). The server validates every parcel,
   then updates them together in one transaction. Missing, deleted, reassigned, out-of-scope,
   ineligible, or concurrently changed parcels reject the batch without partial updates. This endpoint

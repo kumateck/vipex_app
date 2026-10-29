@@ -15,6 +15,7 @@ export async function changeMainReceiverWithCallOutcomeSvc(input: {
   parcelId: string;
   companyId: string;
   branchId: string;
+  locationId?: string | null;
   actorUserId: string;
   telephone: string;
   fullname?: string;
@@ -33,6 +34,7 @@ export async function changeMainReceiverWithCallOutcomeSvc(input: {
         status: parcels.status,
         companyId: parcels.companyId,
         destinationId: parcels.destinationId,
+        pickupLocationId: parcels.pickupLocationId,
         callCenterAssignedToUserId: parcels.callCenterAssignedToUserId,
         isDeleted: parcels.isDeleted,
         callCenterCalledAt: parcels.callCenterCalledAt,
@@ -88,6 +90,7 @@ export async function changeMainReceiverWithCallOutcomeSvc(input: {
           eq(parcels.id, input.parcelId),
           eq(parcels.companyId, input.companyId),
           eq(parcels.destinationId, input.branchId),
+          input.locationId ? eq(parcels.pickupLocationId, input.locationId) : undefined,
           eq(parcels.callCenterAssignedToUserId, input.actorUserId),
           eq(parcels.isDeleted, false),
           isNull(parcels.callCenterCalledAt),

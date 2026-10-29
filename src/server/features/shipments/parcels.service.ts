@@ -82,7 +82,6 @@ import {
   validateStorageWaiverReason,
 } from './storage-accrual-guards';
 import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
-import { callCenterAssignmentStatus } from './parcel-call-center-assignment';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 function getErrorCode(error: unknown): string | undefined {
@@ -1695,32 +1694,4 @@ export async function resolveParcelDiscrepancySvc(input: {
   });
 
   return { id: resolved.id, parcelId: resolved.parcelId };
-}
-
-export async function assignParcelToCallCenterSvc(input: { parcelId: string; userId: string }) {
-  const parcel = await getParcelRepo(input.parcelId);
-  if (!parcel) throw NotFound('Parcel not found');
-
-  await updateParcelRepo(
-    input.parcelId,
-    {
-      callCenterAssignedToUserId: input.userId,
-      callCenterCalledAt: null,
-      status: callCenterAssignmentStatus(parcel.status),
-    },
-    db,
-  );
-
-  return { success: true, parcelId: input.parcelId };
-}
-
-export async function bulkAssignParcelsToCallCenterSvc(input: {
-  parcelIds: string[];
-  userId: string;
-}) {
-  if (input.parcelIds.length === 0) throw BadRequest('Select at least one parcel');
-  for (const parcelId of input.parcelIds) {
-    await assignParcelToCallCenterSvc({ parcelId, userId: input.userId });
-  }
-  return { success: true, assignedCount: input.parcelIds.length };
 }
