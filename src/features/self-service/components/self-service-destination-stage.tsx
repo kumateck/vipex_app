@@ -46,18 +46,20 @@ export function SelfServiceDestinationStage({
     );
 
   useEffect(() => {
-    if (!destinationBranchId || isLoadingLocations || locationOptions.length !== 1) return;
-    const onlyLocation = locationOptions[0];
-    if (!onlyLocation) return;
-    setValue('destinationLocationId', onlyLocation.id, { shouldDirty: true });
+    if (!destinationBranchId || isLoadingLocations || !locationOptions.length) return;
+    const firstReceivingLocation = locationOptions[0];
+    if (!firstReceivingLocation) return;
+    setValue('destinationLocationId', firstReceivingLocation.id, { shouldDirty: true });
     clearErrors('destinationLocationId');
   }, [clearErrors, destinationBranchId, isLoadingLocations, locationOptions, setValue]);
+
+  const selfServiceLocationOptions = locationOptions.slice(0, 1);
 
   const locationPlaceholder = !destinationBranchId
     ? 'Select destination branch first'
     : isLoadingLocations
       ? 'Loading locations...'
-      : locationOptions.length
+      : selfServiceLocationOptions.length
         ? 'Select location'
         : 'No locations available';
 
@@ -114,10 +116,14 @@ export function SelfServiceDestinationStage({
                   isLoading={isLoadingLocations}
                   placeholder={locationPlaceholder}
                   searchPlaceholder="Search location..."
-                  disabled={!destinationBranchId || isLoadingLocations}
+                  disabled={
+                    !destinationBranchId ||
+                    isLoadingLocations ||
+                    selfServiceLocationOptions.length <= 1
+                  }
                   className={SELF_SERVICE_SELECT_CONTENT_CLASS}
                   triggerClassName={SELF_SERVICE_SELECT_TRIGGER_CLASS}
-                  options={locationOptions.map((location) => ({
+                  options={selfServiceLocationOptions.map((location) => ({
                     value: location.id,
                     label: location.name,
                   }))}
