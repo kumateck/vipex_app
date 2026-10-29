@@ -2925,7 +2925,7 @@ export async function getFleetDispatchOpsPerformanceRepo(input: {
     .where(
       and(
         eq(fleetTrips.companyId, input.companyId),
-        sql`coalesce(${fleetTrips.startedAt}, ${fleetTrips.plannedStartAt}, ${fleetTrips.createdAt}) >= ${input.windowStart}`,
+        sql`coalesce(${fleetTrips.startedAt}, ${fleetTrips.plannedStartAt}, ${fleetTrips.createdAt}) >= ${input.windowStart.toISOString()}`,
       ),
     );
 
