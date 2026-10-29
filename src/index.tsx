@@ -3,6 +3,7 @@ import { apiFetch } from './server/app';
 import { logger as devLogger } from './server/utils/logger';
 import { join, resolve } from 'node:path';
 import { getWebCacheHeaders } from './server/utils/web-cache';
+import { installProcessErrorHandlers } from './server/services/observability/error-monitor';
 import {
   communicationSocketHandlers,
   upgradeCommunicationSocket,
@@ -87,3 +88,6 @@ const server = serve({
 });
 
 devLogger.info(`🚀 Server running at ${server.url}`);
+
+// Sends errors and a heartbeat to Oryx Monitor when ERROR_MONITOR_URL/KEY are set.
+installProcessErrorHandlers();
