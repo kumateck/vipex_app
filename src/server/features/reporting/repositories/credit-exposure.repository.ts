@@ -121,8 +121,8 @@ export async function listCustomerCreditAgingDetailReportRowsRepo(input: {
         AND cct.transaction_type = ${CustomerCreditTransactionType.CHARGE}
         AND cct.signed_amount_psw > 0
         ${input.customerId ? sql`AND cct.customer_id = ${input.customerId}` : sql``}
-        ${input.from ? sql`AND cct.created_at >= ${input.from}` : sql``}
-        ${input.to ? sql`AND cct.created_at <= ${input.to}` : sql``}
+        ${input.from ? sql`AND cct.created_at >= ${input.from.toISOString()}` : sql``}
+        ${input.to ? sql`AND cct.created_at <= ${input.to.toISOString()}` : sql``}
     ),
     allocations AS (
       SELECT

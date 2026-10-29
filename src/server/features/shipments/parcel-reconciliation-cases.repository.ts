@@ -12,14 +12,26 @@ import { ParcelReconciliationCaseStatus } from '@/db/schemas/enums';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
-export async function listEligibleParcelCorrectionSessionsRepo(input: {
+type EligibleParcelCorrectionSessionsInput = {
   cashierId: string;
   branchId: string;
   occurredAt: Date;
   preferredSessionId?: string | null;
-}) {
+};
+
+export function listEligibleParcelCorrectionSessionsRepo(
+  input: EligibleParcelCorrectionSessionsInput,
+) {
+  return buildEligibleParcelCorrectionSessionsQuery(input);
+}
+
+export function buildEligibleParcelCorrectionSessionsQuery(
+  input: EligibleParcelCorrectionSessionsInput,
+) {
   const sessionStart = sql<Date>`coalesce(${cashierSessions.actualStartTime}, ${cashierSessions.scheduledStartTime})`;
   const sessionEnd = sql<Date>`coalesce(${cashierSessions.actualEndTime}, ${cashierSessions.scheduledEndTime})`;
+  // Raw sql expressions have no column encoder, so encode the Date via a timestamp column.
+  const occurredAt = sql.param(input.occurredAt, cashierSessions.scheduledStartTime);
 
   return db
     .select({
@@ -41,7 +53,7 @@ export async function listEligibleParcelCorrectionSessionsRepo(input: {
         eq(cashierSessions.branchId, input.branchId),
         or(
           input.preferredSessionId ? eq(cashierSessions.id, input.preferredSessionId) : undefined,
-          and(lte(sessionStart, input.occurredAt), gte(sessionEnd, input.occurredAt)),
+          and(lte(sessionStart, occurredAt), gte(sessionEnd, occurredAt)),
         ),
       ),
     )
