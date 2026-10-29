@@ -99,6 +99,22 @@ inputs:
     required: false
     default: ''
 
+  release:
+    description: Commit SHA of the image, reported with errors (also used by Sentry)
+    required: false
+    default: ''
+  error_monitor_url:
+    description: Oryx Monitor base URL; errors are forwarded only when this and error_monitor_key are set
+    required: false
+    default: ''
+  error_monitor_key:
+    required: false
+    default: ''
+  error_monitor_instance:
+    description: Name shown in Oryx Monitor, e.g. vipex-prod
+    required: false
+    default: ''
+
   mtn_momo_target_environment:
     description: sandbox or production
     required: false
@@ -182,6 +198,10 @@ runs:
         MNOTIFY_API_URL: ${{ inputs.mnotify_api_url }}
         MNOTIFY_API_KEY: ${{ inputs.mnotify_api_key }}
         MNOTIFY_SENDER_ID: ${{ inputs.mnotify_sender_id }}
+        RELEASE: ${{ inputs.release }}
+        ERROR_MONITOR_URL: ${{ inputs.error_monitor_url }}
+        ERROR_MONITOR_KEY: ${{ inputs.error_monitor_key }}
+        ERROR_MONITOR_INSTANCE: ${{ inputs.error_monitor_instance }}
         SSH_PRIVATE_KEY: ${{ inputs.ssh_private_key }}
         SSH_USERNAME: ${{ inputs.ssh_username }}
         SSH_HOST: ${{ inputs.ssh_host }}
@@ -239,6 +259,10 @@ runs:
         add_optional_env ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
         add_optional_env OPENAI_API_KEY "$OPENAI_API_KEY"
         add_optional_env GOOGLE_API_KEY "$GOOGLE_API_KEY"
+        add_optional_env RELEASE "$RELEASE"
+        add_optional_env ERROR_MONITOR_URL "$ERROR_MONITOR_URL"
+        add_optional_env ERROR_MONITOR_KEY "$ERROR_MONITOR_KEY"
+        add_optional_env ERROR_MONITOR_INSTANCE "$ERROR_MONITOR_INSTANCE"
 
         mkdir -p ~/.ssh
         echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
