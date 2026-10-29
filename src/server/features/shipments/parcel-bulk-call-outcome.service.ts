@@ -1,3 +1,4 @@
+import { isParcelInCallCenterScope } from './call-center-scope';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { parcels, ParcelStatus } from '@/db/schemas';
@@ -26,20 +27,20 @@ export function validateBulkCallOutcomeCandidates(
     id: string;
     companyId: string;
     destinationId: string;
+    pickupLocationId?: string | null;
     callCenterAssignedToUserId: string | null;
     isDeleted: boolean;
     status: number;
     callCenterCalledAt?: Date | null;
   }>,
   parcelIds: string[],
-  context: { companyId: string; branchId: string; actorUserId: string },
+  context: { companyId: string; branchId: string; locationId?: string | null; actorUserId: string },
 ) {
   if (
     candidates.length !== parcelIds.length ||
     candidates.some(
       (parcel) =>
-        parcel.companyId !== context.companyId ||
-        parcel.destinationId !== context.branchId ||
+        !isParcelInCallCenterScope(parcel, context) ||
         parcel.callCenterAssignedToUserId !== context.actorUserId ||
         parcel.isDeleted,
     )
@@ -60,6 +61,7 @@ export async function saveBulkCallOutcomeSvc(input: {
   outcome: CallOutcome;
   companyId: string;
   branchId: string;
+  locationId?: string | null;
   actorUserId: string;
 }) {
   if (!input.companyId || !input.branchId || !input.actorUserId) {
@@ -80,6 +82,7 @@ export async function saveBulkCallOutcomeSvc(input: {
         id: parcels.id,
         companyId: parcels.companyId,
         destinationId: parcels.destinationId,
+        pickupLocationId: parcels.pickupLocationId,
         callCenterAssignedToUserId: parcels.callCenterAssignedToUserId,
         isDeleted: parcels.isDeleted,
         status: parcels.status,
@@ -97,6 +100,7 @@ export async function saveBulkCallOutcomeSvc(input: {
           inArray(parcels.id, parcelIds),
           eq(parcels.companyId, input.companyId),
           eq(parcels.destinationId, input.branchId),
+          input.locationId ? eq(parcels.pickupLocationId, input.locationId) : undefined,
           eq(parcels.callCenterAssignedToUserId, input.actorUserId),
           eq(parcels.isDeleted, false),
           isNull(parcels.callCenterCalledAt),

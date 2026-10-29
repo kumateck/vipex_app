@@ -333,17 +333,6 @@ export async function listParcelReconciliationCasesCtrl(input: {
     meta: buildPaginationMeta({ totalRecords, page, pageSize }),
   };
 }
-export async function assignParcelToCallCenterCtrl(input: { parcelId: string; userId: string }) {
-  const { assignParcelToCallCenterSvc } = await import('./parcels.service');
-  return assignParcelToCallCenterSvc(input);
-}
-export async function bulkAssignParcelsToCallCenterCtrl(input: {
-  parcelIds: string[];
-  userId: string;
-}) {
-  const { bulkAssignParcelsToCallCenterSvc } = await import('./parcels.service');
-  return bulkAssignParcelsToCallCenterSvc(input);
-}
 export async function updateParcelShelfPickerCtrl(
   input: Parameters<
     typeof import('./shelf-picker-assignment.service').updateParcelShelfPickerSvc

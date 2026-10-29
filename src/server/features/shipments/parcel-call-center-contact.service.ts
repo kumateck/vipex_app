@@ -1,3 +1,4 @@
+import { isParcelInCallCenterScope } from './call-center-scope';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { ParcelStatus, customers, parcels } from '@/db/schemas';
@@ -24,6 +25,7 @@ export function assertCallCenterContactCandidate<
   T extends {
     companyId: string;
     destinationId: string;
+    pickupLocationId?: string | null;
     callCenterAssignedToUserId: string | null;
     callCenterCalledAt: Date | null;
     status: number;
@@ -31,13 +33,18 @@ export function assertCallCenterContactCandidate<
   },
 >(
   parcel: T | null | undefined,
-  input: { companyId: string; branchId: string; actorUserId: string; outcome?: CallOutcome },
+  input: {
+    companyId: string;
+    branchId: string;
+    locationId?: string | null;
+    actorUserId: string;
+    outcome?: CallOutcome;
+  },
 ): asserts parcel is T {
   if (
     !parcel ||
     parcel.isDeleted ||
-    parcel.companyId !== input.companyId ||
-    parcel.destinationId !== input.branchId ||
+    !isParcelInCallCenterScope(parcel, input) ||
     parcel.callCenterAssignedToUserId !== input.actorUserId
   )
     throw NotFound('Assigned parcel not found at your branch');
@@ -53,6 +60,7 @@ export async function recordCallCenterContactSvc(input: {
   parcelId: string;
   companyId: string;
   branchId: string;
+  locationId?: string | null;
   actorUserId: string;
   outcome?: CallOutcome;
   secondReceiverId?: string | null;
@@ -67,6 +75,7 @@ export async function recordCallCenterContactSvc(input: {
         id: parcels.id,
         companyId: parcels.companyId,
         destinationId: parcels.destinationId,
+        pickupLocationId: parcels.pickupLocationId,
         callCenterAssignedToUserId: parcels.callCenterAssignedToUserId,
         callCenterCalledAt: parcels.callCenterCalledAt,
         status: parcels.status,
@@ -106,6 +115,7 @@ export async function recordCallCenterContactSvc(input: {
           eq(parcels.id, input.parcelId),
           eq(parcels.companyId, input.companyId),
           eq(parcels.destinationId, input.branchId),
+          input.locationId ? eq(parcels.pickupLocationId, input.locationId) : undefined,
           eq(parcels.callCenterAssignedToUserId, input.actorUserId),
           eq(parcels.status, parcel.status),
           eq(parcels.isDeleted, false),

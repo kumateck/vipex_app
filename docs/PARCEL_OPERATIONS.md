@@ -134,6 +134,41 @@ disabled. When an active pickup queue exists, the server mirrors the assignment 
 `pickup_queues.picker_staff_id` for compatibility. The server enforces these permissions
 independently of sidebar visibility.
 
+### Parcel Assignment and Call Outcome location scope
+
+Parcel Assignment and Call Outcome use the signed-in user's company and destination branch.
+When the user has an assigned location, parcel queues include only parcels whose pickup
+location matches it, and assignment officer options include only active users at that same
+branch and location. Parcels or officers without a location are excluded from a location-scoped
+session. When the user has a branch but no location, all pickup locations in that branch are
+available, including parcels and active officers with no location. Call Outcome continues to
+show only parcels assigned to the signed-in call agent; the branch fallback does not expose
+other agents' work. Search, pagination, payment filters, and **Include saved outcomes** retain
+this scope. Missing company or branch context rejects queue access; officer options are empty.
+
+The server applies this scope to `/shipments/parcels/call-center`, `/call-center/assigned`, and
+general parcel searches with `assignedToCurrentUser=true`, overriding caller-supplied company,
+destination branch, and location filters for those assigned searches. Assignment saves validate
+both the parcel's pickup location and the target officer's active company/branch/location.
+Single and bulk call saves, legacy call-outcome PATCH requests, and main-receiver changes also
+check the authenticated location. Out-of-scope parcels return 404; an unavailable or inactive
+assignment officer returns 400. Bulk assignment validates the whole selection and commits it in
+one transaction, so a mixed-location or otherwise invalid selection makes no partial assignments.
+Duplicate IDs or selections outside 1–200 parcels are rejected.
+
+These rules apply to web and Electron desktop pages and to mobile clients using the assigned
+call-center queue and outcome endpoints. Existing assignments are not rewritten automatically;
+a branch user without a location can review and correct a previous cross-location assignment.
+No schema migration is required.
+
+QA scenarios: sign in at HAK and verify Anloga Junction parcels and officers are excluded;
+try single and mixed-location bulk assignments directly and verify no changes persist; repeat
+single/bulk outcomes and main-receiver changes on an old misassigned parcel; verify same-location
+saves succeed. Sign in with a branch and no location and verify every location in that branch
+is available, other branches are excluded, and inactive officers remain unavailable. Repeat
+search, pagination, and saved-outcome filtering. Automated coverage:
+`call-center-scope.test.ts` and `tests/server/call-center-location-scope.routes.spec.ts`.
+
 ### Call-center assignment schema compatibility
 
 The application stores call-center assignments in the nullable
