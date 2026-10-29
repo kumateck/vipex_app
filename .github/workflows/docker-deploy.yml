@@ -123,6 +123,10 @@ jobs:
           mnotify_api_url: ${{ secrets.MNOTIFY_API_URL }}
           mnotify_api_key: ${{ secrets.MNOTIFY_API_KEY }}
           mnotify_sender_id: ${{ secrets.MNOTIFY_SENDER_ID }}
+          release: ${{ github.sha }}
+          error_monitor_url: https://oryxmonitor.kumateck.com
+          error_monitor_key: ${{ secrets.ERROR_MONITOR_KEY }}
+          error_monitor_instance: vipex-dev
           docker_username: ${{ secrets.DOCKER_USERNAME }}
           docker_password: ${{ secrets.DOCKER_PASSWORD }}
           ssh_host: ${{ secrets.SSH_HOST }}
