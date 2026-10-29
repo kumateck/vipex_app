@@ -31,6 +31,7 @@ export interface Customer {
 }
 
 export interface CustomerFilters {
+  customerType?: CustomerType;
   companyId?: string;
   includeDeleted?: boolean | null;
 }
@@ -119,6 +120,9 @@ export interface CustomerTransaction {
   status: number;
   chargePsw: number;
   method: number;
+  paymentStatus: import('@/shared/shipments/parcel-payment-status').ParcelPaymentStatus;
+  paidPrincipalPsw: number;
+  creditPaidPsw: number;
   transactionRole: 'SENDER' | 'RECEIVER';
   createdAt: string;
 }
@@ -445,7 +449,13 @@ export const customersApi = api.injectEndpoints({
         unallocatedAmountPsw: number;
         allocations: Array<{ chargeTransactionId: string; amountPsw: number }>;
       },
-      { customerId: string; amountCedis: number | string; notes?: string; referenceId?: string }
+      {
+        customerId: string;
+        parcelIds: string[];
+        amountCedis: number | string;
+        notes?: string;
+        referenceId?: string;
+      }
     >({
       query: ({ customerId, ...body }) => ({
         url: `/customers/${customerId}/credit/payments`,

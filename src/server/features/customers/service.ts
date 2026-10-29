@@ -1,10 +1,9 @@
+import { getParcelPaymentStatus } from '@/shared/shipments/parcel-payment-status';
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import { db } from '@/db/config';
 import { recordAuditLog } from '../audit/logger';
-import { toPesewas } from '@/server/utils/gh-money';
 import { resolveCustomerByTelephone } from './resolve-customer-by-telephone';
 import {
-  createCustomerCreditAllocationRepo,
   createCustomerCardRepo,
   createCustomerCreditTransactionRepo,
   createCustomerRepo,
@@ -477,73 +476,7 @@ export async function getCustomerCreditSummarySvc(input: {
   };
 }
 
-export async function postCustomerCreditPaymentSvc(input: {
-  customerId: string;
-  companyId: string;
-  amountCedis: number | string;
-  notes?: string | null;
-  referenceId?: string | null;
-  createdBy: string;
-}): Promise<{
-  id: string;
-  allocatedAmountPsw: number;
-  unallocatedAmountPsw: number;
-  allocations: Array<{ chargeTransactionId: string; amountPsw: number }>;
-}> {
-  const customer = await getCustomerRepo(input.customerId);
-  if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
-
-  const amountPsw = Number(toPesewas(input.amountCedis));
-  if (amountPsw <= 0) {
-    throw BadRequest('Payment amount must be greater than zero');
-  }
-
-  const payment = await createCustomerCreditTransactionRepo({
-    companyId: input.companyId,
-    customerId: input.customerId,
-    sourceType: CustomerCreditSourceType.MANUAL,
-    transactionType: CustomerCreditTransactionType.PAYMENT,
-    referenceId: input.referenceId ?? null,
-    signedAmountPsw: -Math.abs(amountPsw),
-    notes: input.notes ?? null,
-    createdBy: input.createdBy,
-  });
-
-  const openCharges = await listCustomerOpenCreditChargesRepo({
-    customerId: input.customerId,
-    companyId: input.companyId,
-  });
-
-  let remainingPsw = amountPsw;
-  const allocations: Array<{ chargeTransactionId: string; amountPsw: number }> = [];
-  for (const charge of openCharges) {
-    if (remainingPsw <= 0) break;
-    if (charge.outstandingAmountPsw <= 0) continue;
-    const allocationAmountPsw = Math.min(remainingPsw, charge.outstandingAmountPsw);
-    if (allocationAmountPsw <= 0) continue;
-
-    await createCustomerCreditAllocationRepo({
-      companyId: input.companyId,
-      customerId: input.customerId,
-      chargeTransactionId: charge.chargeTransactionId,
-      paymentTransactionId: payment.id,
-      amountPsw: allocationAmountPsw,
-      createdBy: input.createdBy,
-    });
-    allocations.push({
-      chargeTransactionId: charge.chargeTransactionId,
-      amountPsw: allocationAmountPsw,
-    });
-    remainingPsw -= allocationAmountPsw;
-  }
-
-  return {
-    id: payment.id,
-    allocatedAmountPsw: amountPsw - remainingPsw,
-    unallocatedAmountPsw: remainingPsw,
-    allocations,
-  };
-}
+export { postCustomerCreditPaymentSvc } from './credit-settlement';
 
 export async function postCustomerCreditChargeSvc(input: {
   customerId: string;
@@ -946,6 +879,9 @@ export async function listCustomerTransactionsSvc(input: {
         status: row.status,
         chargePsw: row.chargePsw,
         method: row.method,
+        paymentStatus: getParcelPaymentStatus(row),
+        paidPrincipalPsw: row.paidPrincipalPsw,
+        creditPaidPsw: row.creditPaidPsw,
         transactionRole: isSender ? ('SENDER' as const) : ('RECEIVER' as const),
         createdAt: row.createdAt,
       };

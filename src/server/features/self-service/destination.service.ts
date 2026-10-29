@@ -51,12 +51,14 @@ export async function listSelfServiceDestinationLocationsSvc(input: {
 // Never trust the client-picked destination blindly: re-verify it's a real,
 // active branch in the same company, not the source branch itself, not head
 // office, and (if a location was picked) that the location actually belongs
-// to that branch.
+// to that branch. Public submissions can additionally be limited to its first
+// receiving location while staff draft edits retain the full location list.
 export async function validateSelfServiceDestinationSvc(input: {
   sourceBranchId: string;
   companyId: string;
   destinationBranchId: string;
   destinationLocationId?: string | null;
+  firstReceivingLocationOnly?: boolean;
 }): Promise<{ destinationBranchId: string; destinationLocationId: string | null }> {
   if (input.destinationBranchId === input.sourceBranchId) {
     throw BadRequest('Destination branch cannot be the same as the source branch');
@@ -70,7 +72,7 @@ export async function validateSelfServiceDestinationSvc(input: {
     throw BadRequest('Head office cannot be selected as destination branch');
   }
 
-  if (!input.destinationLocationId) {
+  if (!input.destinationLocationId && !input.firstReceivingLocationOnly) {
     return { destinationBranchId: destination.id, destinationLocationId: null };
   }
 
@@ -79,12 +81,22 @@ export async function validateSelfServiceDestinationSvc(input: {
     branchId: destination.id,
     canReceive: true,
   });
-  const matchedLocation = locationOptions.find(
-    (location) => location.id === input.destinationLocationId,
-  );
-  if (!matchedLocation) {
-    throw BadRequest('Select a valid destination location');
+  const firstReceivingLocation = locationOptions[0];
+  if (!firstReceivingLocation) {
+    throw BadRequest('The destination branch has no receiving locations');
+  }
+  const selectedLocation = input.destinationLocationId
+    ? locationOptions.find((location) => location.id === input.destinationLocationId)
+    : firstReceivingLocation;
+  if (!selectedLocation) {
+    throw BadRequest('Select a valid receiving location for the destination branch');
+  }
+  if (input.firstReceivingLocationOnly && selectedLocation.id !== firstReceivingLocation.id) {
+    throw BadRequest('Select the first receiving location for the destination branch');
   }
 
-  return { destinationBranchId: destination.id, destinationLocationId: matchedLocation.id };
+  return {
+    destinationBranchId: destination.id,
+    destinationLocationId: selectedLocation.id,
+  };
 }

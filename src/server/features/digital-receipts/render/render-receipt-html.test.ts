@@ -6,6 +6,7 @@ import {
 import { buildHomeDeliveryReceiptA5Props } from '@/features/operations/parcel/utils/build-home-delivery-receipt-props';
 import { buildSenderReceiptData, type ReceiptParcelRow } from '../receipt-data';
 import { renderReceiptHtml } from './render-receipt-html';
+import { PaymentMethod } from '@/db/schemas/enums';
 
 const row: ReceiptParcelRow = {
   bookingCode: 'BK-2026-0001',
@@ -52,6 +53,14 @@ function renderInvoice(data: ReturnType<typeof buildSenderReceiptData>) {
 }
 
 describe('renderReceiptHtml', () => {
+  test('credit digital copies retain zero collected and render a credit acknowledgement', () => {
+    const data = buildSenderReceiptData({ ...row, method: PaymentMethod.CREDIT }, null);
+    expect(data.amountPaidCedis).toBe(0);
+    const html = renderInvoice(data);
+    expect(html).toContain('PAYMENT STATUS: CREDIT');
+    expect(html).not.toContain('Tax Invoice');
+    expect(html).not.toContain('will be collected from the recipient');
+  });
   test('renders the paid A5 receipt as a standalone document', () => {
     const html = renderInvoice(buildSenderReceiptData(row, recorded));
     expect(html.startsWith('<!doctype html>')).toBe(true);

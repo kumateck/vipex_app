@@ -56,6 +56,7 @@ const IMPLEMENTED_STANDALONE_REPORT_URLS = new Set<string>([
   '/reports/customers/credit-summary',
   '/reports/customers/aging',
   '/reports/parcels/register',
+  '/reports/parcels/analytics',
   '/reports/parcels/delivered',
   '/reports/transfers/pending',
   '/reports/transfers/acknowledged',
@@ -161,6 +162,11 @@ const BASE_ROUTES: Route[] = [
             title: 'Self-Service Bookings',
             url: '/parcels/self-service',
             permissionKey: PermissionKeys.CanReadSelfServiceBookings,
+          },
+          {
+            title: 'Charge Approvals',
+            url: '/parcels/charge-approvals',
+            permissionKey: PermissionKeys.CanApproveParcelCharge,
           },
           {
             title: 'Reconciliation Cases',
@@ -678,6 +684,11 @@ const BASE_ROUTES: Route[] = [
         icon: 'Receipt',
         items: [
           {
+            title: 'Tax Data Generation',
+            url: '/accounting/tax-data',
+            permissionKey: PermissionKeys.CanReadAccounting,
+          },
+          {
             title: 'Tax Filing',
             url: '/accounting/tax',
             permissionKey: PermissionKeys.CanCreateTaxFilingPeriod,
@@ -1026,6 +1037,12 @@ const BASE_ROUTES: Route[] = [
   {
     title: 'Insights',
     menu: [
+      {
+        title: 'Parcel Analytics',
+        url: '/reports/parcels/analytics',
+        icon: 'ChartBar',
+        permissionKey: PermissionKeys.CanViewReportParcelsStatusSummary,
+      },
       {
         title: 'Business Analytics',
         url: '/bi-executive-dashboard',

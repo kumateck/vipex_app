@@ -22,6 +22,7 @@ async function resolveCampaignMessageContent(input: {
   senderPhone?: string | null;
   branch?: string | null;
   location?: string | null;
+  locationPhone?: string | null;
 }) {
   if (!input.campaign) throw NotFound('Campaign not found');
   const channel = normalizeChannel(input.campaign.channel);
@@ -82,6 +83,7 @@ export async function sendNotificationCampaignSvc(input: {
       senderPhone: sender?.senderPhone,
       branch: sender?.branch,
       location: sender?.location,
+      locationPhone: sender?.locationPhone,
     });
     const createdDispatch = await createNotificationDispatchRepo({
       companyId: input.companyId,

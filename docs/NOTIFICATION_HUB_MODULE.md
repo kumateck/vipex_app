@@ -150,7 +150,7 @@ variables are present; secrets are not returned to the client.
 
 ## Application SMS Definitions
 
-Digital receipt events (`digital_receipt_booking`, `digital_receipt_payment`, `digital_receipt_home_delivery`) appear in the definitions list and can be edited like other events. Their variables are `customerName`, `bookingCode`, `amountPaid`, `balance`, `destination`, `receiptUrl`, `branch` (destination branch), and `location` (pickup location, or drop-off address for home delivery). They are only dispatched when the `digital_receipts` module is enabled. See [Digital receipts](DIGITAL_RECEIPTS.md).
+Digital receipt events (`digital_receipt_booking`, `digital_receipt_payment`, `digital_receipt_home_delivery`) appear in the definitions list and can be edited like other events. Their variables are `customerName`, `bookingCode`, `amountPaid`, `balance`, `destination`, `receiptUrl`, `branch` (destination branch), and `location` (pickup location, or drop-off address for home delivery). They also support `locationName` and `locationPhone` for the assigned pickup location contact. They are only dispatched when the `digital_receipts` module is enabled. See [Digital receipts](DIGITAL_RECEIPTS.md).
 
 Transactional SMS actions use a central event catalog and a company-specific template override:
 
@@ -212,7 +212,8 @@ boolean `is_schedule: false` and `sms_type: "otp"`; ordinary SMS keeps the OTP f
 Coverage: `otp-sms-delivery.test.ts` and `sms-provider-payloads.test.ts`.
 
 Reusable templates and new bulk SMS messages support `{{senderName}}`, `{{senderPhone}}`,
-`{{recipientName}}`, `{{recipientPhone}}`, `{{branch}}`, `{{location}}`, and `{{date}}`.
+`{{recipientName}}`, `{{recipientPhone}}`, `{{branch}}`, `{{location}}`, `{{locationName}}`,
+`{{locationPhone}}`, and `{{date}}`.
 Sender, branch, and location values resolve from the user dispatching the campaign; recipient values
 resolve from each audience record. A missing value resolves to an empty string. `{{companyId}}` is
 not supported. Unknown variables are rejected when a template or campaign is saved, before any
@@ -220,7 +221,7 @@ messages are dispatched. This behavior is shared by the web template editor and 
 
 QA scenarios:
 
-1. Create a bulk SMS containing all seven supported variables; verify sender details and operational
+1. Create a bulk SMS containing all nine supported variables; verify sender details and operational
    assignment come from the dispatching user and recipient details come from each audience record.
 2. Send the same template as a user without a location; verify the message is dispatched with an
    empty location value.
@@ -296,3 +297,41 @@ It uses current saved recipients and configured templates without updating the p
 call timestamp, assignments, receiver details, or payments. It is a manual new send, including
 previously successful recipients when selected, with no automatic retries. Mobile has no new
 resend control; its existing save workflow is unchanged. No migration is required.
+
+## Location name and telephone SMS variables
+
+All application SMS event definitions and bulk SMS templates expose `{{locationName}}`
+and `{{locationPhone}}`. The variable buttons are generated from the shared/event catalogs,
+including previously customized events. Existing bodies are preserved; edit a template to
+include the new tokens. Unknown variables remain rejected and OTP bodies still require `{{otp}}`.
+
+Each location has its own optional `telephone` (maximum 30 characters, stored as text to
+preserve leading zeroes and international prefixes), editable in Locations on web/desktop.
+Apply migration `0089_location_telephone` before running the updated backend; existing rows
+remain null until configured. See [location contact settings](PLATFORM_AND_ACCESS.md#location-telephone).
+There is no fallback to the branch telephone: `{{branchPhone}}` keeps its existing meaning.
+
+- Bulk/campaign SMS uses the dispatching user's assigned active location in their company/branch.
+- Call outcomes, resends, and receiver OTP use the parcel's assigned active pickup location
+  in its company/destination branch. Both receiver choices use the same location contact.
+- Queue tickets use the queue location contact. With no queue location, the existing branch-name
+  location label remains, while locationPhone is empty. A deleted or out-of-scope assigned
+  queue location rejects ticket creation before queue or SMS changes.
+- Digital receipts use the assigned pickup location name/telephone. The legacy `{{location}}`
+  still uses the receipt's pickup label or home-delivery address; `{{locationName}}` identifies
+  the pickup location even for home delivery. No assigned pickup location means empty new tokens.
+  Contact data is resolved when generating messages; the public receipt summary is unchanged.
+
+`{{location}}` remains a compatible name alias for bulk/ordinary parcel SMS. Missing location
+or telephone renders as an empty string without an unresolved token. Lookup rejects foreign,
+mismatched-branch, or deleted locations rather than using another location's contact.
+No new sending permissions or module gates are introduced. Native mobile dispatches use the
+same server variables; no native location-management or SMS-template screen is added.
+
+Validation: `tests/utils/sms-template-variables.spec.ts`, `campaign-template-values.test.ts`,
+`sms-event-definitions.test.ts`, `services/sms-location-variables.test.ts`, receipt message tests,
+and `tests/server/sms-location.spec.ts` cover catalog acceptance, rendering, saved text values,
+clearing/omission, migration idempotence and scoped lookups. Integration tests require
+`SMS_LOCATION_TEST=1 TEST_DATABASE_URL=postgres://localhost/vipex_sms_location_test` against
+that dedicated empty local database; its tables are dropped after testing. SMS dispatch tests
+mock the provider and send no real messages.

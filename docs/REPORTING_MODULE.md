@@ -8,6 +8,7 @@ UI entry points:
 
 - `/reports`
 - `/reports/parcels/daily-audit`
+- `/reports/parcels/analytics`
 - `/accounting/reports`
 
 Backend entry points:
@@ -168,3 +169,17 @@ When adding a new report:
 7. update `API.md`, this document, the route-permission matrix, and a report QA scenario in the same change
 
 Formal documents like payslips can still keep dedicated print views when the layout is materially different.
+
+## Parcel analytics
+
+Parcel Analytics filters open in a dialog from the page header. Apply closes the dialog
+and loads analytics on the main page; closing without applying preserves the report.
+
+The live Parcel Analytics page provides global, branch-wise, and current-status KPIs,
+branch comparisons, daily booking trends, receipt-based collection aging, paginated parcel
+drill-down, and CSV aggregate export. Both endpoints require
+`CanViewReportParcelsStatusSummary` and enforce company/branch scope on the server.
+See [Parcel Analytics](PARCEL_ANALYTICS.md) for metric definitions, filter/date semantics,
+API responses, failure cases, supported clients, limitations, and validation scenarios.
+
+Parcel Analytics currently supports aggregate CSV export; no print view is implemented.

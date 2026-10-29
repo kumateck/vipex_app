@@ -28,10 +28,12 @@ import { paymentsRoutes } from './features/payments/routes';
 import { paymentCalculationRoutes } from './features/payments/calculation.routes';
 import { deliveriesRoutes } from './features/deliveries/routes';
 import { accountingRoutes } from './features/accounting/routes';
+import { taxDataRoutes } from './features/accounting/tax-data';
 import { bookingWithParcelsRoutes } from './features/shipments/booking-with-parcels.routes';
 import { inventoryRoutes } from './features/inventory/routes';
 import { shiftsRoutes } from './features/shifts/routes';
 import { reportingRoutes } from './features/reporting/routes';
+import { parcelAnalyticsRoutes } from './features/reporting/parcel-analytics';
 import { auditRoutes } from './features/audit/routes';
 import { hrRoutes } from './features/hr/routes';
 import { payrollRoutes } from './features/payroll/routes';
@@ -71,6 +73,7 @@ import { receiptReprintRoutes } from './features/receipt-reprint/receipt-reprint
 import { parcelStickerPaymentRoutes } from './features/shipments/parcel-sticker-payment.routes';
 import { whatsappMessagingRoutes, whatsappWebhookRoutes } from './features/whatsapp-messaging';
 import { digitalReceiptRoutes, publicReceiptRoutes } from './features/digital-receipts';
+import { maintenanceRoutes } from './features/maintenance';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -94,6 +97,7 @@ export const app = new Elysia()
   .group('/v1', (v1) =>
     v1
       .use(api)
+      .group('/maintenance', (r) => r.use(maintenanceRoutes))
       .group('/users', (r) => r.use(usersRoutes).use(usersInviteRoutes))
       .group('/branches', (r) => r.use(branchesRoutes))
       .group('/locations', (r) => r.use(locationsRoutes))
@@ -120,7 +124,7 @@ export const app = new Elysia()
       .group('/payments', (r) => r.use(paymentsRoutes).use(paymentCalculationRoutes))
       .group('/deliveries', (r) => r.use(deliveriesRoutes))
       .group('/pickup-queues', (r) => r.use(pickupQueuesRoutes))
-      .group('/accounting', (r) => r.use(accountingRoutes))
+      .group('/accounting', (r) => r.use(accountingRoutes).use(taxDataRoutes))
       .group('/inventory', (r) => r.use(inventoryRoutes))
       .group('/shifts', (r) => r.use(shiftsRoutes))
       .group('/company-modules', (r) => r.use(companyModulesRoutes))
@@ -145,7 +149,7 @@ export const app = new Elysia()
       .group('/management-daily-brief', (r) => r.use(managementDailyBriefRoutes))
       .group('/ai-chat', (r) => r.use(aiChatRoutes))
       .group('/it-support', (r) => r.use(itSupportRoutes))
-      .group('/reports', (r) => r.use(reportingRoutes))
+      .group('/reports', (r) => r.use(reportingRoutes).use(parcelAnalyticsRoutes))
       .group('/audit', (r) => r.use(auditRoutes))
       .group('/hr', (r) => r.use(hrRoutes))
       .group('/payroll', (r) => r.use(payrollRoutes))

@@ -325,12 +325,51 @@ email; customer notifications remain available only from the call outcome. The s
 parcels outside the staff member's company and destination branch. Web only; mobile has no
 equivalent page.
 
-Delivery Cashier also has **Upcoming handovers: second receivers**, showing Address Collected
-and Dispatched parcels at the cashier's destination branch. Search by booking/tracking or receiver,
+Delivery Cashier separates its queues into **Finalization** and **Upcoming Handovers** tabs on
+web and Electron desktop. **Finalization** is selected when the page opens and shows only
+completed rider handovers for money receipt and finalization, including the existing Return to
+Pickup action. Only the selected queue is visible. **Upcoming Handovers** is shown only with
+`CanManageParcelSecondReceiver`; without it, only Finalization is available. Tabs support keyboard
+navigation through the shared tabs component. Mobile screens are unchanged.
+
+The **Upcoming Handovers** tab has **Upcoming handovers: second receivers**, showing Address Collected
+and Dispatched parcels at the cashier's destination branch. Search by booking/tracking or sender/
+receiver name and phone,
 then use **Add Second Receiver** or **Change Second Receiver**. This uses the same permission,
 validation, customer reuse, removal, card clearing, OTP expiry and audit rules above, without
 requiring a separate `CanCreateCustomers` grant. The finalization queue remains separate and
 only contains completed rider handovers. Staff must save the contact before the rider confirms.
+
+Upcoming Handovers follows Super Search's grouped, labeled columns: **Parcel Reference** (booking,
+tracking, consignment and any storage-fee badge), **Customers** (sender, main receiver and second
+receiver, each with both available telephone numbers, plus Call Sender when applicable), **Parcel
+Description** (details and content), **Route & Delivery** (stage, assigned rider, delivery address,
+source branch/location and destination branch/pickup location), **Payment** (the same parcel value
+and paid/to-be-paid display as Super Search, plus **Delivery fee** and **Delivery fee to collect**),
+and **Dates** (created and received). Delivery fee is the configured charge; Delivery fee to collect
+uses the server's outstanding delivery-fee balance, falling back to the configured fee only when
+the balance is unavailable. A recorded zero balance stays zero. To be paid remains the parcel
+principal amount shown by Super Search, separately from the delivery fee.
+The delivery address is the home-delivery dropoff address; pickup location is separately labeled
+and is not substituted for a missing address. Long names, descriptions and addresses wrap without
+truncation; the shared table scrolls horizontally on narrow screens. Missing values show `-`, a
+missing second receiver shows `Not added`, and a missing rider shows `Not assigned`. A missing fee
+shows `-`, while a recorded zero fee shows `GHS 0.00`; missing/invalid dates show `-`.
+**View Details** opens the shared parcel details dialog beside the existing second-receiver action.
+These fields use the existing parcel-list response; no additional request per row, endpoint,
+permission, money collection or handover rule is introduced. Finalization remains the first tab.
+
+QA: open Delivery Cashier and verify Finalization is selected with no upcoming-handovers table
+below it; switch tabs with the pointer and keyboard and verify only the selected queue appears.
+Without `CanManageParcelSecondReceiver`, verify the Upcoming Handovers tab is absent. On narrow
+and desktop widths, verify both tab labels fit and each selected table remains scrollable. Verify
+search and pagination in each queue, second-receiver editing, finalization, and Return to Pickup
+still work; a queue-load failure must retain that queue's existing error behavior.
+Compare all grouped fields with Super Search and the parcel details dialog, including both phones
+for all three customers, parcel content, destination address versus pickup location, delivery fee,
+paid/unpaid/partial payments, rider and dates. Cover missing data, invalid dates, zero fees, long
+unbroken descriptions/addresses, and a parcel without a second receiver; verify View Details opens
+the selected parcel and saving a second receiver refreshes that row's contact information.
 
 On mobile, Assigned Deliveries → Confirm handover asks **Who is receiving the parcel?** and
 lets the rider select the main receiver or the cashier-added second receiver. Riders cannot
@@ -443,6 +482,15 @@ After creation, an eligible sending or full cashier can choose to print. The cur
 | Zero charge or credit | Sticker only.                     |
 
 Sticker quantity requirements and current implementation gaps are documented in [Parcel Printing](PARCEL_PRINTING.md).
+Cashier-created credit parcels proceed directly to Processed after the credit charge is posted.
+Legacy credit parcels still awaiting sender confirmation have zero cash due; confirmation/printing
+must not create a principal payment. The server rejects principal collection for credit parcels,
+including requests from older clients. Credit repayments belong to the customer credit account.
+Credit receipts print an acknowledgement with **PAYMENT STATUS: CREDIT** and the amount charged
+to the account; sticker verification labels the parcel **CREDIT**. Reprints load current recorded
+payments rather than inferring payment from a zero receiver balance. Existing erroneous cash rows
+must be reconciled before they stop appearing as paid. See the historical repair procedure and
+QA scenarios in [Parcel printing](PARCEL_PRINTING.md#credit-printing-and-historical-repair).
 
 ## Operational Lifecycle
 
@@ -1146,6 +1194,21 @@ stored `plannedToBePaidPsw` value is already reduced as principal payments are c
 and list queries must not subtract those payments from it again. For example, a GHS 150 charge with
 a GHS 100 sender payment leaves GHS 50 available for receiver collection.
 
+**Sender Payments printing:** after Collect Payment or receiver-pay confirmation succeeds, the
+web/desktop client uses that completed cashier transaction for the first sticker and receipt print.
+No second sticker-payment lookup is required. A failed collection does not authorize printing.
+Initial unpaid bookings still require settlement; reprinting does not collect money again and
+loads the current saved payment state. Partial receiver settlement prints TO BE PAID with the
+remaining principal, even when `plannedToBePaidPsw` has already been reduced; full settlement
+prints PAID. Approved credit prints CREDIT. These rules are shared by creation receipts, Sender
+Payments, Consignments and outgoing In Transit print actions. Receipt-only jobs do not require
+sticker verification; a sticker error in a combined job does not cancel a valid receipt.
+Previously confirmed parcels also reprint from their existing recorded settlement, including
+historical confirmations with no `processedBy`. The verifier's payment/credit query explicitly
+correlates totals to the parcel and company; it must not read a valid saved collection as zero.
+This query fix requires no repayment, reconfirmation, or financial-record backfill.
+See [Parcel Printing](PARCEL_PRINTING.md#verified-sticker-payment-status) for failures and QA.
+
 Storage settlement uses the parcel's persisted `receivedAt` timestamp. For legacy parcels where
 that field is null, the earliest audited transition to `ARRIVED_AT_DESTINATION` is the effective
 received time. The detail response and storage settlement use the same effective timestamp, so the
@@ -1544,3 +1607,19 @@ The Call Outcome queue also supports a server-side Payment type filter: All, Pai
 Partial. The filter uses the parcel charge and outstanding planned-to-be-paid amount, and applies
 before pagination so totals and page navigation remain accurate. QA: verify each payment type across
 multiple pages, including a split-payment parcel under Partial.
+
+### Sender Payments confirmation print choices
+
+On web and desktop Sender Payments, each collection/confirmation dialog starts with
+**Print receipt** and **Print sticker** unchecked. The cashier must select at least one;
+the confirmation button and submit handler block processing when neither is selected.
+Receipt only prints the receipt (or receiver-pay acknowledgement), sticker only prints
+the sticker, and selecting both prints both after successful processing. Opening another
+confirmation resets both choices. Existing amount validation and automated MTN payment
+confirmation requirements still apply. Failed processing does not start printing.
+These choices control physical printing independently of optional digital receipt delivery;
+mobile and the Create Parcel payment dialog are unchanged.
+
+QA: Verify neither selected blocks confirmation; receipt only, sticker only, and both
+produce exactly the chosen documents; clearing both disables confirmation again; reopening
+starts unchecked; failed payment prints nothing; automated MTN still requires confirmation.

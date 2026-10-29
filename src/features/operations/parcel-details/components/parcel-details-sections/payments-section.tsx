@@ -1,3 +1,4 @@
+import { ParcelCreditChargeAction } from '@/features/operations/parcel-credit-charge';
 import { memo } from 'react';
 import {
   Table,
@@ -54,6 +55,17 @@ export const PaymentsSection = memo(function PaymentsSection({
             },
           ]}
         />
+        {parcel.chargePsw === 0 ? (
+          <div className="mt-4">
+            <ParcelCreditChargeAction
+              key={parcel.id}
+              parcelId={parcel.id}
+              bookingCode={parcel.bookingCode}
+              chargePsw={parcel.chargePsw}
+              senderName={parcel.senderNameSnapshot}
+            />
+          </div>
+        ) : null}
       </DetailCard>
       <DetailCard title={`Payment Records (${payments.length})`}>
         {payments.length === 0 ? (

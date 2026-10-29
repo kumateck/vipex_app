@@ -124,9 +124,17 @@ export async function createPickupQueueSvc(input: {
 
   const paymentBucket = Number(parcel.plannedToBePaidPsw ?? 0) > 0 ? 'TP' : 'SP';
   const queueLocationId = parcel.pickupLocationId ?? null;
-  const queueLocationName = queueLocationId
-    ? (await getLocationSvc(queueLocationId)).name
-    : branch.name;
+  const queueLocation = queueLocationId ? await getLocationSvc(queueLocationId) : null;
+  if (
+    queueLocation &&
+    (queueLocation.companyId !== parcel.companyId ||
+      queueLocation.branchId !== parcel.destinationId ||
+      queueLocation.isDeleted)
+  )
+    throw Conflict(
+      'The assigned queue location is no longer active in this company and destination branch',
+    );
+  const queueLocationName = queueLocation?.name ?? branch.name;
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const queueNumber = await getNextPickupQueueNumberRepo({
@@ -167,6 +175,7 @@ export async function createPickupQueueSvc(input: {
           queueNumber,
           branchName: branch.name,
           locationName: queueLocationName,
+          locationPhone: queueLocation?.telephone ?? null,
         });
         smsSent = result.sent;
       }

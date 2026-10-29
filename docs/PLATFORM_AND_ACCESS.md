@@ -163,3 +163,25 @@ Important events include:
 - Password administration revoking active sessions and recording an audit event.
 - Branch pickup and receiver OTP toggles enabled and disabled independently.
 - Cashier, rider, and employee actions with and without matching assignments.
+
+## Location telephone
+
+Locations on web/desktop have an optional Telephone field in create/edit and a Telephone
+column in the list. Sending/receiving controls use the shared horizontal field layout so
+the checkbox and label fit within the form. The number belongs to that location, independently of its branch.
+Existing read/create/update location permissions apply. Native mobile has no location
+administration screen; its SMS actions use the same server contact data.
+
+Migration `0089_location_telephone` adds nullable `locations.telephone varchar(30)` without
+backfilling branch numbers. Apply it before deploying the updated backend. POST/PATCH location
+requests accept optional `telephone` as a string or null; detail/list/options responses include
+`telephone`. Values are trimmed and kept as strings; blank/null clears the number, and an
+omitted PATCH field preserves it. More than 30 characters is rejected. Other location fields
+and sending/receiving capabilities retain their existing behavior. Restoring a deleted
+location keeps its number unless the create request supplies a replacement/clear value.
+
+SMS templates can use `{{locationName}}` and `{{locationPhone}}`; a missing number renders
+empty and never substitutes the branch phone. See [SMS context rules](NOTIFICATION_HUB_MODULE.md#location-name-and-telephone-sms-variables).
+QA: create a location with a leading-zero number; edit/rename it; verify the number persists;
+clear it and verify SMS shows no unresolved token; verify old clients omitting telephone
+preserve the existing value. Tests: `location-payload.test.ts` and isolated `sms-location.spec.ts`.

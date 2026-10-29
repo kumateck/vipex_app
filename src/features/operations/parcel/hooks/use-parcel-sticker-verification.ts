@@ -8,8 +8,13 @@ import {
 } from '@/shared/printing';
 import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useLazyVerifyStickerPaymentQuery } from '../services';
+import { loadStickerPaymentForPrint } from '../utils';
 
-export function useParcelStickerVerification(bookingCode: string, trackingCode: string) {
+export function useParcelStickerVerification(
+  bookingCode: string,
+  trackingCode: string,
+  confirmedPayment?: VerifiedStickerPayment,
+) {
   const [load] = useLazyVerifyStickerPaymentQuery();
   const [payment, setPayment] = useState<VerifiedStickerPayment | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -20,12 +25,15 @@ export function useParcelStickerVerification(bookingCode: string, trackingCode: 
     if (inFlight.current) return false;
     inFlight.current = true;
     setIsVerifying(true);
-    // A previous successful verification never authorizes another print attempt.
+    // Reprints fetch current state; the just-completed cashier action is already confirmed.
     setPayment(null);
     try {
       await withVerifiedStickerPayment(
         { bookingCode, trackingCode },
-        () => load({ bookingCode, trackingCode }, false).unwrap(),
+        () =>
+          loadStickerPaymentForPrint({ bookingCode, trackingCode }, confirmedPayment, () =>
+            load({ bookingCode, trackingCode }, false).unwrap(),
+          ),
         (current) => {
           assertVerifiedStickerPayment(current, activeParcel.current);
           // Print helpers clone the DOM immediately after this promise resolves.
@@ -43,7 +51,7 @@ export function useParcelStickerVerification(bookingCode: string, trackingCode: 
       inFlight.current = false;
       setIsVerifying(false);
     }
-  }, [bookingCode, trackingCode, load]);
+  }, [bookingCode, trackingCode, load, confirmedPayment]);
   const current =
     payment?.bookingCode === bookingCode && payment.trackingCode === trackingCode ? payment : null;
   return { payment: current, verify, isVerifying };

@@ -16,6 +16,7 @@ function toLocationDto(l: {
   branchId: string;
   branch: { id: string | null; name: string | null } | null;
   name: string;
+  telephone: string | null;
   canSend: boolean;
   canReceive: boolean;
   isDeleted: boolean;
@@ -29,6 +30,7 @@ function toLocationDto(l: {
     branchId: l.branchId,
     branch: l.branch?.id && l.branch?.name ? { id: l.branch.id, name: l.branch.name } : null,
     name: l.name,
+    telephone: l.telephone,
     canSend: l.canSend,
     canReceive: l.canReceive,
     isDeleted: !!l.isDeleted,
@@ -89,6 +91,7 @@ export async function listLocationOptionsCtrl(filters: {
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    telephone: row.telephone,
     branchId: row.branchId,
     canSend: row.canSend,
     canReceive: row.canReceive,
@@ -99,12 +102,16 @@ export async function createLocationCtrl(input: {
   companyId: string;
   branchId: string;
   name: string;
+  telephone?: string | null;
   createdBy: string;
 }) {
   return createLocationSvc(input);
 }
 
-export async function updateLocationCtrl(id: string, patch: { name?: string }) {
+export async function updateLocationCtrl(
+  id: string,
+  patch: { name?: string; telephone?: string | null },
+) {
   return updateLocationSvc(id, patch);
 }
 

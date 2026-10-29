@@ -135,7 +135,10 @@ export type ListParcelsParams = {
   sort?: SortField[] | null;
 };
 
-export async function listParcelsRepo(p: ListParcelsParams): Promise<{
+export async function listParcelsRepo(
+  p: ListParcelsParams,
+  executor: DbExecutor = db,
+): Promise<{
   data: (ParcelRow & {
     bookingCreatedAt: Date | null;
     destinationName: string | null;
@@ -431,7 +434,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
 
   // The count joins only what its filters reference. Primary-key and partial-unique joins
   // cannot change the row count; deliveries and pickup queues are kept because they can.
-  let countQuery = db.select({ c: count() }).from(parcels).$dynamic();
+  let countQuery = executor.select({ c: count() }).from(parcels).$dynamic();
   if (p.search) {
     countQuery = countQuery
       .leftJoin(s, eq(parcels.senderId, s.id))
@@ -448,7 +451,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(pickupQueues, pickupQueueJoin)
     .where(whereClause);
 
-  const rowsPromise = db
+  const rowsPromise = executor
     .select({
       id: parcels.id,
       companyId: parcels.companyId,

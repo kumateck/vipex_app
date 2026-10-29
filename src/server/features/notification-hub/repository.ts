@@ -498,10 +498,19 @@ export async function getNotificationSenderContextRepo(input: {
       senderPhone: users.telephone,
       branch: branches.name,
       location: locations.name,
+      locationPhone: locations.telephone,
     })
     .from(users)
     .leftJoin(branches, eq(branches.id, users.branchId))
-    .leftJoin(locations, eq(locations.id, users.locationId))
+    .leftJoin(
+      locations,
+      and(
+        eq(locations.id, users.locationId),
+        eq(locations.companyId, input.companyId),
+        eq(locations.branchId, users.branchId),
+        eq(locations.isDeleted, false),
+      ),
+    )
     .where(and(eq(users.id, input.userId), eq(users.companyId, input.companyId)))
     .limit(1);
 
@@ -615,6 +624,7 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
       branch: branches.name,
       branchPhone: branches.telephone,
       location: locations.name,
+      locationPhone: locations.telephone,
       secondReceiverId: parcels.secondReceiverId,
       secondReceiverName: parcels.secondReceiverNameSnapshot,
       primaryReceiverId: customers.id,
@@ -626,7 +636,15 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
     .from(parcels)
     .innerJoin(customers, eq(customers.id, parcels.receiverId))
     .leftJoin(branches, eq(branches.id, parcels.destinationId))
-    .leftJoin(locations, eq(locations.id, parcels.pickupLocationId))
+    .leftJoin(
+      locations,
+      and(
+        eq(locations.id, parcels.pickupLocationId),
+        eq(locations.companyId, companyId),
+        eq(locations.branchId, parcels.destinationId),
+        eq(locations.isDeleted, false),
+      ),
+    )
     .where(
       and(
         eq(parcels.id, parcelId),
@@ -666,6 +684,7 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
     branch: parcel.branch,
     branchPhone: parcel.branchPhone,
     location: parcel.location,
+    locationPhone: parcel.locationPhone,
     primary: {
       id: parcel.primaryReceiverId,
       name: parcel.primaryReceiverName,

@@ -1,5 +1,10 @@
 # Digital Receipts
 
+Sender credit booking copies render a credit acknowledgement with zero collected payment,
+matching the physical receipt. A zero receiver balance does not prove sender payment. Customer
+credit repayments remain separate account transactions; this document describes the original
+credit booking. See [Parcel printing](PARCEL_PRINTING.md#credit-printing-and-historical-repair).
+
 Status: implemented on branch `feature/whatsapp-receipts` (web + server). The public page lives in `vipex_website` (`/receipt/:token`). Mobile is not implemented.
 
 ## Purpose
@@ -70,7 +75,7 @@ closing the receipt dialog leaves parcel details open.
 1. Builds the receipt (validates the parcel is eligible for that kind; e.g. `receiver_payment` needs a recorded receiver payment).
 2. Creates one `receipt_share_links` row. The token is 32 random bytes as hex; only its sha256 is stored. It expires after 180 days.
 3. For each recipient × channel:
-   - SMS: `dispatchSmsEventSvc` with events `digital_receipt_booking` / `digital_receipt_payment` / `digital_receipt_home_delivery`. These are editable in SMS Configuration and use the variables `customerName, bookingCode, amountPaid, balance, destination, receiptUrl, branch, location`.
+   - SMS: `dispatchSmsEventSvc` with events `digital_receipt_booking` / `digital_receipt_payment` / `digital_receipt_home_delivery`. These are editable in SMS Configuration and use the variables `customerName, bookingCode, amountPaid, balance, destination, receiptUrl, branch, location, locationName, locationPhone`. The new locationName/locationPhone quote the assigned pickup location contact; legacy location keeps its existing pickup-label/home-delivery-address meaning. Missing pickup contacts render empty.
    - WhatsApp: `dispatchWhatsAppEventSvc` with the same event codes; the URL button carries the token.
    - Email: platform SMTP (`sendMail`) with an HTML/text email containing the summary and a "View your receipt" button. It is logged in `notification_dispatches` with `channel = 'email'` and `provider_key = 'smtp'`.
 4. Returns `{ shareLinkId, url, expiresAt, results[] }`. Each result is `sent | failed | skipped` with a detail, e.g. "No email on file", "No phone on file", or "WhatsApp is not enabled or configured".

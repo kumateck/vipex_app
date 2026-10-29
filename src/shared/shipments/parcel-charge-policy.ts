@@ -9,8 +9,8 @@ export function getParcelChargeValidationError({
   chargeCedis,
   plannedToBePaidCedis,
 }: ParcelChargeAmounts): string | null {
-  if (!Number.isFinite(chargeCedis) || chargeCedis < 0) {
-    return 'Enter a valid parcel charge';
+  if (!Number.isFinite(chargeCedis) || chargeCedis < 0.01) {
+    return 'Parcel charge must be at least GHS 0.01';
   }
   if (!Number.isFinite(plannedToBePaidCedis) || plannedToBePaidCedis < 0) {
     return 'Enter a valid receiver to-be-paid amount';

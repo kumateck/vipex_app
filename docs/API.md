@@ -2,6 +2,32 @@
 
 Base URL: `/v1`
 
+System Admin maintenance endpoints:
+
+- `GET /maintenance/scripts`: all nine supported booking-code operations, descriptors,
+  allowed fields, operation-specific repair confirmation text and source references.
+- `GET /maintenance/runs`: latest 20 company-scoped runs, status and results.
+- `POST /maintenance/runs`: `{ operationId, params, mode: "preview" | "execute",
+previewRunId?, confirmNoCashReceived?, confirmRepair? }`.
+  IDs: `trace-credit-parcel`, `repair-credit-print-payment`, `scan-credit-conflicts`,
+  `check-parcel-booking-search`, `inspect-cleared-delivery-fee`,
+  `backfill-parcel-customer-names`, `restore-reversed-parcel-balance`,
+  `fix-reversed-booking-to-be-paid`, `repair-parcel-financial-state`.
+  Operations accept `{ bookingCode }`; conflicts may use `{}` for the company scan.
+  New adapters accept case-insensitive booking/tracking codes and reject ambiguous matches.
+  Execute requires a successful same-admin/company preview from the last ten minutes and an
+  unchanged plan. Credit-print repair requires `confirmNoCashReceived: true`; other repairs
+  require `confirmRepair: true` for the specific confirmation returned in their descriptor.
+  Blocked/already-correct previews return `readyToApply: false` and cannot be executed.
+
+Every endpoint requires authentication and the **current active System Admin role**, checked in
+the database. Other role permissions cannot grant access. Company and actor come from that user.
+Unknown scripts/parameters are rejected; no commands, shell paths, SQL or database URLs are
+accepted. Successful requests return a run with `id`, `operationId`, `params`, `mode`, `status`,
+timestamps and `result: { summary, details, readyToApply }`. Failures are audited and returned as
+400/409 (404 for a missing/foreign parcel); unauthenticated/non-admin access returns 401/403. Repairs and their success audits commit
+atomically. See [System Maintenance Scripts](SYSTEM_MAINTENANCE.md).
+
 `POST /self-service/sessions` issues a branch-bound, single-use 15-minute token persisted in
 PostgreSQL (migration `0087`). All subsequent public self-service calls require
 `x-self-service-session`; the server remains the expiry authority. Missing, expired, used, or
@@ -25,7 +51,12 @@ Last audited at the mounted route-group level: 2026-10-08.
 
 Sticker printing now verifies saved payment state through
 `GET /v1/shipments/parcels/sticker-payment`. Only verified PAID, TO BE PAID with a receiver balance,
-or ledger-approved CREDIT can print; unknown/unpaid states and verification outages block the job.
+or ledger-approved CREDIT can print. Initial bookings and reprints use this endpoint; the first
+web/desktop print after successful cashier collection/confirmation uses that completed transaction
+without a second GET. Unknown/unpaid states and verification outages block stickers requiring
+the lookup, while an otherwise valid receipt can still print.
+The verifier also recognises payments/credit already saved for older confirmed parcels; corrected
+query correlation avoids falsely reading those records as zero. No financial backfill is required.
 See [Identity and parcel operations](api/IDENTITY_AND_OPERATIONS.md#sticker-payment-verification)
 and [Parcel Printing](PARCEL_PRINTING.md#verified-sticker-payment-status) for access, failure behavior,
 web/desktop/mobile coverage and rollout order.
@@ -85,6 +116,13 @@ They block protected content, but keep the saved session for Retry, when this ch
 request is temporarily unavailable. A confirmed invalid refresh session or denied device clears
 the local login. The same refresh operation is shared with ordinary web/desktop API requests.
 
+`GET /v1/reports/parcel-analytics` and `/v1/reports/parcel-analytics/details` provide live
+global, branch, and status parcel KPIs plus paginated drill-down. Both require
+`CanViewReportParcelsStatusSummary` and authenticated company/branch scope. Required
+filters are `from`, `to` (inclusive booking dates, maximum 366 days), and
+`basis=source|destination`. See [Parcel Analytics](PARCEL_ANALYTICS.md) for calculations,
+responses, validation, clients, and limitations.
+
 `GET /v1/reports/daily-parcel-audit?date=YYYY-MM-DD` provides the current payment and delivery
 state for parcels created on that Ghana calendar date. Head office may add `branchId`; other users
 are scoped to their own branch. It requires `CanViewReportParcelsDailyAudit`. See
@@ -126,7 +164,12 @@ caller's company. Details were not company-checked before October 2026. See
 
 `GET /v1/shipments/parcels/:id/receipt-reprint-tax` returns the summed, non-voided sender
 principal payment and recorded tax amounts for a receipt reprint, or `null` when no such payment
-exists. It requires authentication plus one of `CanReadConsignments`, `CanReadParcelOutgoing`, or
+exists on a non-credit parcel. A credit parcel without active non-credit sender principal payments
+returns the same numeric tax fields at zero plus `settlementMode: "CREDIT"`. Voided and credit-method
+payment rows are excluded. Web/desktop reprints always request fresh data, even when their page
+snapshot shows zero paid; lookup failures cancel the reprint. The client renders the credit response
+as an acknowledgement and never interprets a zero receiver balance as proof of payment.
+It requires authentication plus one of `CanReadConsignments`, `CanReadParcelOutgoing`, or
 `CanReadParcels`. The parcel must belong to the user's company; users without broad parcel read
 permission must be at head office or the parcel's source branch. Missing or out-of-scope
 parcels return 404. The endpoint is read-only and is used by web and desktop reprint actions, not
@@ -341,7 +384,11 @@ without snapshots use the legacy status and payment fallback.
 authenticated cashier's active session, replacing a provisional parcel entry-session link and
 preserving the creator. This covers paid, split, and zero-payment To Be Paid confirmation,
 including self-service bookings. Parcel locking gives concurrent confirmations one owner;
-repeating confirmation preserves ownership. Missing/deleted/wrong-company/wrong-source-branch
+principal collection for a parcel whose saved method is CREDIT returns 409 before creating a
+payment or tax item. This guard also covers the generic payment creation endpoint. A legacy credit
+parcel can be confirmed with no amount; account repayments use the customer credit workflow.
+Credit booking requests with a sender payment or receiver balance return 400.
+Repeating confirmation preserves ownership. Missing/deleted/wrong-company/wrong-source-branch
 parcels return 404 even without a payment; missing active sessions return 403. First processing
 adds `PARCEL_SENDER_PROCESSED` audit metadata with current/prior session IDs. Immediate delegated
 creation rejects a changed authorized session with 400 before persistence. Schemas/permissions
@@ -512,3 +559,76 @@ is isolated to one parcel and audited atomically. Sender credit history blocks r
 pending Accounts reconciliation. See [Identity and operations APIs](api/IDENTITY_AND_OPERATIONS.md).
 Booking customer-name popups on web/mobile reuse existing lookup and customer PATCH endpoints;
 no customer-directory read grant is needed for minimal booking lookup.
+
+## Parcel tax data generation
+
+`GET /v1/accounting/tax-data/options`, `/counts`, and `/records` support daily
+booking-cohort tax selection by source/destination route. Options return `{fromBranches,toBranches}`;
+`destinationBranchId` narrows the destination and `maxOccurrences` (1–500) caps total records
+across pages. Counts remain the full paid-amount/occurrence distribution. `POST /v1/accounting/tax-data/export` returns an XLSX
+attachment; `/confirm` marks selected parcel tax flags with transactional audit.
+All require accounting module access, `CanReadAccounting`, and authenticated
+company/source-branch scope; confirmation additionally requires `CanConfirmParcelTaxData`.
+See [Parcel Tax Data Generation](PARCEL_TAX_DATA.md) for queries, responses, validation,
+recorded tax definitions, optimistic revalidation, and supported clients.
+
+## Location contact and SMS template variables
+
+`POST /v1/locations/` and `PATCH /v1/locations/:id` accept optional `telephone` (string up
+to 30 characters or null). Values are trimmed; null/blank clears and omission preserves on
+update. GET detail/list/options responses include nullable `telephone`. Existing location
+grants apply. Migration `0089_location_telephone` must run before this backend is deployed.
+
+SMS settings event catalogs and bulk-template validation now accept `locationName` and
+`locationPhone`. These resolve from the appropriate assigned location, with no branch-phone
+fallback. Missing values render empty. No default template bodies or request shapes for
+SMS sending change. See [SMS location context](NOTIFICATION_HUB_MODULE.md#location-name-and-telephone-sms-variables).
+
+### Customer parcel credit settlement
+
+- `GET /v1/customers?customerType=0|1`: filters Individual/Business before paging;
+  still requires `CanReadCustomers` and company scope.
+- `GET /v1/customers/:id/credit/parcels` (`CanReadCustomers`) and
+  `GET /v1/customer-wallet-credit/accounts/:customerId/open-parcels`
+  (`CanCreateCustomerWalletCreditPayments`, enabled `customer_wallet_credit`) return
+  all outstanding parcels with booking/tracking codes and integer pesewa totals.
+- Both `POST /v1/customers/:id/credit/payments` (`CanUpdateCustomers`) and
+  `POST /v1/customer-wallet-credit/accounts/:customerId/payments` (finance permission
+  and module above) require `{ parcelIds: string[], amountCedis: number|string,
+referenceId?: string|null, notes?: string|null }`. Select 1–200 distinct owned
+  parcels and pay their exact outstanding sum. No partial or unallocated payment.
+  Return `{ id, allocatedAmountPsw, unallocatedAmountPsw: 0, allocations }`.
+  Validation/mismatch: 400; unavailable/settled/conflicting payment: 409; foreign
+  customer: 404. Existing unallocated payment credit also returns 409 for finance
+  review. Payment, allocations, and audit commit atomically.
+- `PATCH /v1/shipments/parcels/:id/credit-charge` (`CanUpdateParcelCharge`) accepts
+  `{ chargeCedis, expectedChargePsw: 0, method: 4, reason }` for a legacy zero charge only.
+  Returns **202** `{ id, status: "PENDING_APPROVAL" }` without changing the parcel or debt.
+  Positive charges cannot be edited. Requires approved sender credit, no principal payments
+  or existing parcel credit, no conflicting reconciliation and an eligible parcel state.
+- `GET /v1/shipments/parcels/charge-corrections` requires either `CanUpdateParcelCharge` or
+  `CanApproveParcelCharge`; query `page`, `search` (booking/tracking), `parcelId`; response
+  `{ data, hasNextPage }`, 20 per page, scoped to the current company.
+- `POST /v1/shipments/parcels/charge-corrections/:id/review` (`CanApproveParcelCharge`) accepts
+  `{ approve: boolean, note?: string }`. A different staff member must review it; rejection
+  needs a reason. Approval rechecks current state and credit availability, atomically updates
+  charge and method CREDIT, posts sender debt and audit, and returns `{ id, status: "APPROVED" }`.
+  Rejection returns status REJECTED without changing parcel finances. Invalid inputs: 400;
+  insufficient permissions/inactive staff: 403; missing/foreign records: 404; paid/changed/
+  already-reviewed or self-approved requests: 409. Only one pending request per parcel.
+  Live role grants are checked even for older native-session permission snapshots.
+- Existing `GET /v1/shipments/parcels/:id/history` includes charge request, approval/applied,
+  and rejection events with old/new charge and payment method, reasons, review notes, request
+  reference, event timestamps and actor attribution. Request/decision audits are transactional;
+  approved corrections remain visible after the charge is nonzero. Existing parcel history
+  read permissions continue to apply.
+- Customer `GET /v1/customers/:id/transactions` includes `paymentStatus` (PAID, TO_BE_PAID,
+  PARTIAL, CREDIT or CHARGE_MISSING), `paidPrincipalPsw` and `creditPaidPsw`. Status uses active
+  principal payments per parcel and credit allocations, excludes voided payments/fees, ignores
+  cash anomalies for CREDIT, and never treats a zero charge as Paid.
+- New parcel charges must be at least GHS 0.01, including agent completion of
+  self-service drafts. Unpriced drafts are not yet booked parcels.
+
+Web and desktop expose these flows. Other API clients must adopt explicit parcel
+selection; old amount-only credit payment requests are rejected. Details and
+failure handling: [Customer Wallet & Credit Control](CUSTOMER_WALLET_CREDIT_MODULE.md).

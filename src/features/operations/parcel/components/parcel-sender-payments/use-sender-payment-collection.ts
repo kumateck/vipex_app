@@ -19,6 +19,11 @@ type UseSenderPaymentCollectionArgs = {
 export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaymentCollectionArgs) {
   const [selectedParcel, setSelectedParcel] = useState<SenderCashierParcel | null>(null);
   const [lastPrintedReceipt, setLastPrintedReceipt] = useState<ReceiptPrintData | null>(null);
+  const [printReceipt, setPrintReceipt] = useState(false);
+  const [printSticker, setPrintSticker] = useState(false);
+  const [lastPrintSelection, setLastPrintSelection] = useState<'invoice' | 'sticker' | 'both'>(
+    'both',
+  );
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethodRaw] = useState(String(PaymentMethod.CASH));
   const [mtnPaymentFlow, setMtnPaymentFlow] = useState<MtnPaymentFlow>('automated');
@@ -46,6 +51,8 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
   };
 
   const openCollectPayment = (parcel: SenderCashierParcel) => {
+    setPrintReceipt(false);
+    setPrintSticker(false);
     setSelectedParcel(parcel);
     setAmount((getSenderDuePsw(parcel) / 100).toFixed(2));
     setPaymentMethod(String(PaymentMethod.CASH));
@@ -57,11 +64,14 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
   };
 
   const handleCollectPayment = async () => {
-    if (!selectedParcel) return;
+    if (!selectedParcel || isCollecting || (!printReceipt && !printSticker)) return;
     const senderDueCedis = getSenderDuePsw(selectedParcel) / 100;
     const amountValue = Number(amount);
     const totalChargeCedis = selectedParcel.chargePsw / 100;
-    const receiverToPayCedis = Math.max(totalChargeCedis - senderDueCedis, 0);
+    const receiverToPayCedis =
+      selectedParcel.method === PaymentMethod.CREDIT
+        ? 0
+        : Math.max(totalChargeCedis - senderDueCedis, 0);
 
     if (senderDueCedis > 0 && (Number.isNaN(amountValue) || amountValue <= 0)) {
       toast.error('Enter a valid payment amount');
@@ -97,20 +107,21 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
         [selectedParcel.id],
         senderDueCedis > 0 ? 'sender_payment' : 'booking',
       );
-      if (receiptDelivery.includesPhysical) {
-        setLastPrintedReceipt(
-          buildSenderReceiptData({
-            parcel: selectedParcel,
-            senderDueCedis,
-            amountValue,
-            totalChargeCedis,
-            receiverToPayCedis,
-            destinationBranchName,
-            destinationLocationName,
-            taxBreakdown: result.payment?.amounts,
-          }),
-        );
-      }
+      setLastPrintSelection(
+        printReceipt && printSticker ? 'both' : printReceipt ? 'invoice' : 'sticker',
+      );
+      setLastPrintedReceipt(
+        buildSenderReceiptData({
+          parcel: selectedParcel,
+          senderDueCedis,
+          amountValue,
+          totalChargeCedis,
+          receiverToPayCedis,
+          destinationBranchName,
+          destinationLocationName,
+          taxBreakdown: result.payment?.amounts,
+        }),
+      );
       toast.success(
         senderDueCedis > 0 ? 'Payment collected successfully' : 'Receipts generated successfully',
       );
@@ -123,6 +134,11 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
 
   return {
     selectedParcel,
+    printReceipt,
+    setPrintReceipt,
+    printSticker,
+    setPrintSticker,
+    lastPrintSelection,
     openCollectPayment,
     closeCollectPayment,
     amount,

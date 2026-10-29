@@ -48,6 +48,11 @@ export function SelfServiceCompletionForm({
     setParcelDetails,
     chargeCedis,
     setChargeCedis,
+    pickupLocationId,
+    setPickupLocationId,
+    locationOptions,
+    locationsLoading,
+    locationsFailed,
     paymentResponsibility,
     setPaymentResponsibility,
     senderPartialPaymentCedis,
@@ -95,6 +100,18 @@ export function SelfServiceCompletionForm({
             onChangeText={setChargeCedis}
             keyboardType="decimal-pad"
             placeholder="0.00"
+          />
+          <AppSelectField
+            label="Pickup location"
+            value={pickupLocationId}
+            options={locationOptions.map((location) => ({
+              value: location.id,
+              label: location.name,
+            }))}
+            onValueChange={setPickupLocationId}
+            placeholder={locationsFailed ? 'Could not load locations' : 'Select location'}
+            loading={locationsLoading}
+            disabled={locationsLoading || locationsFailed || locationOptions.length === 0}
           />
           <ParcelChargeAgentField {...chargeAgent} />
           <View style={styles.callSenderRow}>

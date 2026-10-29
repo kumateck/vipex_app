@@ -28,7 +28,8 @@ export function ToBePaidReceiptA5Template(
     .map((value) => value?.trim())
     .filter(Boolean)
     .join(' — ');
-  const amountDue = `GHS ${receiverToPayCedis.toFixed(2)}`;
+  const isCredit = props.settlementMode === 'CREDIT';
+  const amountDue = `GHS ${(isCredit ? props.totalChargeCedis : receiverToPayCedis).toFixed(2)}`;
   const parcelCode = `#${bookingCode.trim().replace(/^#+/, '')}`;
 
   return (
@@ -62,9 +63,18 @@ export function ToBePaidReceiptA5Template(
           textAlign: 'center',
         }}
       >
-        <strong>NOTICE:</strong> The sender has made <strong>NO PAYMENT</strong>. Full payment of{' '}
-        <strong>{amountDue}</strong> will be collected from the recipient before the parcel is
-        released.
+        {isCredit ? (
+          <>
+            <strong>NOTICE:</strong> No payment was collected for this parcel. {amountDue} was
+            charged to the sender's credit account.
+          </>
+        ) : (
+          <>
+            <strong>NOTICE:</strong> The sender has made <strong>NO PAYMENT</strong>. Full payment
+            of <strong>{amountDue}</strong> will be collected from the recipient before the parcel
+            is released.
+          </>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 40mm', gap: '4mm' }}>
@@ -96,10 +106,14 @@ export function ToBePaidReceiptA5Template(
               fontWeight: 900,
             }}
           >
-            PAYMENT STATUS: TO BE PAID
+            PAYMENT STATUS: {isCredit ? 'CREDIT' : 'TO BE PAID'}
           </div>
 
-          <ReceiptField label="Amount Due for payment" value={amountDue} emphasis />
+          <ReceiptField
+            label={isCredit ? 'Amount charged to credit account' : 'Amount Due for payment'}
+            value={amountDue}
+            emphasis
+          />
         </div>
 
         <BrandedQrCode

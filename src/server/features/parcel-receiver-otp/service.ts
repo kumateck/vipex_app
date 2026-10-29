@@ -71,6 +71,7 @@ async function resolveTargetPhone(
     name: target?.name ?? 'Customer',
     branch: recipients.branch,
     location: recipients.location,
+    locationPhone: recipients.locationPhone,
   };
 }
 
@@ -87,7 +88,7 @@ export async function requestReceiverOtpSvc(input: {
   const channel = input.channel ?? 'sms';
   await assertOfficePickupParcel(input.parcelId);
   if (channel === 'whatsapp') await assertWhatsAppAvailable(input.companyId);
-  const { phone, name, branch, location } = await resolveTargetPhone(
+  const { phone, name, branch, location, locationPhone } = await resolveTargetPhone(
     input.companyId,
     input.parcelId,
     input.targetReceiver,
@@ -124,7 +125,7 @@ export async function requestReceiverOtpSvc(input: {
     phone,
     recipientType: input.targetReceiver === 'second' ? 'second_receiver' : 'receiver',
     recipientName: name,
-    variables: { receiverName: name, otp, expiresInMinutes: 5, branch, location },
+    variables: { receiverName: name, otp, expiresInMinutes: 5, branch, location, locationPhone },
     metadataJson: {
       parcelId: input.parcelId,
       targetReceiver: input.targetReceiver,

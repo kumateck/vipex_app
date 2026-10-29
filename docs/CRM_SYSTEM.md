@@ -248,15 +248,41 @@ Notes:
 
 ## Debt Payment Allocation
 
-Credit payment posting now allocates automatically to oldest outstanding credit charges first (FIFO):
+On a customer's Payments tab, select parcels by booking code and enter the exact
+sum of their outstanding balances. The server requires `parcelIds` on
+`POST /:id/credit/payments`; it no longer distributes an arbitrary amount by FIFO.
+Partial settlement, excess amounts, duplicate parcel IDs, and unallocated payment
+balances are rejected. An older partial allocation may be cleared by paying the
+parcel's full remaining balance. The settlement list includes all outstanding dates.
 
-- One credit payment transaction is created for the amount paid.
-- Allocation rows are created per satisfied charge item.
-- Partial payments are distributed across multiple open charges until exhausted.
-- Endpoint response includes:
-  - allocated amount
-  - unallocated remainder
-  - allocation breakdown
+`GET /:id/credit/parcels` requires `CanReadCustomers` and returns outstanding amounts
+grouped by parcel with booking/tracking codes. Posting requires
+`CanUpdateCustomers`. Both endpoints enforce the authenticated company. Repayment,
+allocations, and audit share one transaction, and concurrent submissions cannot
+allocate the same outstanding amount twice. Unknown/mismatched customers return
+404; already settled or unavailable parcels return 409; amount mismatch returns 400.
+
+Accounts staff can also use Finance → Customer Wallet & Credit Control → Create
+Payment with that module's dedicated permissions. See
+[CUSTOMER_WALLET_CREDIT_MODULE.md](CUSTOMER_WALLET_CREDIT_MODULE.md) for the API
+contract, failures, permissions, and zero-charge correction approval workflow.
+
+The Customers list now has Individual and Business tabs. The `customerType` filter
+(0 or 1) is applied on the server before pagination and counting. Search and tab
+changes reset pagination. Existing records keep their recorded customer type.
+
+Credit ledger entries remain immutable. Legacy zero charges can be proposed as CREDIT through
+Parcel Details and take effect only after independent approval. Dedicated role grants
+`CanUpdateParcelCharge` and `CanApproveParcelCharge` control the two steps. There are no person
+selectors; the sender owns the debt and the system records requester and approver. Positive
+charges cannot be edited through this flow. See the wallet module document for restrictions.
+New parcel creation and charge requests reject zero (minimum GHS 0.01).
+
+The transaction API includes `paymentStatus`, `paidPrincipalPsw`, and `creditPaidPsw`. The list
+shows Paid/To Be Paid/Partial based on active principal payments, or Credit until the sender's
+parcel principal debt is fully allocated. CREDIT parcels ignore phantom cash records for this
+label. Zero charges are never shown as Paid; zero cash shows Charge missing, zero CREDIT also
+has a Charge missing warning. Sender and receiver views use the same parcel-scoped calculation.
 
 ## Defaults and Compatibility
 

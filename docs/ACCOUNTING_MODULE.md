@@ -22,8 +22,8 @@ It covers:
 - `recorded_by_user_id` is used for audit.
 - Raw operational activity is not the general ledger.
 - Only approved or confirmed accounting events post to the general ledger.
-- Tax calculation remains driven by the existing Ghana tax calculator.
-- Accounting is company-gated through `companies.use_accounting`.
+- Payment tax calculation uses the active company tax profile/components with the existing Ghana fallback. Tax data exports preserve saved payment snapshots.
+- Accounting is gated by its company module; explicit module state takes precedence over the legacy `companies.use_accounting` flag.
 
 ## Permissions
 
@@ -49,7 +49,7 @@ UI gating:
 
 - `/accounting/reports` requires `CanReadAccounting`
 - `/accounting/setup` requires `CanManageAccountingSetup`
-- `/accounting/tax` requires `CanManageTaxFiling`
+- `/accounting/tax` requires `CanCreateTaxFilingPeriod` (the current exact page override)
 - `/accounting/daily-cash` and `/accounting/expenses` require `CanPostAccountingEntries`
 
 Role-management support:
@@ -451,3 +451,20 @@ Recommended checks:
 bunx tsc --noEmit
 bun scripts/generate-routes.ts
 ```
+
+## Parcel tax data generation
+
+`/accounting/tax-data` provides the legacy count, Get data, export-list, Excel, and confirm
+workflow using recorded principal-payment taxes. The filter dialog selects a source-to-destination
+route and booking date; Count shows the full amount/occurrence distribution, while Get data
+uses an exact paid amount and a server-enforced total occurrence cap (1–500). Read/export requires `CanReadAccounting`;
+confirmation requires the new `CanConfirmParcelTaxData` grant. Both enforce accounting
+module and authenticated company/source-branch scope. No roles are auto-granted confirmation.
+
+Confirmation marks selected parcel tax flags with transactional audit; it does not file a
+return or change tax journal statuses. See [Parcel Tax Data Generation](PARCEL_TAX_DATA.md)
+for snapshot, tax component, selection, API, client, failure, and validation details.
+
+Documentation mismatch: the broad `CanManageTaxFiling` name in older permission sections
+above is legacy intent, not a current permission for this workflow. Current filing actions
+use their dedicated action permissions; tax-data confirmation uses `CanConfirmParcelTaxData`.

@@ -64,6 +64,7 @@ export async function postCustomerWalletPaymentSvc(input: {
   companyId: string;
   customerId: string;
   actorUserId: string;
+  parcelIds: string[];
   amountCedis: number | string;
   notes?: string | null;
   referenceId?: string | null;
@@ -72,6 +73,7 @@ export async function postCustomerWalletPaymentSvc(input: {
     companyId: input.companyId,
     customerId: input.customerId,
     createdBy: input.actorUserId,
+    parcelIds: input.parcelIds,
     amountCedis: input.amountCedis,
     notes: input.notes,
     referenceId: input.referenceId,

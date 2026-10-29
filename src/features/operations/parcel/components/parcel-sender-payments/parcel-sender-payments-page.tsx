@@ -59,6 +59,11 @@ export function ParcelSenderPaymentsPage() {
     lastPrintedReceipt,
     clearLastPrintedReceipt,
     receiptDelivery,
+    printReceipt,
+    setPrintReceipt,
+    printSticker,
+    setPrintSticker,
+    lastPrintSelection,
   } = useSenderPaymentsWorkflow();
 
   return (
@@ -93,6 +98,10 @@ export function ParcelSenderPaymentsPage() {
           onMomoConfirmed={setMomoTransactionId}
           isSubmitting={isSubmitting}
           receiptDelivery={receiptDelivery}
+          printReceipt={printReceipt}
+          onPrintReceiptChange={setPrintReceipt}
+          printSticker={printSticker}
+          onPrintStickerChange={setPrintSticker}
           onClose={closeCollectPayment}
           onSubmit={handleCollectPayment}
         />
@@ -130,7 +139,7 @@ export function ParcelSenderPaymentsPage() {
           <ParcelReceiptActions
             data={lastPrintedReceipt}
             autoPrint
-            autoPrintSelection="both"
+            autoPrintSelection={lastPrintSelection}
             mode="sender-payment"
             onAutoPrintComplete={clearLastPrintedReceipt}
           />

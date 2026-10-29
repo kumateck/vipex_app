@@ -95,6 +95,13 @@ already network-addressed origins remain unchanged.
 
 Public responses must minimize personal data. Phone lookup must not expose a customer directory or fuzzy-search results.
 
+For a destination branch, the public form automatically selects its first active receiving
+location and does not let the customer change it (the location-options API orders locations by
+name, then ID). The server defaults an omitted location to that first location and rejects a
+different location even if a client is modified. Branches with no receiving locations cannot
+complete the required destination step. This keeps customer self-service location choice to one
+predictable pickup point.
+
 ## Draft Data
 
 A draft can contain:
@@ -135,6 +142,10 @@ Authenticated agents use permission-controlled routes to:
 2. Open a draft and inspect its submitted details.
 3. Claim it to reserve the draft in the staff queue.
 4. Confirm or add operational details and calculate the charge.
+   The completing officer can change the draft's pickup location to any active receiving location
+   at the destination branch while entering the charge. The web form shows the location selector
+   with destination details; mobile shows it beside the charge. Changing the destination branch
+   defaults to that branch's first receiving location when available.
    Select **Agent who charged the parcel** from active staff at the source branch. This is an
    explicit required selection on web, desktop, and mobile; it may differ from the completing
    officer. The resulting parcel stores `chargeAgentUserId`, separate from `createdBy` and
@@ -158,6 +169,13 @@ then confirm as the second cashier and verify only their session includes it. Se
 [cashier ownership](CASHIER_PAYMENTS_AND_SHIFTS.md#confirmation-owns-the-to-be-paid-report).
 
 Reading drafts uses `CanReadSelfServiceBookings`. Claiming, completing, or cancelling uses `CanCompleteSelfServiceBookings`.
+
+Location QA: selecting a public destination branch automatically selects its first receiving
+location (name, then ID), with no customer location choice; a crafted request with another
+receiving location is rejected.
+Verify branches with no receiving locations cannot submit. On web and mobile, complete a draft
+and change its pickup location to another receiving location; confirm the resulting parcel keeps
+the staff-selected location. Sending-only locations must never appear or pass validation.
 
 Printing a branch entry QR code uses `CanPrintSelfServiceQrCode`. This permission is listed under
 **Branch Network Management** and can be assigned to a Branch Manager without granting branch edit

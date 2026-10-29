@@ -1,10 +1,13 @@
-import type { StickerPaymentStatus } from '@/shared/printing';
+import type { StickerPaymentStatus, VerifiedStickerPayment } from '@/shared/printing';
 
 export type ReceiptPrintData = {
   bookingCode: string;
   trackingCode: string;
   callSender?: boolean;
   stickerStatusLabel?: StickerPaymentStatus;
+  settlementMode?: 'CREDIT';
+  /** Supplied only after a successful cashier collect/confirm request. */
+  confirmedStickerPayment?: VerifiedStickerPayment;
   parcelDetails: string;
   parcelContent?: string | null;
   parcelValueCedis?: number | null;

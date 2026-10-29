@@ -46,3 +46,13 @@ Platform, user, dashboard, accounting, and other core route overrides.
 | `/users/inactive`                  | `CanReadInactiveUsers`              |
 | `/users/invites`                   | `CanResendSetupInvite`              |
 | `/customer-messages`               | `CanReadCustomerMessages`           |
+
+## Parcel tax data
+
+`/accounting/tax-data` uses the shared accounting read-prefix rule (`CanReadAccounting`),
+not a new exact route override. All five `/v1/accounting/tax-data/*` endpoints require
+that read grant plus the accounting module and company/source-branch scope.
+`POST /v1/accounting/tax-data/confirm` additionally requires the new
+`CanConfirmParcelTaxData` catalog permission. Assign it explicitly to intended roles;
+read/export grants do not imply confirmation. Neither `CanUpdateParcels` nor a filing
+permission substitutes for this grant. See [Parcel Tax Data Generation](../PARCEL_TAX_DATA.md).

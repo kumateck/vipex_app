@@ -10,6 +10,7 @@ export function ReceiptRollTemplate(
   },
 ) {
   const unpaid = isToBePaidDeliveryReceipt(props);
+  const isCredit = props.settlementMode === 'CREDIT';
   const money = props.formatMoney;
   const destination = [props.destinationLocationName, props.destinationBranchName]
     .filter((value) => value && value !== '-')
@@ -18,12 +19,17 @@ export function ReceiptRollTemplate(
     <ReceiptRollShell
       paperFormat={props.paperFormat}
       issuedAtLabel={props.issuedAtLabel}
-      title={unpaid ? 'ACKNOWLEDGEMENT NOTE' : 'Tax Invoice'}
+      title={unpaid || isCredit ? 'ACKNOWLEDGEMENT NOTE' : 'Tax Invoice'}
       cashierName={props.cashierName}
       duplicate={props.duplicate}
       qrValue={props.qrValue}
     >
-      {unpaid ? (
+      {isCredit ? (
+        <div style={{ border: '0.25mm solid #000', padding: '1.5mm', fontWeight: 700 }}>
+          NOTICE: No payment was collected for this parcel. {money(props.totalChargeCedis)} was
+          charged to the sender's credit account.
+        </div>
+      ) : unpaid ? (
         <div style={{ border: '0.25mm solid #000', padding: '1.5mm', fontWeight: 700 }}>
           NOTICE: The sender has made NO PAYMENT. Full payment of {money(props.receiverToPayCedis)}{' '}
           will be collected from the recipient before the parcel is released.

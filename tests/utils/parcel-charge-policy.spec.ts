@@ -5,6 +5,16 @@ import {
 } from '@/shared/shipments/parcel-charge-policy';
 
 describe('parcel charge policy', () => {
+  it('rejects zero, negative and sub-pesewa charges', () => {
+    for (const chargeCedis of [0, -1, 0.001, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(
+        getParcelChargeValidationError({ chargeCedis, plannedToBePaidCedis: 0 }),
+      ).not.toBeNull();
+    }
+    expect(
+      getParcelChargeValidationError({ chargeCedis: 0.01, plannedToBePaidCedis: 0 }),
+    ).toBeNull();
+  });
   it('rejects a telephone number entered as a parcel charge', () => {
     expect(
       getParcelChargeValidationError({

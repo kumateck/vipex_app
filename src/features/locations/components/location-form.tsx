@@ -48,6 +48,26 @@ export function LocationForm(props: LocationFormProps) {
                   <p className="text-sm text-destructive">{errors.name.message}</p>
                 ) : null}
               </Field>
+              <Field>
+                <FieldLabel htmlFor="telephone">Telephone (optional)</FieldLabel>
+                <Input
+                  id="telephone"
+                  type="tel"
+                  maxLength={30}
+                  placeholder="Location contact number"
+                  aria-invalid={!!errors.telephone}
+                  aria-describedby="location-telephone-help"
+                  {...register('telephone')}
+                />
+                <p id="location-telephone-help" className="text-sm text-muted-foreground">
+                  Used by the SMS locationPhone variable. Leave blank if unavailable.
+                </p>
+                {errors.telephone?.message ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    {errors.telephone.message}
+                  </p>
+                ) : null}
+              </Field>
               {mode === 'create' ? (
                 <Field>
                   <FieldLabel htmlFor="branchId">Branch</FieldLabel>
@@ -88,7 +108,7 @@ export function LocationForm(props: LocationFormProps) {
                   control={control}
                   name={name}
                   render={({ field }) => (
-                    <Field className="flex-row items-center gap-3">
+                    <Field orientation="horizontal" className="gap-3">
                       <Checkbox
                         id={name}
                         checked={field.value}

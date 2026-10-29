@@ -17,6 +17,8 @@ import {
   unblockCustomerWalletAccountCtrl,
 } from './controller';
 
+import { listCreditParcelsSvc } from '../customers/credit-settlement';
+
 export const customerWalletCreditRoutes = new Elysia({ name: 'customer-wallet-credit' })
   .use(authPlugin)
   .get(
@@ -80,10 +82,31 @@ export const customerWalletCreditRoutes = new Elysia({ name: 'customer-wallet-cr
       detail: { tags: ['CustomerWalletCredit'], summary: 'List customer wallet approval queue' },
     },
   )
+  .get(
+    '/accounts/:customerId/open-parcels',
+    ({ params, user }) =>
+      listCreditParcelsSvc({
+        customerId: params.customerId,
+        companyId: user!.companyId!,
+      }),
+    {
+      params: t.Object({ customerId: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateCustomerWalletCreditPayments),
+        requireModuleEnabled('customer_wallet_credit'),
+      ],
+      detail: {
+        tags: ['CustomerWalletCredit'],
+        summary: 'List outstanding customer parcels for settlement',
+      },
+    },
+  )
   .post(
     '/accounts/:customerId/payments',
     async ({ params, body, user, set }) => {
       const result = await postCustomerWalletPaymentCtrl(user as AuthUser, params.customerId, {
+        parcelIds: body.parcelIds,
         amountCedis: body.amountCedis,
         notes: body.notes ?? null,
         referenceId: body.referenceId ?? null,
@@ -94,9 +117,10 @@ export const customerWalletCreditRoutes = new Elysia({ name: 'customer-wallet-cr
     {
       params: t.Object({ customerId: UUID }),
       body: t.Object({
+        parcelIds: t.Array(UUID, { minItems: 1, maxItems: 200, uniqueItems: true }),
         amountCedis: t.Union([t.Number(), t.String()]),
-        notes: t.Optional(t.Union([t.String(), t.Null()])),
-        referenceId: t.Optional(t.Union([t.String(), t.Null()])),
+        notes: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+        referenceId: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
       }),
       beforeHandle: [
         requireAuth(),

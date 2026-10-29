@@ -135,15 +135,17 @@ export function useSelfServiceDraftCompleteForm(draft: SelfServiceDraft | undefi
     if (
       !destinationBranchId ||
       isLoadingLocations ||
-      locationOptions.length !== 1 ||
+      locationOptions.length === 0 ||
       destinationLocationId
     ) {
       return;
     }
-    const onlyLocation = locationOptions[0];
-    if (!onlyLocation) return;
-    setValue('parcels.0.destinationLocationId', onlyLocation.id, { shouldDirty: true });
-    setValue('parcels.0.destinationLocationName', onlyLocation.name, { shouldDirty: true });
+    const firstReceivingLocation = locationOptions[0];
+    if (!firstReceivingLocation) return;
+    setValue('parcels.0.destinationLocationId', firstReceivingLocation.id, { shouldDirty: true });
+    setValue('parcels.0.destinationLocationName', firstReceivingLocation.name, {
+      shouldDirty: true,
+    });
     clearErrors('parcels.0.destinationLocationId');
   }, [
     clearErrors,
