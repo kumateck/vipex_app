@@ -104,6 +104,12 @@ receiving locations are omitted. Server booking validation also rejects non-rece
 locations and non-sending assigned sources. Migration `0082_location_service_capabilities` is
 required before deploying these queries; existing locations default to both services.
 
+In mobile self-service completion, the **Pickup location** selector appears beside the charge and
+lists active receiving locations for the draft's destination branch. It starts with the draft's
+location when still valid, otherwise the first available option. Location lookup failure or an
+empty receiving-location list blocks completion. The public self-service form offers only the
+first receiving location; staff can choose another receiving location when completing the draft.
+
 ### Scan-to-Receive Request Quotas
 
 Authenticated receiving traffic is exempt from the shared backend request quota. This covers
@@ -232,6 +238,7 @@ Credit eligibility, credit limit, customer type, identity verification, governme
 - Granted, read-only, action-only where supported, and fully denied permission combinations for every workflow.
 - Direct navigation with no permission performs no protected request.
 - Self-service available, claimed, concurrent claim, expired, completed, split-payment, and server-validation cases.
+- Self-service destination with multiple receiving locations: public customer gets only the first; staff can select another on web and mobile; receiving-disabled locations remain unavailable.
 - Call-center agent with no assignments, assigned arrival/contacted/returned parcels, search, each outcome, missing phone, invalid second receiver, notification partial failure, and refresh after save.
 - Call-center user with assigned-call-only permission, address-only permission, both permissions, invalid address, and invalid fee.
 - Discrepancy selected-system-record, unmatched physical parcel, missing identity, missing notes, denied camera, capture failure, upload failure after create, and successful linked upload.

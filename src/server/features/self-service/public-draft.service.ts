@@ -117,6 +117,7 @@ export async function submitSelfServiceDraftSvc(input: PublicDraftSubmission) {
       companyId: branch.companyId,
       destinationBranchId: input.destinationBranchId,
       destinationLocationId: input.destinationLocationId,
+      firstReceivingLocationOnly: true,
     }),
   ]);
 
