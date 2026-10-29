@@ -41,7 +41,7 @@ export async function listDailyParcelAuditRowsRepo(input: {
     WITH target_parcels AS (
       SELECT * FROM parcels pr
       WHERE pr.company_id = ${input.companyId} AND pr.is_deleted = false
-        AND pr.created_at >= ${input.dayStart} AND pr.created_at < ${input.nextDayStart}
+        AND pr.created_at >= ${input.dayStart.toISOString()} AND pr.created_at < ${input.nextDayStart.toISOString()}
         ${input.branchId ? sql`AND pr.source_id = ${input.branchId}` : sql``}
     ), principal_payments AS (
       SELECT p.parcel_id,

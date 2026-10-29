@@ -284,6 +284,22 @@ desktop use this endpoint for the Returns to Source page; mobile has no list pag
 parcel source or destination is that branch. Requested cases may be approved, then executed,
 after destination arrival as long as the parcel has not been delivered to the customer.
 
+`GET /v1/shipments/parcels/reconciliation-cases/eligible-sessions/:parcelId` requires
+`CanRequestParcelReconciliation` and returns the parcel creator's cashier sessions at the
+parcel's source branch that either are the parcel's recorded cashier session or were open
+(actual start/end, falling back to scheduled) when the parcel was created. A parcel from
+another company returns 404; a parcel with no creator returns an empty list. Before the
+2026-10-29 fix, this endpoint (and creating a case, which reuses the same query) returned
+HTTP 500 for every parcel with a recorded creator because the creation time was bound as a raw `Date`. Web and
+desktop use it in the reconciliation request dialog; mobile does not.
+
+Raw SQL rule: when a raw `sql` expression (not a plain column) is compared with a `Date`, bind
+the value as a string (`date.toISOString()`) or with `sql.param(date, timestampColumn)`. The
+Drizzle postgres-js driver disables postgres' own Date serializer, so a raw `Date` fails with
+“The "string" argument must be of type string … Received an instance of Date”. The daily
+parcel audit, customer credit aging detail, and fleet dispatch ops performance queries were
+fixed for the same reason on 2026-10-29.
+
 Parcel creation stores the sender, receiver, and optional second receiver names on the parcel
 alongside their linked customer IDs. Existing parcel list/detail, consignment, delivery, and
 report responses return these stored names. A later customer profile rename leaves older
