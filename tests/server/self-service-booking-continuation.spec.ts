@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { db } from '@/db/config';
-import { branches, selfServiceBookingDrafts } from '@/db/schemas';
+import { branches, locations, selfServiceBookingDrafts } from '@/db/schemas';
 import {
   createSelfServiceSessionToken,
   validateSelfServiceSessionSvc,
@@ -20,6 +20,7 @@ describe('self-service persisted continuation', () => {
   let fixture: Awaited<ReturnType<typeof createShelfPickupFixture>>;
   const tokens: string[] = [];
   const destinationId = createId();
+  const destinationLocationId = createId();
   const redisUrl = env.REDIS_URL;
   beforeAll(async () => {
     env.REDIS_URL = undefined;
@@ -29,6 +30,13 @@ describe('self-service persisted continuation', () => {
       id: destinationId,
       companyId: fixture.companyId,
       name: 'Test destination',
+      createdBy: fixture.actor,
+    });
+    await db.insert(locations).values({
+      id: destinationLocationId,
+      companyId: fixture.companyId,
+      branchId: destinationId,
+      name: 'Destination receiving desk',
       createdBy: fixture.actor,
     });
   });
@@ -98,6 +106,7 @@ describe('self-service persisted continuation', () => {
       .from(selfServiceBookingDrafts)
       .where(eq(selfServiceBookingDrafts.companyId, fixture.companyId));
     expect(rows).toHaveLength(10);
+    expect(rows.every((row) => row.destinationLocationId === destinationLocationId)).toBe(true);
     expect(await getCacheStore().get('rl:self-service-draft:phone:0551112222')).toBe('10');
     const firstToken = tokens[0]!;
     const original = await publicSubmit(firstToken);
