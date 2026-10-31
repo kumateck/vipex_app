@@ -13,6 +13,7 @@ import {
 } from '@/shared/maintenance';
 import { executeCreditPrintRepair, type TaggedTransaction } from './credit-repair';
 import { scanCreditConflicts, traceCreditParcel } from './parcel-inspection';
+import { repairReceivingWorkflow } from './receiving-workflow';
 
 export async function runRegisteredScript(
   tx: TaggedTransaction,
@@ -32,6 +33,11 @@ export async function runRegisteredScript(
     apply: input.apply,
   };
   switch (input.operationId) {
+    case 'repair-parcel-receiving-workflow':
+      return repairReceivingWorkflow(tx, {
+        ...operation,
+        pickupLocationId: String(input.params.pickupLocationId ?? '') || undefined,
+      });
     case 'check-parcel-booking-search':
       return checkBookingSearch(tx, operation);
     case 'inspect-cleared-delivery-fee':

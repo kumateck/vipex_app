@@ -1,6 +1,6 @@
 import { AppScreen } from '@mobile/components/screen';
 import { useLocalSearchParams } from '@mobile/navigation/router-compat';
-import { AppButton, MobileNoAccess } from '@mobile/components/ui/mobile';
+import { AppButton, AppLabel, MobileNoAccess } from '@mobile/components/ui/mobile';
 import { PaymentResponsibility } from '@mobile/constants/payment';
 import { CustomerLookupCard } from '../../customer-lookup-card';
 import { ParcelCreateHeader } from '../parcel-create-header';
@@ -53,6 +53,9 @@ function ParcelCreateForm({
     isLoadingBranches,
     locationOptions,
     isLoadingLocations,
+    pickupLocationError,
+    locationsFailed,
+    retryLocations,
     isSubmitting,
     printSticker,
     setPrintSticker,
@@ -116,6 +119,12 @@ function ParcelCreateForm({
           if (value !== PaymentResponsibility.RECIPIENT) setPrintSticker(false);
         }}
       />
+      {destinationBranchId && pickupLocationError ? (
+        <AppLabel>{pickupLocationError}</AppLabel>
+      ) : null}
+      {locationsFailed ? (
+        <AppButton title="Retry pickup locations" variant="plain" onPress={retryLocations} />
+      ) : null}
       <AppButton
         title={
           isSubmitting
@@ -125,7 +134,7 @@ function ParcelCreateForm({
               : 'Create TobePaid Booking'
         }
         onPress={() => void handleSubmit()}
-        disabled={isSubmitting}
+        disabled={isSubmitting || Boolean(pickupLocationError)}
         loading={isSubmitting}
       />
       <StickerRetryActions

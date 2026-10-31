@@ -1,5 +1,9 @@
 import qrcode from 'qrcode-generator';
-import { resolveStickerPayment, type StickerPaymentStatus } from '@/shared/printing';
+import {
+  resolveStickerPayment,
+  STICKER_COMPLAINTS_LINE,
+  type StickerPaymentStatus,
+} from '@/shared/printing';
 import stickerLogo from './sticker-logo-data-uri.json';
 
 export type MobileSticker = {
@@ -16,6 +20,8 @@ export type MobileSticker = {
   callSender?: boolean;
   paymentStatusLabel?: StickerPaymentStatus;
   copies: number;
+  printedByName?: string | null;
+  issuedAtLabel?: string | null;
 };
 
 function escapeHtml(value: string) {
@@ -97,6 +103,7 @@ export function buildMobileStickerHtml(sticker: MobileSticker) {
   .sticker{width:90mm;height:92mm;border:.35mm solid #111;padding:1.2mm;display:grid;grid-template-rows:22mm auto auto minmax(0,1fr);gap:.7mm;overflow:hidden;page-break-after:always}
   .sticker:last-child{page-break-after:auto}.top{min-width:0;display:grid;grid-template-columns:11mm 1fr 22mm;align-items:center;column-gap:2mm}
   .logo{width:11mm;height:11mm;object-fit:contain}.brand{display:inline-flex;align-items:center;gap:.9mm;font-weight:900;white-space:nowrap}.brand-main{font-size:7.2mm;line-height:.82}.brand-sub{font-size:7.2mm;line-height:.82;letter-spacing:.02em}
+  .brand-panel{min-width:0;text-align:center}.brand-meta{margin-top:2.2mm;display:grid;gap:.3mm;font-size:1.9mm;line-height:1.15;font-weight:700}.brand-meta>div{white-space:nowrap}.cashier{overflow:hidden;text-overflow:ellipsis}
   .qr-panel{width:21mm;height:21mm;background:#fff;justify-self:end}.qr{border-collapse:collapse;width:21mm;height:21mm;table-layout:fixed}.qr td{padding:0}
   .due{border:.35mm solid #111;display:grid;place-items:center;text-align:center;padding:.7mm .5mm}.due-title{font-size:4.2mm;font-weight:900;line-height:1.1}.amount{margin-top:.3mm;font-size:4mm;font-weight:900;line-height:1.1}.note{margin-top:.6mm;font-size:1.9mm;font-weight:700;line-height:1.2}
   .receiver{position:relative;border:.35mm solid #111;display:grid;grid-template-rows:auto auto auto;row-gap:.5mm;text-align:center;padding:.8mm 1mm}.receiver .label{font-size:1.8mm}.receiver-name{padding:0 4.5mm;font-weight:900;line-height:1.1;overflow-wrap:anywhere}.receiver-phone{font-size:3.9mm;font-weight:900;line-height:1.15}.cs{position:absolute;top:.4mm;right:.6mm;border:.4mm solid #111;padding:.1mm .6mm;background:#fff;color:#000;font-size:3.2mm;font-weight:900;line-height:1}
@@ -104,7 +111,7 @@ export function buildMobileStickerHtml(sticker: MobileSticker) {
   .location-value{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   </style></head><body>${Array.from(
     { length: copies },
-    () => `<div class="sticker"><header class="top"><img class="logo" src="${stickerLogo.dataUri}" alt="Vipex logo"><div class="brand"><span class="brand-main">VIPEX</span><span class="brand-sub">PARCEL</span></div><div class="qr-panel">${qrTable(sticker.trackingCode)}</div></header>
+    () => `<div class="sticker"><header class="top"><img class="logo" src="${stickerLogo.dataUri}" alt="Vipex logo"><div class="brand-panel"><div class="brand"><span class="brand-main">VIPEX</span><span class="brand-sub">PARCEL</span></div><div class="brand-meta"><div>${STICKER_COMPLAINTS_LINE}</div><div class="cashier"${(sticker.printedByName?.trim().length ?? 0) > 28 ? ' style="font-size:1.6mm"' : ''}>Cashier: ${display(sticker.printedByName ?? '')}</div><div>Date: ${display(sticker.issuedAtLabel ?? '')}</div></div></div><div class="qr-panel">${qrTable(sticker.trackingCode)}</div></header>
   <section class="due"><div><div class="due-title">${paymentLabel}</div>${hasReceiverPayment ? `<div class="amount">GHS ${sticker.amountCedis.toFixed(2)}</div><div class="note">PLEASE NOTE: PAYMENT DUE UPON RECEIPT OF PARCEL.</div>` : ''}</div></section>
   <section class="receiver">${sticker.callSender ? '<span class="cs">CS</span>' : ''}<div class="label">Receiver</div><div class="receiver-name" style="font-size:${receiverNameFontSize(sticker.receiverName)}">${display(sticker.receiverName)}</div><div class="receiver-phone">${display(sticker.receiverPhone)}</div></section>
   <main class="main"><div class="destination">${destination('Destination', sticker.destinationBranch, true)}${destination('Location', sticker.destinationLocation)}</div>${row('Sender', sticker.senderName)}${row('Sender Tel', sticker.senderPhone)}${row('Parcel Details', sticker.parcelDetails)}</main>

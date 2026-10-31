@@ -16,6 +16,7 @@ import type {
 import { useSelfServiceCompletionForm } from '../../hooks';
 import { ParcelChargeAgentField } from '@mobile/features/parcel-create/components/parcel-create-screen';
 import { SelfServiceDraftSummary } from './self-service-draft-summary';
+import { SelfServicePickupLocationField } from './self-service-pickup-location-field';
 
 type Props = {
   draft: SelfServiceDraft;
@@ -53,6 +54,8 @@ export function SelfServiceCompletionForm({
     locationOptions,
     locationsLoading,
     locationsFailed,
+    locationError,
+    retryLocations,
     paymentResponsibility,
     setPaymentResponsibility,
     senderPartialPaymentCedis,
@@ -101,17 +104,14 @@ export function SelfServiceCompletionForm({
             keyboardType="decimal-pad"
             placeholder="0.00"
           />
-          <AppSelectField
-            label="Pickup location"
+          <SelfServicePickupLocationField
             value={pickupLocationId}
-            options={locationOptions.map((location) => ({
-              value: location.id,
-              label: location.name,
-            }))}
-            onValueChange={setPickupLocationId}
-            placeholder={locationsFailed ? 'Could not load locations' : 'Select location'}
+            options={locationOptions}
+            onChange={setPickupLocationId}
             loading={locationsLoading}
-            disabled={locationsLoading || locationsFailed || locationOptions.length === 0}
+            failed={locationsFailed}
+            error={locationError}
+            onRetry={retryLocations}
           />
           <ParcelChargeAgentField {...chargeAgent} />
           <View style={styles.callSenderRow}>

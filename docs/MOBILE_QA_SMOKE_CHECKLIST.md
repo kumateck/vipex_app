@@ -237,6 +237,20 @@ and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md)
 
 ## Location Services, Charge Agent and Receiving Quotas
 
+- At a destination with one receiving location, verify booking selects it automatically. With
+  multiple locations, require a selection; switch destinations and verify no stale location remains.
+- For mobile booking, mobile self-booking completion and the mobile draft editor, verify blank,
+  failed/empty, loading and stale pickup locations block submission. Retry a failed lookup.
+- Repeat required-location validation on web/desktop self-booking completion: the button stays
+  disabled without a valid location and the submit handler cannot send an empty/NULL location.
+- Confirm arrival once and verify receipt time, authenticated receiver and pickup location are saved
+  together. Repeat with an old status-only mobile client and verify the same backend behavior.
+- Open an Awaiting Pickup/called parcel with a missing historical receipt timestamp; Confirm Arrived
+  must be disabled in the updated client and a forced POST/legacy PATCH must return 409 without
+  changing status, caller or call marker. Repeat with delivered and wrong-branch parcels.
+- Run concurrent arrival requests, a mixed eligible/ineligible bulk batch and a stale consignment
+  item; verify one receipt at most and no partial updates or backwards status changes.
+
 - Apply migration `0082` to the test database; verify old locations default to both services.
 - Disable receiving on a sending-only location and confirm it disappears from mobile pickup
   options, web parcel creation, public self-service and staff completion destination lists.

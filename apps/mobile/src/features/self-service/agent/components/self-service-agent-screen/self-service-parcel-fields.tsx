@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { AppInput, AppLabel, AppSelectField } from '@mobile/components/ui/mobile';
+import { AppButton, AppInput, AppLabel, AppSelectField } from '@mobile/components/ui/mobile';
 import type { AppSelectOption } from '@mobile/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
@@ -14,6 +14,8 @@ type Props = {
     onLocationChange: (value: string) => void;
     locationOptions: AppSelectOption[];
     isLoadingLocations: boolean;
+    locationsFailed: boolean;
+    retryLocations: () => void;
   };
   parcel: {
     content: string;
@@ -38,14 +40,23 @@ export function SelfServiceParcelFields({ destination, parcel, error }: Props) {
         placeholder="Select destination branch"
       />
       <AppSelectField
-        label="Pickup location (optional)"
+        label="Pickup location"
         value={destination.locationId}
         options={destination.locationOptions}
         onValueChange={destination.onLocationChange}
         loading={destination.isLoadingLocations}
-        disabled={!destination.branchId}
+        disabled={
+          !destination.branchId || destination.isLoadingLocations || destination.locationsFailed
+        }
         placeholder={destination.branchId ? 'Select location' : 'Select destination branch first'}
       />
+      {destination.locationsFailed ? (
+        <AppButton
+          title="Retry pickup locations"
+          variant="plain"
+          onPress={destination.retryLocations}
+        />
+      ) : null}
       <AppLabel>What&apos;s inside the parcel</AppLabel>
       <AppInput value={parcel.content} onChangeText={parcel.setContent} multiline maxLength={255} />
       <AppLabel>Declared value (GHS)</AppLabel>

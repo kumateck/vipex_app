@@ -104,6 +104,16 @@ describe('maintenance console rendering', () => {
       if (selected.kind === 'repair' && selected.id !== 'repair-credit-print-payment')
         expect(html).not.toContain('I confirmed that printing created this payment');
     }
-    expect(render(fixture())).toContain('Available scripts (9)');
+    expect(render(fixture())).toContain('Available scripts (10)');
+  });
+  test('receiving repair exposes its booking input, optional location and specific confirmation', () => {
+    const selected = MAINTENANCE_SCRIPTS.find(
+      (script) => script.id === 'repair-parcel-receiving-workflow',
+    )!;
+    const html = render(fixture({ selected, hasExecutablePreview: true }));
+    expect(html).toContain('Repair parcel receiving workflow');
+    expect(html).toContain('Pickup location ID');
+    expect(html).toContain('awaiting collection');
+    expect(html).toContain('Execute repair');
   });
 });

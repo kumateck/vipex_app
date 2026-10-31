@@ -7,7 +7,8 @@ export type MaintenanceScriptId =
   | 'backfill-parcel-customer-names'
   | 'restore-reversed-parcel-balance'
   | 'fix-reversed-booking-to-be-paid'
-  | 'repair-parcel-financial-state';
+  | 'repair-parcel-financial-state'
+  | 'repair-parcel-receiving-workflow';
 export type MaintenanceParams = Record<string, string | boolean>;
 export type MaintenanceField = {
   name: string;

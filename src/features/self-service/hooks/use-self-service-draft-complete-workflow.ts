@@ -12,6 +12,7 @@ import {
 } from '../api/self-service-agent.api';
 import { useSelfServiceDraftCompleteForm } from './use-self-service-draft-complete-form';
 import { buildSelfServiceCompletionReceipt } from '../utils';
+import { getRequiredPickupLocationError } from '@/shared/shipments/pickup-location';
 
 export function useSelfServiceDraftCompleteWorkflow() {
   const [isCustomerEditorOpen, setIsCustomerEditorOpen] = useState(false);
@@ -25,11 +26,26 @@ export function useSelfServiceDraftCompleteWorkflow() {
   const onSubmit = async (values: ParcelBookingFormValues) => {
     const parcel = values.parcels[0];
     if (!draft || !parcel) return;
+    const locationError = getRequiredPickupLocationError({
+      destinationId: parcel.destinationBranchId,
+      pickupLocationId: parcel.destinationLocationId,
+      options: formState.locationOptions,
+      loading: formState.isLoadingLocations,
+      failed: formState.locationsFailed,
+    });
+    if (locationError) {
+      formState.form.setError('parcels.0.destinationLocationId', {
+        type: 'validate',
+        message: locationError,
+      });
+      toast.error(locationError);
+      return;
+    }
     try {
       const input: CompleteSelfServiceDraftInput = {
         id: draft.id,
         destinationId: parcel.destinationBranchId,
-        pickupLocationId: parcel.destinationLocationId || null,
+        pickupLocationId: parcel.destinationLocationId,
         parcelDetails: parcel.parcelDetails,
         chargeCedis: sanitizeString(parcel.charge).replace(/,/g, ''),
         chargeAgentUserId: parcel.chargeAgentUserId,
