@@ -12,6 +12,7 @@ import {
 import { BranchType } from '@/db/schemas/enums';
 import type { ParcelBookingFormValues } from '@/features/operations/parcel/components/parcel-create';
 import type { SelfServiceDraft } from '../api/self-service-agent.api';
+import { getRequiredPickupLocationError } from '@/shared/shipments/pickup-location';
 
 function buildFormValues(draft?: SelfServiceDraft): ParcelBookingFormValues {
   return {
@@ -109,12 +110,24 @@ export function useSelfServiceDraftCompleteForm(draft: SelfServiceDraft | undefi
     if (draft) previousBranchId.current = draft.destinationBranchId ?? '';
   }, [draft]);
 
-  const { data: locationOptions = [], isLoading: isLoadingLocations } = useListLocationOptionsQuery(
+  const {
+    currentData: locationOptions = [],
+    isFetching: isLoadingLocations,
+    isError: locationsFailed,
+    refetch: retryLocations,
+  } = useListLocationOptionsQuery(
     destinationBranchId && companyId
       ? { companyId, branchId: destinationBranchId, canReceive: true }
       : undefined,
     { skip: !destinationBranchId || !companyId },
   );
+  const locationError = getRequiredPickupLocationError({
+    destinationId: destinationBranchId,
+    pickupLocationId: destinationLocationId,
+    options: locationOptions,
+    loading: isLoadingLocations,
+    failed: locationsFailed,
+  });
 
   useEffect(() => {
     const senderPays = paymentResponsibility === 'SENDER';
@@ -135,7 +148,8 @@ export function useSelfServiceDraftCompleteForm(draft: SelfServiceDraft | undefi
     if (
       !destinationBranchId ||
       isLoadingLocations ||
-      locationOptions.length === 0 ||
+      locationsFailed ||
+      locationOptions.length !== 1 ||
       destinationLocationId
     ) {
       return;
@@ -152,6 +166,7 @@ export function useSelfServiceDraftCompleteForm(draft: SelfServiceDraft | undefi
     destinationBranchId,
     destinationLocationId,
     isLoadingLocations,
+    locationsFailed,
     locationOptions,
     setValue,
   ]);
@@ -173,6 +188,9 @@ export function useSelfServiceDraftCompleteForm(draft: SelfServiceDraft | undefi
     destinationBranchOptions,
     locationOptions,
     isLoadingLocations,
+    locationsFailed,
+    locationError,
+    retryLocations,
     locationPlaceholder,
     paymentResponsibility,
     parcelChargeValue,

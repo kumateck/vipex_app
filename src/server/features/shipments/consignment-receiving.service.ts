@@ -1,5 +1,5 @@
 import { db } from '@/db/config';
-import { ConsignmentReceivingStatus, ParcelStatus } from '@/db/schemas';
+import { ConsignmentReceivingStatus } from '@/db/schemas';
 import { BadRequest, Forbidden, NotFound } from '../../utils/http-error';
 import { recordAuditLog } from '../audit/logger';
 import { getBranchRepo } from '../branches/repository';
@@ -12,7 +12,8 @@ import {
   markConsignmentItemArrivedRepo,
 } from './consignments-receiving.repository';
 import { getConsignmentRepo, listConsignmentsForParcelRepo } from './consignments.repository';
-import { getParcelByCodeRepo, updateParcelRepo } from './parcels.repository';
+import { getParcelByCodeRepo } from './parcels.repository';
+import { receiveIncomingParcels } from './parcel-receiving';
 
 type ReceiveConsignmentItemOutcome =
   | {
@@ -78,15 +79,13 @@ export async function receiveConsignmentItemSvc(input: {
       tx,
     );
     if (updated) {
-      await updateParcelRepo(
-        parcel.id,
-        {
-          status: ParcelStatus.ARRIVED_AT_DESTINATION,
-          receivedBy: input.actorUserId,
-          receivedAt: arrivedAt,
-        },
-        tx,
-      );
+      await receiveIncomingParcels(tx, {
+        parcelIds: [parcel.id],
+        companyId: consignment.companyId,
+        branchId: consignment.destinationId,
+        actorUserId: input.actorUserId,
+        receivedAt: arrivedAt,
+      });
     }
     return updated;
   });

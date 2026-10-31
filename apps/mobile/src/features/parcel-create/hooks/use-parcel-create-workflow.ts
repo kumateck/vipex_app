@@ -23,6 +23,7 @@ import { useMobileStickerPrint } from './use-mobile-sticker-print';
 import { useParcelBranchOptions } from './use-parcel-branch-options';
 import { parseAmount } from '../utils';
 import { useParcelChargeAgents } from './use-parcel-charge-agents';
+import { getRequiredPickupLocationError } from '@/shared/shipments/pickup-location';
 
 export function useParcelCreateWorkflow(initialPaymentResponsibility: MobilePaymentResponsibility) {
   const { session, withAuth } = useAuth();
@@ -35,7 +36,7 @@ export function useParcelCreateWorkflow(initialPaymentResponsibility: MobilePaym
   const sender = useCustomerLookup(withAuth);
   const receiver = useCustomerLookup(withAuth);
   const [destinationBranchId, setDestinationBranchId] = useState('');
-  const [pickupLocationId, setPickupLocationId] = useState('');
+  const [selectedPickupLocationId, setPickupLocationId] = useState('');
   const [parcelDetails, setParcelDetails] = useState('');
   const [parcelContent, setParcelContent] = useState('');
   const [parcelValue, setParcelValue] = useState('');
@@ -46,8 +47,28 @@ export function useParcelCreateWorkflow(initialPaymentResponsibility: MobilePaym
   const [paymentResponsibility, setPaymentResponsibility] = useState<MobilePaymentResponsibility>(
     initialPaymentResponsibility,
   );
-  const { branchOptions, isLoadingBranches, locationOptions, isLoadingLocations } =
-    useParcelBranchOptions(companyId, destinationBranchId, canCreate, isHeadOffice);
+  const {
+    branchOptions,
+    isLoadingBranches,
+    locationOptions,
+    isLoadingLocations,
+    locationsFailed,
+    retryLocations,
+  } = useParcelBranchOptions(companyId, destinationBranchId, canCreate, isHeadOffice);
+  const pickupLocationId = locationOptions.some(
+    (location) => location.id === selectedPickupLocationId,
+  )
+    ? selectedPickupLocationId
+    : locationOptions.length === 1
+      ? locationOptions[0]!.id
+      : '';
+  const pickupLocationError = getRequiredPickupLocationError({
+    destinationId: destinationBranchId,
+    pickupLocationId,
+    options: locationOptions,
+    loading: isLoadingLocations,
+    failed: locationsFailed,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [printSticker, setPrintSticker] = useState(false);
   const [stickerCopies, setStickerCopies] = useState('1');
@@ -83,6 +104,7 @@ export function useParcelCreateWorkflow(initialPaymentResponsibility: MobilePaym
       return notifyError('Invalid receiver number', 'Telephone 2 must have 10 digits.');
     if (!destinationBranchId)
       return notifyError('Destination required', 'Select a destination branch.');
+    if (pickupLocationError) return notifyError('Pickup location required', pickupLocationError);
     if (!parcelDetails.trim())
       return notifyError('Parcel details required', 'Describe the parcel.');
     if (!parcelContent.trim())
@@ -126,7 +148,7 @@ export function useParcelCreateWorkflow(initialPaymentResponsibility: MobilePaym
           parcels: [
             {
               destinationId: destinationBranchId,
-              pickupLocationId: pickupLocationId || null,
+              pickupLocationId,
               receiverId,
               status: ParcelStatus.CREATED,
               parcelDetails: parcelDetails.trim(),
@@ -210,6 +232,9 @@ export function useParcelCreateWorkflow(initialPaymentResponsibility: MobilePaym
     isLoadingBranches,
     locationOptions,
     isLoadingLocations,
+    pickupLocationError,
+    locationsFailed,
+    retryLocations,
     isSubmitting,
     printSticker,
     setPrintSticker,

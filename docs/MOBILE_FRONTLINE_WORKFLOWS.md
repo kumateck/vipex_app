@@ -104,9 +104,27 @@ receiving locations are omitted. Server booking validation also rejects non-rece
 locations and non-sending assigned sources. Migration `0082_location_service_capabilities` is
 required before deploying these queries; existing locations default to both services.
 
+Mobile booking requires a valid pickup location on every submission. It selects a sole receiving
+location automatically and requires a selection when several exist. Loading, failed lookups and
+empty location lists block submission; failed lookups offer retry. Changing destinations hides the
+previous destination's options. The backend also resolves omitted locations for old clients or
+rejects ambiguous/non-receiving choices, so a location-scoped calling queue does not lose new
+parcels with an otherwise determinable destination location.
+
+**Confirm Arrived** is enabled only for unreceived In Transit parcels and calls the dedicated
+mark-received endpoint. It saves receipt time, authenticated receiving user and validated location
+together. The backend applies the same checks to old status-only mobile PATCH requests. Repeated,
+Awaiting Pickup, called pickup and delivered scans cannot move the parcel back to Arrived, even
+when a historical receipt timestamp is missing. Company/branch and receiving permissions are
+checked server-side. Backend deployment protects old mobile clients; the disabled button and POST
+transport require the updated mobile bundle. Historical records are repaired separately through
+[Maintenance Scripts](SYSTEM_MAINTENANCE.md#receiving-workflow-repair).
+
 In mobile self-service completion, the **Pickup location** selector appears beside the charge and
 lists active receiving locations for the draft's destination branch. It starts with the draft's
-location when still valid, otherwise the first available option. Location lookup failure or an
+location when still valid, otherwise a sole available option. With several locations, staff must
+choose one. The draft editor also requires a pickup location and does not offer an optional clear.
+Location lookup failure or an
 empty receiving-location list blocks completion. The public self-service form offers only the
 first receiving location; staff can choose another receiving location when completing the draft.
 
@@ -114,7 +132,7 @@ first receiving location; staff can choose another receiving location when compl
 
 Authenticated receiving traffic is exempt from the shared backend request quota. This covers
 in-transit parcel searches, parcel details, receiving/closing consignments, mark-received
-endpoints and the mobile `PATCH /shipments/parcels/:id` arrival-status confirmation. The same
+endpoints and legacy mobile `PATCH /shipments/parcels/:id` arrival-status confirmation. The same
 shared endpoints benefit web and desktop receiving. Invalid/unsigned tokens, public traffic,
 unrelated searches and other parcel status updates keep their quotas. Endpoint authentication,
 receiving permissions, branch checks and duplicate/in-flight scan protections remain enforced.

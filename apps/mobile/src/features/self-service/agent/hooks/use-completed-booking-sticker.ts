@@ -20,7 +20,7 @@ export function useCompletedBookingSticker(completed: CompletedSelfServiceBookin
   const location = options.locationOptions.find(
     (item) => item.id === completed.input.pickupLocationId,
   );
-  const ready = Boolean(branch) && (!completed.input.pickupLocationId || Boolean(location));
+  const ready = Boolean(branch) && Boolean(location);
 
   const print = async () => {
     if (!validCopies || !ready || printing || stickerPrint.pendingLog) return;

@@ -116,7 +116,7 @@ describe.skipIf(!enabled)('System Admin maintenance console on isolated PostgreS
       }),
     );
     expect(response.status).toBe(200);
-    expect((await response.json()).length).toBe(9);
+    expect((await response.json()).length).toBe(10);
   });
   test('preview and run use the same guarded repair and record the logged-in admin', async () => {
     const reviewed = await preview();

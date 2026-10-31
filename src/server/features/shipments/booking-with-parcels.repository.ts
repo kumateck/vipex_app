@@ -1,4 +1,7 @@
-import { assertBookingLocationCapabilitiesRepo } from '../locations';
+import {
+  assertBookingLocationCapabilitiesRepo,
+  resolveReceivingPickupLocationsRepo,
+} from '../locations';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
@@ -146,6 +149,11 @@ export async function createBookingWithParcelsAndPaymentsRepo(
 ): Promise<CreateBookingWithParcelsOutput> {
   return db.transaction(async (tx) => {
     await assertBookingLocationCapabilitiesRepo(input, tx);
+    const resolvedParcels = await resolveReceivingPickupLocationsRepo(
+      input.companyId,
+      input.parcels,
+      tx,
+    );
     await assertParcelChargeAgentsRepo(input, tx);
     // Get branch name from authenticated cashier (createdBy)
     const branchName = await getCashierBranchName(tx, input.createdBy);
@@ -167,7 +175,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
     const createdParcels: CreatedParcelRef[] = [];
     const createdPayments: CreatedPaymentRef[] = [];
 
-    for (const p of input.parcels) {
+    for (const p of resolvedParcels) {
       const tracking = await createUniqueTrackingCode(tx, input.companyId);
 
       const code = generateBookingCode(branchName, bookingCreatedAt);

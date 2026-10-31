@@ -4,8 +4,10 @@ import { createIsolatedSchemaFixture } from './isolated-schema-fixture';
 import { executeMaintenanceRunSvc } from '@/server/features/maintenance/service';
 import type { MaintenanceScriptId } from '@/shared/maintenance';
 
-export async function createMaintenanceBookingFixture() {
-  const schema = await createIsolatedSchemaFixture('vipex_maintenance_booking_test');
+export async function createMaintenanceBookingFixture(
+  databaseName = 'vipex_maintenance_booking_test',
+) {
+  const schema = await createIsolatedSchemaFixture(databaseName);
   // Migration 0073 permits NULL snapshots on legacy parcels; model that real repair state.
   await sql.unsafe(
     'alter table parcels alter column sender_name_snapshot drop not null, alter column receiver_name_snapshot drop not null, alter column second_receiver_name_snapshot drop not null',
@@ -52,7 +54,7 @@ export async function createMaintenanceBookingFixture() {
         confirmRepair: true,
       }),
     async reset() {
-      await sql`truncate parcels, payments, customers, deliveries, audit_logs, tax_journal_items, tax_filing_audit_logs, journal_entries, daily_cash_confirmations, customer_credit_transactions, customer_credit_allocations`;
+      await sql`truncate parcels, payments, customers, deliveries, locations, audit_logs, tax_journal_items, tax_filing_audit_logs, journal_entries, daily_cash_confirmations, customer_credit_transactions, customer_credit_allocations`;
       await db.insert(customers).values(
         ['sender', 'receiver', 'second'].map((id) => ({
           id,

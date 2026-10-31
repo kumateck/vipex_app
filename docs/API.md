@@ -4,7 +4,7 @@ Base URL: `/v1`
 
 System Admin maintenance endpoints:
 
-- `GET /maintenance/scripts`: all nine supported booking-code operations, descriptors,
+- `GET /maintenance/scripts`: all ten supported booking-code operations, descriptors,
   allowed fields, operation-specific repair confirmation text and source references.
 - `GET /maintenance/runs`: latest 20 company-scoped runs, status and results.
 - `POST /maintenance/runs`: `{ operationId, params, mode: "preview" | "execute",
@@ -12,8 +12,15 @@ previewRunId?, confirmNoCashReceived?, confirmRepair? }`.
   IDs: `trace-credit-parcel`, `repair-credit-print-payment`, `scan-credit-conflicts`,
   `check-parcel-booking-search`, `inspect-cleared-delivery-fee`,
   `backfill-parcel-customer-names`, `restore-reversed-parcel-balance`,
-  `fix-reversed-booking-to-be-paid`, `repair-parcel-financial-state`.
+  `fix-reversed-booking-to-be-paid`, `repair-parcel-financial-state`,
+  `repair-parcel-receiving-workflow`.
   Operations accept `{ bookingCode }`; conflicts may use `{}` for the company scan.
+  Receiving workflow also accepts optional `pickupLocationId`: without it a missing pickup
+  location can be filled only when exactly one receiving location exists at the destination.
+  Existing locations are retained. A called Arrived parcel returns to Awaiting Pickup only with
+  the latest status audit proving a pickup-to-arrived regression at/after the call. Deleted,
+  confirmed, progressed or active home-delivery parcels are blocked. Caller/call history and
+  receipt timestamps are preserved; no caller is assigned automatically.
   New adapters accept case-insensitive booking/tracking codes and reject ambiguous matches.
   Execute requires a successful same-admin/company preview from the last ten minutes and an
   unchanged plan. Credit-print repair requires `confirmNoCashReceived: true`; other repairs
@@ -497,6 +504,26 @@ Selected booking source/destination locations are validated in the booking trans
 invalid scope/deleted locations or disabled required services fail with HTTP 400 before
 creation. Migration `0082_location_service_capabilities` must be applied first. See
 [Location services](PLATFORM_AND_ACCESS.md#location-sending-and-receiving-services).
+
+Booking/standalone creation and explicit destination/pickup-location edits resolve an omitted
+pickup location to the destination's sole active receiving location. Multiple receiving locations
+require a choice (400). Foreign/deleted/non-receiving choices return 400. A branch without active
+locations retains branch-level receiving; active locations with receiving disabled block the request.
+This validation also runs inside single/bulk/consignment receipt transactions for legacy parcels.
+Current mobile booking and web/desktop/mobile self-booking completion clients require a nonempty,
+validated pickup location even for branches without configured locations. They block loading,
+failed/empty lists and stale choices; their frontend input types require a string location ID.
+
+`POST /shipments/parcels/:id/mark-received` accepts optional `{ receivedBy, receivedAt, status }`;
+`receivedBy` is ignored in favor of the authenticated user, and status must be omitted or 3.
+It returns `{ id, receivedAt }`. It requires `CanReadParcelIncoming` or `CanReadParcelScan`, the
+current receiving user's company/destination branch, status 2, no stored receipt timestamp and
+an undeleted/unconfirmed parcel. Status-only `PATCH /shipments/parcels/:id` with `{ status: 3 }`
+uses the same operation and receiving permissions for old mobile clients; mixed arrival/edit
+payloads return 400. Both routes write location, status, receiver and receipt time atomically.
+Missing/foreign/wrong-branch/deleted records return 404; already-received/progressed/confirmed
+records and concurrent repeats return 409. A stale consignment item or invalid bulk member rolls
+back all receipt changes. See [Arrival consistency](PARCEL_OPERATIONS.md#pickup-location-and-arrival-consistency).
 
 `PATCH /v1/self-service/drafts/:id/customers` requires `CanCompleteSelfServiceBookings`,
 company/branch scope, `sender`/`receiver` (`fullname`, `phone`, nullable/optional `phone2`)

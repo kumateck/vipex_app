@@ -32,6 +32,9 @@ export function SelfServiceDraftComplete() {
     destinationBranchOptions,
     locationOptions,
     isLoadingLocations,
+    locationsFailed,
+    locationError,
+    retryLocations,
     locationPlaceholder,
     paymentResponsibility,
     parcelChargeValue,
@@ -160,7 +163,21 @@ export function SelfServiceDraftComplete() {
             </CardContent>
           </Card>
 
-          <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+          {locationError ? (
+            <p role="alert" className="text-sm text-destructive">
+              {locationError}
+            </p>
+          ) : null}
+          {locationsFailed ? (
+            <Button type="button" variant="outline" onClick={() => void retryLocations()}>
+              Retry pickup locations
+            </Button>
+          ) : null}
+          <Button
+            type="submit"
+            className="w-full gap-2"
+            disabled={isSubmitting || Boolean(locationError)}
+          >
             {isSubmitting ? <Spinner className="h-4 w-4" /> : null}
             {isSubmitting ? 'Completing...' : 'Complete Booking'}
           </Button>

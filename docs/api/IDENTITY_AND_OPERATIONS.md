@@ -274,6 +274,16 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   parcels as arrived. The body contains only unique `parcelIds`; company, branch, and receiving user
   are taken from authentication. Any missing, out-of-scope, deleted, already-received, non-transit,
   or concurrently changed parcel rejects the entire batch.
+  Pickup locations are resolved/validated inside the same transaction; a missing location uses
+  the destination's only receiving location, while ambiguous/disabled locations reject the batch.
+- `POST /shipments/parcels/:id/mark-received`: require `CanReadParcelIncoming` or
+  `CanReadParcelScan`. Optional `receivedBy` is overridden by the authenticated user;
+  optional `receivedAt` is an ISO timestamp and optional status must be 3. Return `{ id, receivedAt }`.
+  Only unreceived, undeleted/unconfirmed In Transit parcels at that user's current company and
+  destination branch are eligible. Status-only legacy `PATCH /shipments/parcels/:id` with status 3
+  follows the same permission, scope, location and receipt checks; mixed edits are rejected.
+  Receipt writes are atomic; repeat/progressed requests return 409 and cannot regress pickup or
+  delivery. Consignment receiving shares the guard and rolls back its item update on failure.
 - `GET /shipments/parcels/delivery-reversal-candidates`: list office- and home-delivered parcels
   for the authenticated company and destination branch, with search and pagination. Requires
   `CanReverseParcelDelivery`.

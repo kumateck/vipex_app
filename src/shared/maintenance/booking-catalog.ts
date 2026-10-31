@@ -9,6 +9,26 @@ const booking = [
 ];
 export const BOOKING_MAINTENANCE_SCRIPTS: MaintenanceScript[] = [
   {
+    id: 'repair-parcel-receiving-workflow',
+    title: 'Repair parcel receiving workflow',
+    kind: 'repair',
+    fields: [
+      ...booking,
+      {
+        name: 'pickupLocationId',
+        label: 'Pickup location ID',
+        required: false,
+        description:
+          'Leave empty to use the destination’s only receiving location. If several exist, preview lists their IDs so you can choose the correct one.',
+      },
+    ],
+    description:
+      'Fill a missing pickup location or restore an already-called parcel that was moved from Awaiting Pickup back to Arrived at Destination. Caller assignment and call history are retained.',
+    confirmation:
+      'I verified the pickup location and confirm this parcel is still at the destination awaiting collection.',
+    sourceFiles: ['src/server/features/maintenance/receiving-workflow/repair.ts'],
+  },
+  {
     id: 'check-parcel-booking-search',
     title: 'Check parcel booking search',
     kind: 'inspection',

@@ -28,7 +28,7 @@ export type SelfServiceDraft = {
 export type CompleteSelfServiceDraftInput = {
   id: string;
   destinationId: string;
-  pickupLocationId?: string | null;
+  pickupLocationId: string;
   parcelDetails: string;
   chargeCedis: number | string;
   chargeAgentUserId?: string | null;

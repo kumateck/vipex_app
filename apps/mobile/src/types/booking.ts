@@ -24,7 +24,7 @@ export type CreateBookingWithParcelsInput = {
   completeToBePaid?: boolean;
   parcels: Array<{
     destinationId: string;
-    pickupLocationId?: string | null;
+    pickupLocationId: string;
     receiverId: string;
     status: number;
     parcelDetails: string;
