@@ -4,7 +4,7 @@ Base URL: `/v1`
 
 System Admin maintenance endpoints:
 
-- `GET /maintenance/scripts`: all nine supported booking-code operations, descriptors,
+- `GET /maintenance/scripts`: all ten supported booking-code operations, descriptors,
   allowed fields, operation-specific repair confirmation text and source references.
 - `GET /maintenance/runs`: latest 20 company-scoped runs, status and results.
 - `POST /maintenance/runs`: `{ operationId, params, mode: "preview" | "execute",
@@ -12,8 +12,15 @@ previewRunId?, confirmNoCashReceived?, confirmRepair? }`.
   IDs: `trace-credit-parcel`, `repair-credit-print-payment`, `scan-credit-conflicts`,
   `check-parcel-booking-search`, `inspect-cleared-delivery-fee`,
   `backfill-parcel-customer-names`, `restore-reversed-parcel-balance`,
-  `fix-reversed-booking-to-be-paid`, `repair-parcel-financial-state`.
+  `fix-reversed-booking-to-be-paid`, `repair-parcel-financial-state`,
+  `repair-parcel-receiving-workflow`.
   Operations accept `{ bookingCode }`; conflicts may use `{}` for the company scan.
+  Receiving workflow also accepts optional `pickupLocationId`: without it a missing pickup
+  location can be filled only when exactly one receiving location exists at the destination.
+  Existing locations are retained. A called Arrived parcel returns to Awaiting Pickup only with
+  the latest status audit proving a pickup-to-arrived regression at/after the call. Deleted,
+  confirmed, progressed or active home-delivery parcels are blocked. Caller/call history and
+  receipt timestamps are preserved; no caller is assigned automatically.
   New adapters accept case-insensitive booking/tracking codes and reject ambiguous matches.
   Execute requires a successful same-admin/company preview from the last ten minutes and an
   unchanged plan. Credit-print repair requires `confirmNoCashReceived: true`; other repairs
@@ -284,6 +291,22 @@ desktop use this endpoint for the Returns to Source page; mobile has no list pag
 parcel source or destination is that branch. Requested cases may be approved, then executed,
 after destination arrival as long as the parcel has not been delivered to the customer.
 
+`GET /v1/shipments/parcels/reconciliation-cases/eligible-sessions/:parcelId` requires
+`CanRequestParcelReconciliation` and returns the parcel creator's cashier sessions at the
+parcel's source branch that either are the parcel's recorded cashier session or were open
+(actual start/end, falling back to scheduled) when the parcel was created. A parcel from
+another company returns 404; a parcel with no creator returns an empty list. Before the
+2026-10-29 fix, this endpoint (and creating a case, which reuses the same query) returned
+HTTP 500 for every parcel with a recorded creator because the creation time was bound as a raw `Date`. Web and
+desktop use it in the reconciliation request dialog; mobile does not.
+
+Raw SQL rule: when a raw `sql` expression (not a plain column) is compared with a `Date`, bind
+the value as a string (`date.toISOString()`) or with `sql.param(date, timestampColumn)`. The
+Drizzle postgres-js driver disables postgres' own Date serializer, so a raw `Date` fails with
+“The "string" argument must be of type string … Received an instance of Date”. The daily
+parcel audit, customer credit aging detail, and fleet dispatch ops performance queries were
+fixed for the same reason on 2026-10-29.
+
 Parcel creation stores the sender, receiver, and optional second receiver names on the parcel
 alongside their linked customer IDs. Existing parcel list/detail, consignment, delivery, and
 report responses return these stored names. A later customer profile rename leaves older
@@ -320,10 +343,24 @@ the secondary phone and other active customers' primary/secondary phones. Migrat
 must be applied before deploying this endpoint. Standard/CRM customer PATCH behavior remains
 profile-only. See [Parcel Operations](PARCEL_OPERATIONS.md#correcting-a-receiver-from-a-parcel).
 
+Parcel Assignment and Call Outcome queues are scoped to the authenticated company and destination
+branch, narrowed to the user's assigned pickup location when present. A branch user without a
+location can access all locations in that branch. `/v1/shipments/parcels/assignment-staff` follows
+the same hierarchy for active officers. `/call-center`, `/call-center/assigned`, and general parcel
+searches with `assignedToCurrentUser=true` enforce this scope on the server; assigned searches
+override supplied company, destination, and location filters. Call Outcome retains its current-user
+assignment requirement. Single/bulk assignment validates both parcel and target officer scope;
+bulk assignment accepts 1–200 unique IDs and is atomic. Out-of-scope parcels return 404, invalid
+officers 400, missing queue context 403, and invalid request schemas 422. See
+[Parcel Operations](PARCEL_OPERATIONS.md#parcel-assignment-and-call-outcome-location-scope) for
+client behavior and QA scenarios.
+
 Call-center clients should use `POST /v1/shipments/parcels/:id/call-center/contact` to record
 a call outcome. For older clients, `PATCH /v1/shipments/parcels/:id` with exactly `status` 5 or
 7 and `secondReceiverId` is handled as the equivalent call outcome. It requires call-center
-permission and an assignment to the caller at the destination branch. The call time is saved,
+permission and an assignment to the caller at the destination branch and assigned location,
+when present. Single/bulk call outcomes and main-receiver changes enforce the same scope.
+The call time is saved,
 the action is audited, and the parcel leaves the active calling queue. Other PATCH payloads
 remain ordinary parcel updates.
 
@@ -467,6 +504,26 @@ Selected booking source/destination locations are validated in the booking trans
 invalid scope/deleted locations or disabled required services fail with HTTP 400 before
 creation. Migration `0082_location_service_capabilities` must be applied first. See
 [Location services](PLATFORM_AND_ACCESS.md#location-sending-and-receiving-services).
+
+Booking/standalone creation and explicit destination/pickup-location edits resolve an omitted
+pickup location to the destination's sole active receiving location. Multiple receiving locations
+require a choice (400). Foreign/deleted/non-receiving choices return 400. A branch without active
+locations retains branch-level receiving; active locations with receiving disabled block the request.
+This validation also runs inside single/bulk/consignment receipt transactions for legacy parcels.
+Current mobile booking and web/desktop/mobile self-booking completion clients require a nonempty,
+validated pickup location even for branches without configured locations. They block loading,
+failed/empty lists and stale choices; their frontend input types require a string location ID.
+
+`POST /shipments/parcels/:id/mark-received` accepts optional `{ receivedBy, receivedAt, status }`;
+`receivedBy` is ignored in favor of the authenticated user, and status must be omitted or 3.
+It returns `{ id, receivedAt }`. It requires `CanReadParcelIncoming` or `CanReadParcelScan`, the
+current receiving user's company/destination branch, status 2, no stored receipt timestamp and
+an undeleted/unconfirmed parcel. Status-only `PATCH /shipments/parcels/:id` with `{ status: 3 }`
+uses the same operation and receiving permissions for old mobile clients; mixed arrival/edit
+payloads return 400. Both routes write location, status, receiver and receipt time atomically.
+Missing/foreign/wrong-branch/deleted records return 404; already-received/progressed/confirmed
+records and concurrent repeats return 409. A stale consignment item or invalid bulk member rolls
+back all receipt changes. See [Arrival consistency](PARCEL_OPERATIONS.md#pickup-location-and-arrival-consistency).
 
 `PATCH /v1/self-service/drafts/:id/customers` requires `CanCompleteSelfServiceBookings`,
 company/branch scope, `sender`/`receiver` (`fullname`, `phone`, nullable/optional `phone2`)

@@ -134,6 +134,41 @@ disabled. When an active pickup queue exists, the server mirrors the assignment 
 `pickup_queues.picker_staff_id` for compatibility. The server enforces these permissions
 independently of sidebar visibility.
 
+### Parcel Assignment and Call Outcome location scope
+
+Parcel Assignment and Call Outcome use the signed-in user's company and destination branch.
+When the user has an assigned location, parcel queues include only parcels whose pickup
+location matches it, and assignment officer options include only active users at that same
+branch and location. Parcels or officers without a location are excluded from a location-scoped
+session. When the user has a branch but no location, all pickup locations in that branch are
+available, including parcels and active officers with no location. Call Outcome continues to
+show only parcels assigned to the signed-in call agent; the branch fallback does not expose
+other agents' work. Search, pagination, payment filters, and **Include saved outcomes** retain
+this scope. Missing company or branch context rejects queue access; officer options are empty.
+
+The server applies this scope to `/shipments/parcels/call-center`, `/call-center/assigned`, and
+general parcel searches with `assignedToCurrentUser=true`, overriding caller-supplied company,
+destination branch, and location filters for those assigned searches. Assignment saves validate
+both the parcel's pickup location and the target officer's active company/branch/location.
+Single and bulk call saves, legacy call-outcome PATCH requests, and main-receiver changes also
+check the authenticated location. Out-of-scope parcels return 404; an unavailable or inactive
+assignment officer returns 400. Bulk assignment validates the whole selection and commits it in
+one transaction, so a mixed-location or otherwise invalid selection makes no partial assignments.
+Duplicate IDs or selections outside 1–200 parcels are rejected.
+
+These rules apply to web and Electron desktop pages and to mobile clients using the assigned
+call-center queue and outcome endpoints. Existing assignments are not rewritten automatically;
+a branch user without a location can review and correct a previous cross-location assignment.
+No schema migration is required.
+
+QA scenarios: sign in at HAK and verify Anloga Junction parcels and officers are excluded;
+try single and mixed-location bulk assignments directly and verify no changes persist; repeat
+single/bulk outcomes and main-receiver changes on an old misassigned parcel; verify same-location
+saves succeed. Sign in with a branch and no location and verify every location in that branch
+is available, other branches are excluded, and inactive officers remain unavailable. Repeat
+search, pagination, and saved-outcome filtering. Automated coverage:
+`call-center-scope.test.ts` and `tests/server/call-center-location-scope.routes.spec.ts`.
+
 ### Call-center assignment schema compatibility
 
 The application stores call-center assignments in the nullable
@@ -538,6 +573,52 @@ use the existing routed A4 print flow; mobile has no previous-consignment reprin
 ## Consignment Receiving
 
 Receiving supports scan-based parcel identification, completeness tracking, discrepancy recording, and confirmation. Staff can identify missing or unexpected parcels before completing the receipt.
+
+### Pickup location and arrival consistency
+
+Booking creation resolves destination pickup locations on the server inside the booking transaction.
+An omitted location becomes the destination's only active receiving location; several eligible
+locations require an explicit selection. A supplied location must belong to the parcel's company
+and destination and be active and receiving-enabled. A branch with no configured active locations
+retains branch-level receiving; a branch with active locations but none receiving-enabled is
+blocked. Standalone parcel creation and explicit destination/location edits use the same resolution.
+Mobile booking and web/desktop/mobile self-booking completion always require a valid pickup
+location in the frontend. A sole location is auto-selected; several require a choice. Loading,
+failed/empty lists and stale selections block submission; a failed lookup offers retry. The mobile
+self-booking draft editor has the same requirement. Changing the destination hides stale options.
+The backend's branch-level compatibility for old clients does not relax this frontend requirement.
+
+Single, bulk and consignment receiving share one transaction-bound arrival operation. It locks
+parcel rows, requires an undeleted, unconfirmed **In Transit** parcel with no stored receipt time,
+resolves/validates the pickup location, and writes **Arrived at Destination**, `receivedBy` and
+`receivedAt` together. Receiving at another branch/company returns 404. Already-received or
+progressed parcels return 409, including legacy Awaiting Pickup parcels with an empty receipt
+timestamp. Concurrent scans cannot overwrite a receipt or move calling/pickup/delivery backwards.
+An invalid member rejects the whole bulk request; consignment item arrival rolls back with its
+parcel update. Missing/ambiguous/disabled receiving locations return 400 without partial receipt.
+
+Mobile **Confirm Arrived** uses `/shipments/parcels/:id/mark-received` and is disabled after a
+parcel leaves the unreceived In Transit state. The server derives the receiver from authentication,
+ignoring an older client's `receivedBy` value. Older mobile status-only `PATCH` arrival requests
+are routed through the same receiving operation and permission checks. Arrival cannot be combined
+with other edits in that legacy PATCH; save edits separately. These server protections apply to
+web, desktop and older mobile clients after backend deployment; the new mobile button behavior
+requires the updated mobile bundle. No schema migration is needed.
+
+These changes prevent new missing-location arrivals and repeat-arrival regressions. They do not
+bulk-rewrite historical parcels or infer missing historical receipt timestamps. Use the reviewed
+[maintenance repair](SYSTEM_MAINTENANCE.md#receiving-workflow-repair) for existing affected records.
+Restoring a called parcel to Awaiting Pickup retains its call history; it should appear in Shelf
+Picker Update rather than the default uncalled queue. The queue location/assignment rules remain.
+
+Regression QA: create a booking without a location at a one-location destination; require a choice
+at a multi-location destination; reject foreign/deleted/sending-only locations. Receive using web,
+new mobile POST and old mobile PATCH; verify location, receiver and timestamp together. Rescan an
+Awaiting Pickup parcel with a call marker and NULL receipt timestamp and verify 409 with no changes.
+Repeat via a stale consignment item and a mixed bulk selection; verify complete rollback. Run
+concurrent receipt requests and verify only one succeeds. Automated integration coverage is
+`parcel-receiving-workflow.spec.ts` using only the empty local `vipex_receiving_workflow_test`
+database with `RECEIVING_WORKFLOW_TEST=1`; its fixture refuses remote/other databases.
 
 The web **In Transit (Receiving Branch)** list has optional Send Date, Source Branch, and
 Consignment Number filters. Apply Filters combines them with the destination branch and in-transit

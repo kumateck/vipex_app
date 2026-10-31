@@ -3,6 +3,7 @@ import { BranchType } from '@mobile/constants/branch';
 import { useParcelBranchOptions } from '@mobile/features/parcel-create/hooks';
 import { useAuth } from '@mobile/providers/auth-provider';
 import type { SelfServiceDraft, UpdateSelfServiceDraftInput } from '../types';
+import { getRequiredPickupLocationError } from '@/shared/shipments/pickup-location';
 import {
   getSelfServiceContactError,
   getSelfServiceParcelError,
@@ -29,12 +30,26 @@ export function useSelfServiceDraftEditor(
     receiver: toForm(draft.receiverFullname, draft.receiverPhone, draft.receiverPhone2),
   }));
   const [destinationBranchId, setDestinationBranchId] = useState(draft.destinationBranchId ?? '');
-  const [destinationLocationId, setDestinationLocationId] = useState(
+  const [selectedLocationId, setDestinationLocationId] = useState(
     draft.destinationLocationId ?? '',
   );
   const [parcelContent, setParcelContent] = useState(draft.parcelContent);
   const [parcelValue, setParcelValue] = useState(String(draft.parcelValuePsw / 100));
   const options = useParcelBranchOptions(companyId, destinationBranchId, true, false);
+  const destinationLocationId = options.locationOptions.some(
+    (location) => location.id === selectedLocationId,
+  )
+    ? selectedLocationId
+    : options.locationOptions.length === 1
+      ? options.locationOptions[0]!.id
+      : '';
+  const locationError = getRequiredPickupLocationError({
+    destinationId: destinationBranchId,
+    pickupLocationId: destinationLocationId,
+    options: options.locationOptions,
+    loading: options.isLoadingLocations,
+    failed: options.locationsFailed,
+  });
   // Same rule the server enforces: not the source branch and not head office.
   const branchOptions = useMemo(
     () =>
@@ -51,7 +66,9 @@ export function useSelfServiceDraftEditor(
   const errors = {
     sender: getSelfServiceContactError(contacts.sender),
     receiver: getSelfServiceContactError(contacts.receiver),
-    parcel: getSelfServiceParcelError({ destinationBranchId, parcelContent, parcelValue }),
+    parcel:
+      getSelfServiceParcelError({ destinationBranchId, parcelContent, parcelValue }) ??
+      locationError,
   };
   const valid = !errors.sender && !errors.receiver && !errors.parcel;
 
@@ -71,7 +88,7 @@ export function useSelfServiceDraftEditor(
       sender: toSelfServiceContactInput(contacts.sender),
       receiver: toSelfServiceContactInput(contacts.receiver),
       destinationBranchId,
-      destinationLocationId: destinationLocationId || null,
+      destinationLocationId,
       parcelContent: parcelContent.trim(),
       parcelValueCedis: parcelValue.replace(/,/g, '').trim(),
     });
@@ -90,6 +107,8 @@ export function useSelfServiceDraftEditor(
       onLocationChange: setDestinationLocationId,
       locationOptions,
       isLoadingLocations: options.isLoadingLocations,
+      locationsFailed: options.locationsFailed,
+      retryLocations: options.retryLocations,
     },
     parcel: {
       content: parcelContent,

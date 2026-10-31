@@ -18,9 +18,30 @@ const baseProps = {
   destinationLocationName: 'Accra',
   qrValue: 'QR-TRACKING-CODE',
   formatMoney: (amount: number) => `GHS ${amount.toFixed(2)}`,
+  printedByName: 'PATIENCE FRIMPONG',
 };
 
 describe('ThermalStickerTemplate', () => {
+  test.each(['portrait', 'landscape'] as const)(
+    'prints complaint contact, cashier and issue time under the %s wordmark',
+    (orientation) => {
+      const markup = renderToStaticMarkup(
+        <ThermalStickerTemplate
+          {...baseProps}
+          orientation={orientation}
+          issuedAtLabel="31 Oct 2026 12:42"
+          printedByName={'Victoria <Cashier>'}
+        />,
+      );
+      expect(markup).toContain('Complaints: +233 27 501 9133');
+      expect(markup).toContain('Cashier: Victoria &lt;Cashier&gt;');
+      expect(markup).toContain('Date: 31 Oct 2026 12:42');
+      expect(markup.indexOf('data-sticker-print-details')).toBeGreaterThan(
+        markup.indexOf('data-sticker-brand'),
+      );
+      expect(markup).not.toContain('<Cashier>');
+    },
+  );
   test.each(['portrait', 'landscape'] as const)(
     'only renders known payment states in %s labels',
     (orientation) => {

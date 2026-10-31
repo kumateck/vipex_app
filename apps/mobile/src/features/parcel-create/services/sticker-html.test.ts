@@ -17,6 +17,17 @@ const sticker: MobileSticker = {
 };
 
 describe('mobile to-be-paid sticker', () => {
+  test('prints complaint and issuer details on every copy with escaped staff names', () => {
+    const html = buildMobileStickerHtml({
+      ...sticker,
+      printedByName: '<Cashier & Co>',
+      issuedAtLabel: '31 Oct 2026 12:42',
+    });
+    expect(html.match(/Complaints: \+233 27 501 9133/g)).toHaveLength(2);
+    expect(html.match(/Cashier: &lt;Cashier &amp; Co&gt;/g)).toHaveLength(2);
+    expect(html.match(/Date: 31 Oct 2026 12:42/g)).toHaveLength(2);
+    expect(html).not.toContain('<Cashier & Co>');
+  });
   test.each(['PENDING', 'UNPAID', 'unknown', undefined])(
     'rejects unverified state %s before producing any HTML',
     (status) => {

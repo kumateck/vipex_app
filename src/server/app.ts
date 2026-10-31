@@ -5,6 +5,7 @@ import { requestId } from './middlewares/requestId';
 import { logger } from './middlewares/logger';
 import { auditTrail } from './middlewares/audit-trail';
 import { errorHandler } from './middlewares/error-handler';
+import { errorMonitorPlugin } from './services/observability/error-monitor/plugin';
 import { rateLimit } from './middlewares/rate-limit';
 import { health } from './routes/health';
 import { api } from './routes';
@@ -85,6 +86,7 @@ export const app = new Elysia()
   .use(logger)
   .use(auditTrail)
   .use(errorHandler)
+  .use(errorMonitorPlugin)
   .use(health)
   .use(publicTrackingRoutes)
   .use(publicContactRoutes)

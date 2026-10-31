@@ -18,6 +18,8 @@ export function ThermalStickerLandscapeTemplate({
   parcelDetails,
   statusLabel,
   duplicate,
+  printedByName,
+  issuedAtLabel,
   statusAmountLabel,
   hasToBePaid,
   qrValue,
@@ -38,7 +40,11 @@ export function ThermalStickerLandscapeTemplate({
         gap: '2.5mm',
       }}
     >
-      <ThermalStickerHeaderPanel duplicate={duplicate} />
+      <ThermalStickerHeaderPanel
+        duplicate={duplicate}
+        printedByName={printedByName}
+        issuedAtLabel={issuedAtLabel}
+      />
 
       <main
         style={{

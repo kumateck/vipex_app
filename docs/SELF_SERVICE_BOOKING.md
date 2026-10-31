@@ -145,7 +145,12 @@ Authenticated agents use permission-controlled routes to:
    The completing officer can change the draft's pickup location to any active receiving location
    at the destination branch while entering the charge. The web form shows the location selector
    with destination details; mobile shows it beside the charge. Changing the destination branch
-   defaults to that branch's first receiving location when available.
+   clears the old selection and auto-selects a sole receiving location. With several options,
+   staff must select a valid location. Pickup location is required on web, desktop and mobile
+   completion; loading, failed/empty location lists, and stale/invalid choices block completion.
+   The web Complete Booking button and submit handler both enforce this requirement. Failed
+   location lookups offer **Retry pickup locations**. Completion requests always send the
+   selected location ID, never an empty or NULL fallback.
    Select **Agent who charged the parcel** from active staff at the source branch. This is an
    explicit required selection on web, desktop, and mobile; it may differ from the completing
    officer. The resulting parcel stores `chargeAgentUserId`, separate from `createdBy` and
@@ -241,7 +246,7 @@ After opening (and therefore claiming) a draft, a mobile completing agent can ta
 details** to correct everything the customer entered: sender and receiver name, phone and backup
 phone, destination branch, pickup location, parcel contents and declared value. Destination
 options exclude the source branch and head office; changing the branch clears the location. The
-form validates names, ten-digit phones, a destination branch, non-blank contents and a
+form validates names, ten-digit phones, a destination branch and receiving pickup location, non-blank contents and a
 non-negative value before enabling **Save booking details**. Saving refreshes the completion
 summary and queue; charge, charge agent, CS and payment choices already entered on the
 completion form are kept. The CS switch remains on the completion form.

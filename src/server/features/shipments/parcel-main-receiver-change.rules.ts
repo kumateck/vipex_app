@@ -1,3 +1,4 @@
+import { isParcelInCallCenterScope } from './call-center-scope';
 import { ParcelStatus } from '@/db/schemas';
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 
@@ -18,6 +19,7 @@ export function normalizeMainReceiverPhone(value: string) {
 type Candidate = {
   companyId: string;
   destinationId: string;
+  pickupLocationId?: string | null;
   callCenterAssignedToUserId: string | null;
   isDeleted: boolean;
   status: number;
@@ -26,12 +28,11 @@ type Candidate = {
 
 export function assertMainReceiverChangeCandidate<T extends Candidate>(
   parcel: T | null | undefined,
-  context: { companyId: string; branchId: string; actorUserId: string },
+  context: { companyId: string; branchId: string; locationId?: string | null; actorUserId: string },
 ): asserts parcel is T {
   if (
     !parcel ||
-    parcel.companyId !== context.companyId ||
-    parcel.destinationId !== context.branchId ||
+    !isParcelInCallCenterScope(parcel, context) ||
     parcel.callCenterAssignedToUserId !== context.actorUserId ||
     parcel.isDeleted
   ) {

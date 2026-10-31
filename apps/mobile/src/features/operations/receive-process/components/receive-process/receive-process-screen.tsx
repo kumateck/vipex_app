@@ -21,6 +21,7 @@ export function ReceiveProcessScreen() {
   const {
     canView,
     canEdit,
+    canConfirmArrival,
     router,
     busy,
     parcel,
@@ -166,7 +167,7 @@ export function ReceiveProcessScreen() {
           <AppButton
             title={arriveBusy ? 'Updating...' : 'Confirm Arrived'}
             onPress={() => void markArrived()}
-            disabled={busy || saveBusy || arriveBusy || !canEdit}
+            disabled={busy || saveBusy || arriveBusy || !canEdit || !canConfirmArrival}
             variant="secondary"
           />
         </View>
