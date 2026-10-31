@@ -3,8 +3,8 @@
 `/settings/maintenance` and `/v1/maintenance/*` are restricted to the **System Admin role**, not
 a grantable permission. Navigation and page guard use the role name; each API call rechecks the
 active user and non-deleted role in the database and scopes operations/history to that company.
-The same restriction applies to all nine booking-code maintenance operations, including name
-backfill, reversal/payment/balance repairs and search/delivery-fee inspections. Execution requires
+The same restriction applies to all ten booking-code maintenance operations, including name
+backfill, receiving-workflow/location repair, reversal/payment/balance repairs and search/delivery-fee inspections. Execution requires
 a fresh preview and the operation-specific confirmation. There is no additional module gate or
 mobile-native page. See [System maintenance](SYSTEM_MAINTENANCE.md).
 
@@ -101,6 +101,14 @@ Saved matching customer profile changes additionally require `CanUpdateCustomers
 Edits are company/branch scoped and reject another officer's claim or a stale draft.
 No page override changes. Location capability controls retain the existing location
 create/update/read permissions. Receiving quota exemptions do not bypass any route guard.
+
+Arrival confirmation through `POST /shipments/parcels/:id/mark-received` or the legacy
+status-3 `PATCH /shipments/parcels/:id` requires `CanReadParcelIncoming` or `CanReadParcelScan`;
+generic parcel-edit or call-center permissions alone do not grant arrival access. The receiver is
+the authenticated user at the parcel's destination branch/company, not a supplied `receivedBy`.
+Only undeleted/unconfirmed, unreceived In Transit parcels are eligible. Bulk receiving keeps
+`CanReadParcelIncoming`; consignment receiving retains its existing permission with the same
+parcel state/location guards. See [Arrival consistency](PARCEL_OPERATIONS.md#pickup-location-and-arrival-consistency).
 
 Delivery Cashier's upcoming handovers section uses `CanManageParcelSecondReceiver` for
 `PUT/DELETE /shipments/parcels/:id/second-receiver`, scoped to the destination branch. The

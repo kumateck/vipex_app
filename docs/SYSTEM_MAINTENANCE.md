@@ -16,20 +16,21 @@ No schema migration is required.
 
 ## Available scripts
 
-The catalog contains **nine operations**, covering all currently identified booking-code
+The catalog contains **ten operations**, covering all currently identified booking-code
 find/repair scripts plus the parcel financial-state repair already available in Operations.
 
-| Operation ID                      | Script shown in the UI                  | Parameters                     | Behavior                                                                                                     |
-| --------------------------------- | --------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `trace-credit-parcel`             | Trace parcel payments                   | Booking/tracking code          | Read parcel state, payments, credit, tax and recent audit.                                                   |
-| `repair-credit-print-payment`     | Repair credit payment from printing     | Booking code                   | Void one erroneous sender cash principal payment, exclude unfiled tax and retain credit.                     |
-| `scan-credit-conflicts`           | Find credit and cash conflicts          | Optional booking/tracking code | Inspect one parcel or scan up to 200 company candidates with a total count.                                  |
-| `check-parcel-booking-search`     | Check parcel booking search             | Booking/tracking code          | Run actual source/destination branch search queries and report counts, target match and timings.             |
-| `inspect-cleared-delivery-fee`    | Find cleared delivery fees              | Booking/tracking code          | Read returned doorstep deliveries, cleared fees, approved fee values, fee payments and return evidence.      |
-| `backfill-parcel-customer-names`  | Repair missing parcel customer names    | Booking/tracking code          | Fill NULL name snapshots from company-scoped customer records; retain existing names.                        |
-| `restore-reversed-parcel-balance` | Restore balance after delivery reversal | Booking/tracking code          | Restore receiver balance after recorded delivery reversal, retaining every payment.                          |
-| `fix-reversed-booking-to-be-paid` | Repair reversed recipient payments      | Booking/tracking code          | Void supported reversed/refunded recipient cash principal, exclude unfiled tax and restore receiver balance. |
-| `repair-parcel-financial-state`   | Repair parcel To Be Paid balance        | Booking/tracking code          | Recalculate receiver balance from charge minus all active principal; retain charge and payments.             |
+| Operation ID                       | Script shown in the UI                  | Parameters                                         | Behavior                                                                                                     |
+| ---------------------------------- | --------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `trace-credit-parcel`              | Trace parcel payments                   | Booking/tracking code                              | Read parcel state, payments, credit, tax and recent audit.                                                   |
+| `repair-credit-print-payment`      | Repair credit payment from printing     | Booking code                                       | Void one erroneous sender cash principal payment, exclude unfiled tax and retain credit.                     |
+| `scan-credit-conflicts`            | Find credit and cash conflicts          | Optional booking/tracking code                     | Inspect one parcel or scan up to 200 company candidates with a total count.                                  |
+| `check-parcel-booking-search`      | Check parcel booking search             | Booking/tracking code                              | Run actual source/destination branch search queries and report counts, target match and timings.             |
+| `inspect-cleared-delivery-fee`     | Find cleared delivery fees              | Booking/tracking code                              | Read returned doorstep deliveries, cleared fees, approved fee values, fee payments and return evidence.      |
+| `backfill-parcel-customer-names`   | Repair missing parcel customer names    | Booking/tracking code                              | Fill NULL name snapshots from company-scoped customer records; retain existing names.                        |
+| `restore-reversed-parcel-balance`  | Restore balance after delivery reversal | Booking/tracking code                              | Restore receiver balance after recorded delivery reversal, retaining every payment.                          |
+| `fix-reversed-booking-to-be-paid`  | Repair reversed recipient payments      | Booking/tracking code                              | Void supported reversed/refunded recipient cash principal, exclude unfiled tax and restore receiver balance. |
+| `repair-parcel-financial-state`    | Repair parcel To Be Paid balance        | Booking/tracking code                              | Recalculate receiver balance from charge minus all active principal; retain charge and payments.             |
+| `repair-parcel-receiving-workflow` | Repair parcel receiving workflow        | Booking/tracking code, optional pickup location ID | Fill a missing destination pickup location and/or restore a proven called-pickup status regression.          |
 
 Source coverage is recorded in the catalog and checked by `maintenance-catalog.spec.ts`:
 
@@ -41,6 +42,8 @@ Source coverage is recorded in the catalog and checked by `maintenance-catalog.s
   generalized from the historical fixed code to the supplied company-scoped code.
 - Recipient-payment repair: `scripts/fix-reversed-booking-to-be-paid.ts`.
 - Operations financial repair: `src/server/features/shipments/parcel-financial-repair.service.ts`.
+- Receiving workflow repair: `src/server/features/maintenance/receiving-workflow/repair.ts`,
+  generalized from the missing-location and called-pickup-regression repairs investigated on 2026-10-31.
 
 CLI credit trace/repair wrappers share their implementation with the runtime tool. Other
 operations use transaction-bound adapters with the additional restrictions below; they do not
@@ -73,6 +76,42 @@ use a unique tracking code. Foreign/missing parcels return 404 without exposing 
 
 No changes are applied when the preview is blocked or reports an already-correct state.
 
+### Receiving workflow repair
+
+Select **Repair parcel receiving workflow** and enter the booking or tracking code. This covers
+two independent cases and can apply both changes in one transaction:
+
+- A parcel with no pickup location gets the destination branch's sole active, receiving-enabled
+  location. If several or no eligible locations exist, the preview is blocked and lists
+  `availableLocations` in record details. Enter the correct optional **Pickup location ID** and
+  preview again. The server validates the supplied ID against the parcel's company and destination;
+  an existing pickup location is never replaced. Circle is not hardcoded.
+- An **Arrived at Destination** parcel with a saved call marker is restored to **Awaiting Pickup**
+  only when its most recent `PARCEL_UPDATED` status audit records **Awaiting Pickup → Arrived at
+  Destination** at or after that call. Missing evidence, another latest status transition, or a
+  regression before the call blocks the repair. An uncalled arrived parcel keeps its status.
+
+Only Arrived at Destination and Awaiting Pickup parcels are supported. Deleted/confirmed parcels,
+completed delivery or rider handover evidence, and non-returned home-delivery records block repair.
+The admin must confirm the previewed location and that the parcel is still awaiting collection.
+Caller assignment, call marker, receipt timestamp, payments, and shelf-picker assignments are
+preserved. A missing stored receipt timestamp remains a known limitation; this operation does not
+infer one from the audit fallback displayed by parcel search. New arrival and booking paths now
+prevent these inconsistencies; see [arrival consistency](PARCEL_OPERATIONS.md#pickup-location-and-arrival-consistency).
+
+Filling the correct location restores eligibility for that location's Call Center Assignment
+search when the parcel is uncalled. It does not assign a caller. Restoring Awaiting Pickup restores
+Shelf Picker Update search eligibility while retaining the called marker, so the parcel remains
+excluded from the default uncalled assignment/calling queues. In Transit still excludes arrived
+and awaiting-pickup parcels. Repeated previews of repaired records report no supported changes.
+
+Execution uses the existing company/admin-bound preview, confirmation, fingerprint, serializable
+transaction and preview-consumption rules. Changes to the parcel, caller/call marker, eligible
+locations, delivery evidence or latest status audit invalidate the preview. The parcel is locked
+and `PARCEL_RECEIVING_WORKFLOW_REPAIRED` records the admin, before/after state, exact changes and
+supporting evidence atomically with the repair. Audit failure rolls everything back. The console
+is available on web and desktop; repaired data is shared with mobile, which has no maintenance UI.
+
 ## Workflow
 
 1. Select a script. Enter its parameters, if any.
@@ -82,7 +121,7 @@ No changes are applied when the preview is blocked or reports an already-correct
    **Execute repair**. Credit-print repairs still require explicit confirmation that no cash was received.
 5. Review the execution result and reprint the corrected parcel documents.
 
-The booking code is sufficient for a repair. The backend discovers the company-scoped parcel,
+For credit-print repair, the booking code is sufficient. The backend discovers the company-scoped parcel,
 matching cash payment, amount and sender credit charge. The logged-in System Admin supplies audit
 identity automatically. The original credit charge and operational parcel status are preserved.
 The repair retains the safeguards described in [Parcel Printing](PARCEL_PRINTING.md#credit-printing-and-historical-repair).
@@ -154,9 +193,18 @@ read-only inspections and audit rollback. Existing server integration tests requ
 `vipex_maintenance_test`. The fixture refuses other database names and remote hosts. Never run
 write tests against the configured production `DATABASE_URL`.
 
-Additional QA: confirm all nine entries and their booking-code inputs are visible on narrow and
+Additional QA: confirm all ten entries and their booking-code inputs are visible on narrow and
 wide screens; select each repair and check its confirmation text matches the operation. Enter
 another booking code after preview and verify execution is unavailable until previewed again.
 Inspect a cleared delivery fee without changing it. Test financial repairs with sender/recipient
 payments, a fully paid parcel, CREDIT, reversed delivery, filed tax and a missing customer name.
 Browser interaction remains a manual check when local browser automation is disabled.
+
+Receiving QA: preview a missing-location arrived parcel without modifying it; execute and verify
+its location-scoped assignment search. Preview a called pickup regression, execute, and verify
+Shelf Picker Update while preserving caller/call history. Test both repairs together; multiple,
+foreign, source-branch, deleted and non-receiving locations; missing/old/superseded regression
+evidence; delivered/deleted/progressed parcels; stale previews; repeat runs; and audit rollback.
+Automated cases live in `receiving-workflow/plan.test.ts` and the receiving cases in the isolated
+`maintenance-booking-operations.spec.ts` suite. Catalog/render tests verify the new operation,
+optional location input and confirmation through the existing maintenance page.

@@ -2,14 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from '@mobile/navigation/router-compat';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
-import { getParcelDetails, searchParcels, updateParcelStatus } from '@mobile/lib/api';
+import { getParcelDetails, searchParcels } from '@mobile/lib/api';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
 import type { ParcelFullDetails, ParcelSearchRow } from '@mobile/types/parcels';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { canMarkParcelArrived, canViewReceiveScreen } from '@mobile/lib/permissions';
 import { hapticError, hapticSuccess, hapticWarning } from '@mobile/lib/haptics';
 import { buildParcelInformationEdit } from '@/shared/shipments/parcel-information-edit';
-import { editIncomingParcelInformation } from '../services';
+import { editIncomingParcelInformation, receiveIncomingParcel } from '../services';
 import { PHONE_DIGITS, normalizePhoneDigits } from '../utils';
 
 export function useReceiveProcess() {
@@ -31,6 +31,7 @@ export function useReceiveProcess() {
   const [editParcelContent, setEditParcelContent] = useState('');
   const [editReceiverName, setEditReceiverName] = useState('');
   const [editReceiverPhone, setEditReceiverPhone] = useState('');
+  const canConfirmArrival = parcel?.status === ParcelStatus.IN_TRANSIT && !parcel.receivedAt;
 
   const loadParcel = useCallback(async () => {
     if (!parcelId || !companyId) return;
@@ -120,6 +121,14 @@ export function useReceiveProcess() {
 
   async function markArrived() {
     if (!parcelId || !parcel) return;
+    if (arriveBusy) return;
+    if (!canConfirmArrival) {
+      notifyError(
+        'Arrival unavailable',
+        'Only an unreceived In Transit parcel can be marked arrived.',
+      );
+      return;
+    }
     if (!canEdit) {
       notifyError('Permission denied', 'You do not have permission to confirm parcel arrival.');
       void hapticWarning();
@@ -127,9 +136,7 @@ export function useReceiveProcess() {
     }
     try {
       setArriveBusy(true);
-      await withAuth((token) =>
-        updateParcelStatus(token, parcelId, ParcelStatus.ARRIVED_AT_DESTINATION),
-      );
+      await withAuth((token) => receiveIncomingParcel(token, parcelId));
       notifySuccess(`Parcel ${parcel.bookingCode} marked ARRIVED_AT_DESTINATION.`);
       void hapticSuccess();
       router.replace('/(app)/receive');
@@ -147,6 +154,7 @@ export function useReceiveProcess() {
   return {
     canView,
     canEdit,
+    canConfirmArrival,
     router,
     busy,
     parcel,

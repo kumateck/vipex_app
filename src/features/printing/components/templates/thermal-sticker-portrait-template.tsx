@@ -19,6 +19,8 @@ export function ThermalStickerPortraitTemplate({
   parcelDetails,
   statusLabel,
   duplicate,
+  printedByName,
+  issuedAtLabel,
   statusAmountLabel,
   hasToBePaid,
   qrValue,
@@ -61,7 +63,11 @@ export function ThermalStickerPortraitTemplate({
             objectFit: 'contain',
           }}
         />
-        <ThermalStickerBrand duplicate={duplicate} />
+        <ThermalStickerBrand
+          duplicate={duplicate}
+          printedByName={printedByName}
+          issuedAtLabel={issuedAtLabel}
+        />
         <div className="justify-self-end">
           <BrandedQrCode
             value={qrValue}

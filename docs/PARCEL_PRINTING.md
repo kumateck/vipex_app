@@ -114,6 +114,30 @@ and on paper for one and multiple copies; check that the QR code and header rema
 
 ### Portrait sticker layout
 
+The free header space immediately beneath **VIP PARCEL** prints
+**Complaints: +233 27 501 9133**, **Cashier: <name>**, and **Date: <date and time>**.
+Browser/desktop stickers use the authenticated printing operator's name and the print job's
+existing issue timestamp, formatted in Ghana time. Mobile booking and self-service sticker
+attempts attach the signed-in operator and the current print-attempt time in Ghana time; retries
+refresh those details without recreating the booking. Missing issuer metadata displays `-`.
+Names are escaped in mobile HTML and React text; longer cashier names use smaller text and only
+exceptionally long names are ellipsized within the header width.
+
+The portrait artwork remains **90 × 92 mm** with its existing **22 mm** header row and unchanged
+QR footprint. No footer, extra row, margin, paper size or extra page is added. DUPLICATE remains
+inside the header beneath these details. The landscape variant keeps its 210 × 69 mm artwork
+and stacks its emblem/brand within the left column so the issuer details do not overlap routing.
+Browser/desktop paper/printer profiles, copies, payment verification and print-usage gates are
+unchanged. Mobile keeps one 90 × 92 mm page per requested copy.
+
+QA: inspect paid, credit, to-be-paid and duplicate portrait labels; check the complaints number,
+operator name and Ghana date/time below the wordmark. Repeat with a long operator name, a long
+receiver name and mobile/self-service copies. Verify the QR and parcel-details row remain visible,
+the label remains on one sheet, and two requested mobile copies produce exactly two pages. Check
+landscape header separation. Automated template/HTML and date-format tests cover the text and
+escaping; physical PDF previews check page counts, dimensions and overflow. A branch printer
+sample remains the final driver/stock check.
+
 The 90 x 92 mm portrait sticker (browser/desktop and mobile print dialog) sizes its payment
 status and receiver blocks to their content, and the destination, sender, sender telephone,
 and parcel details rows to their content, so no value is clipped by a border line. Every label

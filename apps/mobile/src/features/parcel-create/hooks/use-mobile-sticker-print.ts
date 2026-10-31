@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { withVerifiedStickerPayment } from '@/shared/printing';
+import { formatStickerDateTime, withVerifiedStickerPayment } from '@/shared/printing';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -11,7 +11,7 @@ import {
 } from '../services';
 
 export function useMobileStickerPrint() {
-  const { withAuth } = useAuth();
+  const { session, withAuth } = useAuth();
   const [pendingSticker, setPendingSticker] = useState<MobileSticker | null>(null);
   const [pendingLog, setPendingLog] = useState<MobileSticker | null>(null);
   const recordPrint = async (sticker: MobileSticker) => {
@@ -29,6 +29,11 @@ export function useMobileStickerPrint() {
     }
   };
   const print = async (sticker: MobileSticker) => {
+    sticker = {
+      ...sticker,
+      printedByName: session.user?.fullname ?? null,
+      issuedAtLabel: formatStickerDateTime(new Date()),
+    };
     setPendingSticker(sticker);
     try {
       await withVerifiedStickerPayment(

@@ -574,6 +574,52 @@ use the existing routed A4 print flow; mobile has no previous-consignment reprin
 
 Receiving supports scan-based parcel identification, completeness tracking, discrepancy recording, and confirmation. Staff can identify missing or unexpected parcels before completing the receipt.
 
+### Pickup location and arrival consistency
+
+Booking creation resolves destination pickup locations on the server inside the booking transaction.
+An omitted location becomes the destination's only active receiving location; several eligible
+locations require an explicit selection. A supplied location must belong to the parcel's company
+and destination and be active and receiving-enabled. A branch with no configured active locations
+retains branch-level receiving; a branch with active locations but none receiving-enabled is
+blocked. Standalone parcel creation and explicit destination/location edits use the same resolution.
+Mobile booking and web/desktop/mobile self-booking completion always require a valid pickup
+location in the frontend. A sole location is auto-selected; several require a choice. Loading,
+failed/empty lists and stale selections block submission; a failed lookup offers retry. The mobile
+self-booking draft editor has the same requirement. Changing the destination hides stale options.
+The backend's branch-level compatibility for old clients does not relax this frontend requirement.
+
+Single, bulk and consignment receiving share one transaction-bound arrival operation. It locks
+parcel rows, requires an undeleted, unconfirmed **In Transit** parcel with no stored receipt time,
+resolves/validates the pickup location, and writes **Arrived at Destination**, `receivedBy` and
+`receivedAt` together. Receiving at another branch/company returns 404. Already-received or
+progressed parcels return 409, including legacy Awaiting Pickup parcels with an empty receipt
+timestamp. Concurrent scans cannot overwrite a receipt or move calling/pickup/delivery backwards.
+An invalid member rejects the whole bulk request; consignment item arrival rolls back with its
+parcel update. Missing/ambiguous/disabled receiving locations return 400 without partial receipt.
+
+Mobile **Confirm Arrived** uses `/shipments/parcels/:id/mark-received` and is disabled after a
+parcel leaves the unreceived In Transit state. The server derives the receiver from authentication,
+ignoring an older client's `receivedBy` value. Older mobile status-only `PATCH` arrival requests
+are routed through the same receiving operation and permission checks. Arrival cannot be combined
+with other edits in that legacy PATCH; save edits separately. These server protections apply to
+web, desktop and older mobile clients after backend deployment; the new mobile button behavior
+requires the updated mobile bundle. No schema migration is needed.
+
+These changes prevent new missing-location arrivals and repeat-arrival regressions. They do not
+bulk-rewrite historical parcels or infer missing historical receipt timestamps. Use the reviewed
+[maintenance repair](SYSTEM_MAINTENANCE.md#receiving-workflow-repair) for existing affected records.
+Restoring a called parcel to Awaiting Pickup retains its call history; it should appear in Shelf
+Picker Update rather than the default uncalled queue. The queue location/assignment rules remain.
+
+Regression QA: create a booking without a location at a one-location destination; require a choice
+at a multi-location destination; reject foreign/deleted/sending-only locations. Receive using web,
+new mobile POST and old mobile PATCH; verify location, receiver and timestamp together. Rescan an
+Awaiting Pickup parcel with a call marker and NULL receipt timestamp and verify 409 with no changes.
+Repeat via a stale consignment item and a mixed bulk selection; verify complete rollback. Run
+concurrent receipt requests and verify only one succeeds. Automated integration coverage is
+`parcel-receiving-workflow.spec.ts` using only the empty local `vipex_receiving_workflow_test`
+database with `RECEIVING_WORKFLOW_TEST=1`; its fixture refuses remote/other databases.
+
 The web **In Transit (Receiving Branch)** list has optional Send Date, Source Branch, and
 Consignment Number filters. Apply Filters combines them with the destination branch and in-transit
 status, the text search, and pagination; Clear Filters removes only these three fields. Send Date

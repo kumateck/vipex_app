@@ -1,10 +1,10 @@
-import { listReceivingLocations } from '../services';
 import { useEffect, useState } from 'react';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { listBranchOptions } from '@mobile/lib/api';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
-import type { BranchOption, LocationOption } from '@mobile/types/booking';
+import type { BranchOption } from '@mobile/types/booking';
+import { useReceivingLocationOptions } from './use-receiving-location-options';
 
 export function useParcelBranchOptions(
   companyId: string | null,
@@ -15,8 +15,11 @@ export function useParcelBranchOptions(
   const { withAuth } = useAuth();
   const [branchOptions, setBranchOptions] = useState<BranchOption[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
-  const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const receiving = useReceivingLocationOptions(
+    companyId,
+    destinationBranchId,
+    canCreate && !isHeadOffice,
+  );
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -41,36 +44,13 @@ export function useParcelBranchOptions(
     };
   }, [companyId, canCreate, isHeadOffice, withAuth, reloadKey]);
 
-  useEffect(() => {
-    if (!companyId || !destinationBranchId) {
-      setLocationOptions([]);
-      return;
-    }
-    let cancelled = false;
-    setIsLoadingLocations(true);
-    withAuth((token) => listReceivingLocations(token, { companyId, branchId: destinationBranchId }))
-      .then((options) => {
-        if (!cancelled) setLocationOptions(options);
-      })
-      .catch((error) => {
-        notifyError(
-          'Failed to load locations',
-          getMobileErrorMessage(error, '') || 'Please try again',
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingLocations(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [companyId, destinationBranchId, withAuth, reloadKey]);
-
   return {
     branchOptions,
     isLoadingBranches,
-    locationOptions,
-    isLoadingLocations,
-    retry: () => setReloadKey((current) => current + 1),
+    ...receiving,
+    retry: () => {
+      setReloadKey((current) => current + 1);
+      receiving.retryLocations();
+    },
   };
 }

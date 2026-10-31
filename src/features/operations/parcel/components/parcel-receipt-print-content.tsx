@@ -2,9 +2,13 @@ import type { RefObject } from 'react';
 import { InvoiceA5Template, ThermalStickerTemplate } from '@/features/printing';
 import type { ReceiptPrintData } from './parcel-receipt.types';
 import { buildParcelStickerQrValue } from '../utils/tracking-url';
-import { formatDate, formatMoney } from './parcel-receipt-formatters';
+import { formatMoney } from './parcel-receipt-formatters';
 import { buildInvoiceA5Props } from '../utils/build-invoice-a5-props';
-import { assertVerifiedStickerPayment, type VerifiedStickerPayment } from '@/shared/printing';
+import {
+  assertVerifiedStickerPayment,
+  formatStickerDateTime,
+  type VerifiedStickerPayment,
+} from '@/shared/printing';
 
 type ParcelReceiptPrintContentProps = {
   data: ReceiptPrintData;
@@ -51,7 +55,7 @@ export function ParcelReceiptPrintContent({
   const stickerTemplateProps = {
     bookingCode: data.bookingCode,
     duplicate: isDuplicate,
-    issuedAtLabel: formatDate(data.issuedAt),
+    issuedAtLabel: formatStickerDateTime(data.issuedAt),
     printedByName,
     printedByBranchName,
     printedByLocationName,

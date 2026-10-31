@@ -23,7 +23,7 @@ export type SelfServiceDraft = {
 export type CompleteSelfServiceDraftInput = {
   id: string;
   destinationId: string;
-  pickupLocationId: string | null;
+  pickupLocationId: string;
   parcelDetails: string;
   chargeCedis: string;
   chargeAgentUserId?: string | null;
@@ -52,7 +52,7 @@ export type UpdateSelfServiceDraftInput = {
   sender: SelfServiceContactInput;
   receiver: SelfServiceContactInput;
   destinationBranchId: string;
-  destinationLocationId: string | null;
+  destinationLocationId: string;
   parcelContent: string;
   parcelValueCedis: string;
 };

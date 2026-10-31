@@ -102,7 +102,7 @@ export function ParcelBookingFields({
           loading={isLoadingBranches}
         />
         <AppSelectField
-          label="Pickup Location (optional)"
+          label="Pickup Location"
           value={pickupLocationId}
           onValueChange={onPickupLocationChange}
           options={locationSelectOptions}

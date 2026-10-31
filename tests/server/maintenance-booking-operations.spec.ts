@@ -5,6 +5,8 @@ import { registerBalanceCases } from '../utils/maintenance-booking-cases/balance
 import { registerNameCases } from '../utils/maintenance-booking-cases/names';
 import { registerRecipientCases } from '../utils/maintenance-booking-cases/recipient';
 import { registerInspectionCases } from '../utils/maintenance-booking-cases/inspections';
+import { registerReceivingCases } from '../utils/maintenance-booking-cases/receiving';
+import { registerReceivingGuardCases } from '../utils/maintenance-booking-cases/receiving-guards';
 
 describe.skipIf(process.env.MAINTENANCE_BOOKING_TEST !== '1')(
   'booking-code maintenance operations on isolated PostgreSQL',
@@ -25,5 +27,7 @@ describe.skipIf(process.env.MAINTENANCE_BOOKING_TEST !== '1')(
     registerNameCases(current);
     registerRecipientCases(current);
     registerInspectionCases(current);
+    registerReceivingCases(current);
+    registerReceivingGuardCases(current);
   },
 );
