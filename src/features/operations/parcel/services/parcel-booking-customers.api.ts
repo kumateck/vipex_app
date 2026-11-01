@@ -3,6 +3,7 @@ import { api } from '@/services/api';
 export type BookingCustomer = {
   id: string;
   fullname: string;
+  customerType?: number;
   telephone: string | null;
   telephone2: string | null;
 };

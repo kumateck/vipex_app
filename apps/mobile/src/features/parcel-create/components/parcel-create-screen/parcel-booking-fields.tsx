@@ -1,3 +1,4 @@
+import { ParcelExemptionFields } from './parcel-exemption-fields';
 import { Switch, Text, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { BranchType } from '@mobile/constants/branch';
@@ -24,6 +25,7 @@ type ParcelBookingFieldsProps = {
   parcelContent: string;
   parcelValue: string;
   charge: string;
+  exemption: React.ComponentProps<typeof ParcelExemptionFields>['exemption'];
   chargeAgent: React.ComponentProps<typeof ParcelChargeAgentField>;
   callSender: boolean;
   paymentResponsibility: MobilePaymentResponsibility;
@@ -53,6 +55,7 @@ export function ParcelBookingFields({
   parcelContent,
   parcelValue,
   charge,
+  exemption,
   chargeAgent,
   callSender,
   paymentResponsibility,
@@ -134,14 +137,19 @@ export function ParcelBookingFields({
           placeholder="0.00"
           keyboardType="decimal-pad"
         />
-        <AppLabel>Charge (GHS)</AppLabel>
-        <AppInput
-          value={charge}
-          onChangeText={onChargeChange}
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-        />
-        <ParcelChargeAgentField {...chargeAgent} />
+        <ParcelExemptionFields exemption={exemption} />
+        {exemption.exemptionType == null ? (
+          <>
+            <AppLabel>Charge (GHS)</AppLabel>
+            <AppInput
+              value={charge}
+              onChangeText={onChargeChange}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+            />
+            <ParcelChargeAgentField {...chargeAgent} />
+          </>
+        ) : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ flex: 1 }}>
             <AppLabel>CS — Call Sender before deliver to Receiver</AppLabel>
@@ -151,16 +159,19 @@ export function ParcelBookingFields({
           </View>
           <Switch value={callSender} onValueChange={onCallSenderChange} />
         </View>
-        <AppSelectField
-          label="Payment Responsibility"
-          value={String(paymentResponsibility)}
-          onValueChange={(value) =>
-            onPaymentResponsibilityChange(Number(value) as MobilePaymentResponsibility)
-          }
-          options={PAYMENT_RESPONSIBILITY_OPTIONS}
-          placeholder="Select who pays"
-        />
-        {paymentResponsibility === PaymentResponsibility.RECIPIENT ? (
+        {exemption.exemptionType == null ? (
+          <AppSelectField
+            label="Payment Responsibility"
+            value={String(paymentResponsibility)}
+            onValueChange={(value) =>
+              onPaymentResponsibilityChange(Number(value) as MobilePaymentResponsibility)
+            }
+            options={PAYMENT_RESPONSIBILITY_OPTIONS}
+            placeholder="Select who pays"
+          />
+        ) : null}
+        {exemption.exemptionType != null ||
+        paymentResponsibility === PaymentResponsibility.RECIPIENT ? (
           <StickerPrintChoice
             value={printSticker}
             onChange={onPrintStickerChange}

@@ -4,6 +4,8 @@ import { buildParcelTrackingUrl } from './tracking-url';
 
 /** Home delivery receipt amounts and contacts as returned by the server. */
 export type HomeDeliveryReceiptSource = {
+  chargeExemptCustomerType?: number | null;
+  relatedStaffNameSnapshot?: string | null;
   bookingCode: string;
   trackingCode: string;
   parcelDetails: string;
@@ -37,13 +39,16 @@ export function buildHomeDeliveryReceiptA5Props(
   options: { cashierName?: string | null; issuedAt: string },
 ): HomeDeliveryReceiptA5Props {
   return {
+    isChargeExempt: receipt.chargeExemptCustomerType != null,
     cashierName: options.cashierName,
     issuedAtLabel: formatDate(options.issuedAt),
     bookingCode: receipt.bookingCode,
     trackingCode: receipt.trackingCode,
     senderName: receipt.senderName ?? '',
     senderPhone: [receipt.senderPhone, receipt.senderPhone2].filter(Boolean).join(', '),
-    receiverName: receipt.receiverName ?? '',
+    receiverName: receipt.relatedStaffNameSnapshot
+      ? `${receipt.receiverName ?? ''} — ${receipt.relatedStaffNameSnapshot}`
+      : (receipt.receiverName ?? ''),
     receiverPhone: [receipt.receiverPhone, receipt.receiverPhone2].filter(Boolean).join(', '),
     parcelDetails: receipt.parcelDetails,
     parcelContent: receipt.parcelContent,

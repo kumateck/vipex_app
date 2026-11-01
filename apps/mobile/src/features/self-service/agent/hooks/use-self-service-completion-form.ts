@@ -1,3 +1,4 @@
+import { useParcelChargeExemption } from '@mobile/features/parcel-create/hooks/use-parcel-charge-exemption';
 import { useEffect, useState } from 'react';
 import type { CompleteSelfServiceDraftInput, SelfServiceDraft } from '../types';
 import {
@@ -31,6 +32,13 @@ export function useSelfServiceCompletionForm(
     callSenderSelection?.draftId === draft.id ? callSenderSelection.value : draft.callSender;
   const setCallSender = (value: boolean) => setCallSenderSelection({ draftId: draft.id, value });
   const destinationId = draft.destinationBranchId ?? '';
+  const exemption = useParcelChargeExemption(
+    draft.senderCustomerType,
+    draft.receiverCustomerType,
+    destinationId,
+    'self-service',
+  );
+  const isExempt = exemption.exemptionType != null;
   const {
     locationOptions,
     isLoadingLocations: locationsLoading,
@@ -62,10 +70,12 @@ export function useSelfServiceCompletionForm(
     canComplete &&
       !locationError &&
       parcelDetails.trim() &&
-      Number(chargeCedis) >= 0 &&
-      !chargeAgents.loading &&
-      !chargeAgents.failed &&
-      chargeAgents.options.some((agent) => agent.value === chargeAgentUserId),
+      (isExempt ||
+        (Number(chargeCedis) > 0 &&
+          !chargeAgents.loading &&
+          !chargeAgents.failed &&
+          chargeAgents.options.some((agent) => agent.value === chargeAgentUserId))) &&
+      (exemption.exemptionType !== 5 || Boolean(exemption.relatedStaffId)),
   );
 
   const submit = () => {
@@ -75,9 +85,10 @@ export function useSelfServiceCompletionForm(
       destinationId,
       pickupLocationId,
       parcelDetails: parcelDetails.trim(),
-      chargeCedis,
-      chargeAgentUserId,
-      paymentResponsibility,
+      chargeCedis: isExempt ? '0' : chargeCedis,
+      chargeAgentUserId: isExempt ? null : chargeAgentUserId,
+      relatedStaffId: exemption.relatedStaffId || null,
+      paymentResponsibility: isExempt ? 'SENDER' : paymentResponsibility,
       senderSettlementMode: 'PAY_NOW',
       senderPartialPaymentCedis:
         paymentResponsibility === 'SPLIT' ? senderPartialPaymentCedis : null,
@@ -85,6 +96,7 @@ export function useSelfServiceCompletionForm(
     });
   };
   return {
+    exemption,
     parcelDetails,
     setParcelDetails,
     chargeCedis,

@@ -65,6 +65,7 @@ export function buildInvoiceA5Props(
     data.payerType ? data.payerTelephone2 : data.senderTelephone2,
   );
   return {
+    isChargeExempt: data.chargeExemptCustomerType != null || data.stickerStatusLabel === 'EXEMPT',
     settlementMode: data.settlementMode,
     bookingCode: data.bookingCode,
     issuedAtLabel: formatDate(data.issuedAt),
@@ -81,12 +82,16 @@ export function buildInvoiceA5Props(
     payerTelephone,
     senderName: data.senderName,
     senderTelephone: formatTelephonePair(data.senderTelephone, data.senderTelephone2),
-    receiverName: data.receiverName,
+    receiverName: data.relatedStaffNameSnapshot
+      ? `${data.receiverName} — ${data.relatedStaffNameSnapshot}`
+      : data.receiverName,
     receiverTelephone: formatTelephonePair(data.receiverTelephone, data.receiverTelephone2),
     paymentModeLabel:
-      data.settlementMode === 'CREDIT'
-        ? 'Credit'
-        : getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis),
+      data.chargeExemptCustomerType != null || data.stickerStatusLabel === 'EXEMPT'
+        ? 'Exempt'
+        : data.settlementMode === 'CREDIT'
+          ? 'Credit'
+          : getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis),
     totalChargeCedis: data.totalChargeCedis,
     senderPaidCedis: data.senderPaidCedis,
     receiverToPayCedis: data.receiverToPayCedis,

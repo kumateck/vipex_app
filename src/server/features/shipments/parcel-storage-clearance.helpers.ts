@@ -28,6 +28,7 @@ export async function getCurrentStorageAccrual(parcelId: string, executor?: DbEx
   const parcel = await getParcelSvc(parcelId, executor);
   const policy = await getCompanyParcelAgeingPolicy(parcel.companyId);
   const snapshot = computeParcelAgeingSnapshot({
+    chargeExemptCustomerType: parcel.chargeExemptCustomerType,
     status: parcel.status,
     receivedAt: parcel.receivedAt,
     policy,

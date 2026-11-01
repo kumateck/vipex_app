@@ -1,3 +1,4 @@
+import { customerTypeLabel } from '@/shared/customers/customer-types';
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { AppButton, AppCard, AppInput, AppLabel } from '@mobile/components/ui/mobile';
@@ -27,7 +28,7 @@ export function MobileCustomerEditForm({ customer, canUpdate, saving, onBack, on
       <AppCard>
         <Text style={[styles.title, { color: theme.colors.text }]}>{customer.fullname}</Text>
         <Text style={[styles.text, { color: theme.colors.textMuted }]}>
-          {customer.customerType === 1 ? 'Business' : 'Individual'} customer
+          {customerTypeLabel(customer.customerType)} customer
           {customer.creditEligible ? ' · Credit eligible' : ''}
         </Text>
         <AppLabel>Full name</AppLabel>

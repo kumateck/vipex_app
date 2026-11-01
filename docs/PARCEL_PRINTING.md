@@ -728,3 +728,7 @@ verification then confirms the posted charge before printing CREDIT. Customer de
 retain the booking/receipt CREDIT classification and do not create a duplicate cashier sale.
 Existing ledger adjustments remain included in sticker verification. See
 [Customer credit workflows](CUSTOMER_WALLET_CREDIT_MODULE.md).
+
+## Exempt Parcels and Staff Recipients
+
+Family, Friends, Director and Staff customers qualify new parcels for full charge exemption when either the sender or receiver has that type. Transport, delivery, storage and every other charge remain zero. Only Staff parcels require an active destination-branch HR employee as Receiving staff. Updated web/desktop and mobile booking and self-service completion support the selection; stickers show EXEMPT and the preserved staff name while keeping the office contact number. Historical unclassified zero charges remain distinct. See [Customer charge exemptions](CUSTOMER_CHARGE_EXEMPTIONS.md) for current rules, permissions, failure cases, migration rollout and QA.

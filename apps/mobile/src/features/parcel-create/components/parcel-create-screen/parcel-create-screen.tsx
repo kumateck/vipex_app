@@ -64,6 +64,7 @@ function ParcelCreateForm({
     stickerPrint,
     handleSubmit,
     chargeAgent,
+    exemption,
   } = useParcelCreateWorkflow(initialPaymentResponsibility);
   if (!canCreate || isHeadOffice) {
     return (
@@ -96,6 +97,7 @@ function ParcelCreateForm({
         parcelValue={parcelValue}
         charge={charge}
         chargeAgent={chargeAgent}
+        exemption={exemption}
         callSender={callSender}
         paymentResponsibility={paymentResponsibility}
         printSticker={printSticker}
@@ -129,9 +131,11 @@ function ParcelCreateForm({
         title={
           isSubmitting
             ? 'Creating...'
-            : paymentResponsibility === PaymentResponsibility.SENDER
-              ? 'Create Paid Booking'
-              : 'Create TobePaid Booking'
+            : exemption.exemptionType != null
+              ? 'Create Exempt Booking'
+              : paymentResponsibility === PaymentResponsibility.SENDER
+                ? 'Create Paid Booking'
+                : 'Create TobePaid Booking'
         }
         onPress={() => void handleSubmit()}
         disabled={isSubmitting || Boolean(pickupLocationError)}

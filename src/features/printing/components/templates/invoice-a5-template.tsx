@@ -36,7 +36,11 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     formatMoney,
   } = props;
 
-  if (props.settlementMode === 'CREDIT' || isToBePaidDeliveryReceipt(props)) {
+  if (
+    props.isChargeExempt ||
+    props.settlementMode === 'CREDIT' ||
+    isToBePaidDeliveryReceipt(props)
+  ) {
     return <ToBePaidReceiptA5Template {...props} paperFormat={paperFormat} />;
   }
 

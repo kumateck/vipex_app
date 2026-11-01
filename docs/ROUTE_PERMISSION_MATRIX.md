@@ -137,7 +137,7 @@ additionally requires `CanConfirmParcelTaxData`; see
 
 | Route                                                              | Permission / gate                                                                               |
 | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `GET /v1/customers?customerType=0\|1`                              | `CanReadCustomers`; authenticated company                                                       |
+| `GET /v1/customers?customerType=0\|1\|2\|3\|4\|5`                  | `CanReadCustomers`; authenticated company                                                       |
 | `GET /v1/customers/:id/credit/parcels`                             | `CanReadCustomers`; authenticated company                                                       |
 | `POST /v1/customers/:id/credit/payments`                           | `CanUpdateCustomers`; selected owned parcels and exact total                                    |
 | `GET /v1/customer-wallet-credit/accounts/:customerId/open-parcels` | `CanCreateCustomerWalletCreditPayments`; `customer_wallet_credit` enabled                       |
@@ -161,3 +161,16 @@ the charge, CREDIT status and sender debt in one transaction; there is no execut
 `CanUpdateParcels`, reconciliation permissions and System Admin role name alone do not grant
 these actions. Assign the new role grants explicitly. APIs verify live active users and current
 role grants in the authenticated company; request bodies cannot supply a customer, person or actor.
+
+### Exempt customers and receiving staff
+
+| Route/action                                                                             | Permission and scope                                                                              |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Create/edit Family, Friends, Director or Staff through Customer Management CRM endpoints | Existing `CanCreateCustomers` / `CanUpdateCustomers`; authenticated company                       |
+| `GET /v1/shipments/bookings/receiving-staff-options?destinationId=...`                   | `CanCreateBookingWithParcels`; destination branch in authenticated company                        |
+| `GET /v1/self-service/receiving-staff-options?destinationId=...`                         | `CanCompleteSelfServiceBookings`; destination branch in authenticated company                     |
+| Booking/agent completion with `relatedStaffId`                                           | Existing booking/completion permission; active destination-branch HR employee; only Staff parcels |
+
+No extra booking approval is introduced. Employee lookup does not require HR directory or user
+management permissions and exposes only employee ID/name/number. Exemption cannot be removed
+through charge correction or payment permissions. See [current rules](CUSTOMER_CHARGE_EXEMPTIONS.md).

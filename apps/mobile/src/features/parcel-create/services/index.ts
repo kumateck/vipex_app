@@ -8,3 +8,4 @@ export {
   type ChargeAgentSource,
 } from './parcel-charge-agents.service';
 export { listReceivingLocations } from './receiving-locations.service';
+export { listReceivingStaff, type ReceivingStaffOption } from './receiving-staff.service';

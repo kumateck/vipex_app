@@ -1,3 +1,8 @@
+import {
+  resolveBookingExemptions,
+  assertBookingExemptionsUnchanged,
+  resolveReceivingStaff,
+} from '../charge-exemption';
 import { fromPesewas, toPesewas } from '@/server/utils/gh-money';
 import { ParcelStatus } from '@/db/schemas';
 import { BadRequest } from '../../../utils/http-error';
@@ -16,6 +21,7 @@ export async function createParcelSvc(input: {
   trackingCode: string;
   senderId: string;
   receiverId: string;
+  relatedStaffId?: string | null;
   status: number;
   parcelDetails: string;
   parcelContent: string;
@@ -43,12 +49,24 @@ export async function createParcelSvc(input: {
   const plannedToBePaidPsw =
     input.plannedToBePaidCedis != null ? toPesewas(input.plannedToBePaidCedis) : 0n;
   const chargePsw = input.chargeCedis != null ? toPesewas(input.chargeCedis) : plannedToBePaidPsw;
+  const [chargeExemptCustomerType] = await resolveBookingExemptions({
+    companyId: input.companyId,
+    senderId: input.senderId,
+    parcels: [input],
+  });
   const chargeValidationError = getParcelChargeValidationError({
+    chargeExemptCustomerType,
     chargeCedis: fromPesewas(chargePsw),
     plannedToBePaidCedis: fromPesewas(plannedToBePaidPsw),
   });
   if (chargeValidationError) throw BadRequest(chargeValidationError);
   const created = await db.transaction(async (tx) => {
+    const exemptParcel = { ...input, chargeExemptCustomerType };
+    await assertBookingExemptionsUnchanged(
+      { companyId: input.companyId, senderId: input.senderId, parcels: [exemptParcel] },
+      tx,
+    );
+    const relatedStaff = await resolveReceivingStaff(input.companyId, exemptParcel, tx);
     const [location] = await resolveReceivingPickupLocationsRepo(input.companyId, [input], tx);
     return createParcelRepo(
       {
@@ -61,10 +79,15 @@ export async function createParcelSvc(input: {
         trackingCode: input.trackingCode,
         senderId: input.senderId,
         receiverId: input.receiverId,
-        status: input.status,
+        status:
+          chargeExemptCustomerType != null && input.status === ParcelStatus.CREATED
+            ? ParcelStatus.PROCESSED
+            : input.status,
         parcelDetails: input.parcelDetails,
         parcelContent: input.parcelContent,
         parcelValuePsw: Number(parcelValuePsw),
+        chargeExemptCustomerType,
+        ...relatedStaff,
         chargePsw: Number(chargePsw),
         plannedToBePaidPsw: Number(plannedToBePaidPsw),
         method: input.method,

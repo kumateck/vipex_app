@@ -63,7 +63,9 @@ export function ToBePaidReceiptA5Template(
           textAlign: 'center',
         }}
       >
-        {isCredit ? (
+        {props.isChargeExempt ? (
+          <>Exempt from every charge, including storage and delivery fees. No payment is due.</>
+        ) : isCredit ? (
           <>
             <strong>NOTICE:</strong> No payment was collected for this parcel. {amountDue} was
             charged to the sender's credit account.
@@ -125,7 +127,7 @@ export function ToBePaidReceiptA5Template(
           style={{ width: '36mm', height: '36mm', justifySelf: 'center', alignSelf: 'start' }}
         />
       </div>
-      <InvoiceA5Terms />
+      <InvoiceA5Terms isChargeExempt={props.isChargeExempt} />
     </div>
   );
 }

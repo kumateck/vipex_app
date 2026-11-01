@@ -1,3 +1,4 @@
+import { CUSTOMER_TYPE_OPTIONS, customerTypeLabel } from '@/shared/customers/customer-types';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { PermissionGuard } from '@/components/permissions/permission-guard';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { CustomerType } from '@/features/customers/api';
+
 import { PermissionKeys } from '@/shared/permissions/constants';
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -45,9 +46,12 @@ export function CustomersPage() {
       <Card className="h-[calc(100vh-11rem)] min-h-[28rem] flex flex-col overflow-hidden">
         <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
           <Tabs value={String(customerType)} onValueChange={changeType} className="border-b p-4">
-            <TabsList aria-label="Customer type">
-              <TabsTrigger value="0">Individual</TabsTrigger>
-              <TabsTrigger value="1">Business</TabsTrigger>
+            <TabsList aria-label="Customer type" className="flex h-auto flex-wrap">
+              {CUSTOMER_TYPE_OPTIONS.map((option) => (
+                <TabsTrigger key={option.value} value={String(option.value)}>
+                  {option.label}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
           <div className="border-b p-4">
@@ -76,9 +80,7 @@ export function CustomersPage() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium">{customer.fullname}</p>
-                  <Badge variant="outline">
-                    {customer.customerType === CustomerType.Business ? 'Business' : 'Individual'}
-                  </Badge>
+                  <Badge variant="outline">{customerTypeLabel(customer.customerType)}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {customer.telephone || '-'} {customer.email ? `• ${customer.email}` : ''}

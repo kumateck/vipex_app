@@ -10,6 +10,7 @@ const requestSelection = {
   companyId: parcels.companyId,
   branchId: parcels.destinationId,
   parcelStatus: parcels.status,
+  chargeExemptCustomerType: parcels.chargeExemptCustomerType,
   bookingCode: parcels.bookingCode,
   trackingCode: parcels.trackingCode,
   riderUserId: deliveries.riderUserId,

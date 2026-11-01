@@ -54,6 +54,7 @@ export const routes = new Elysia({ name: 'parcel-mutations' })
         trackingCode: t.String(),
         senderId: UUID,
         receiverId: UUID,
+        relatedStaffId: t.Optional(t.Union([UUID, t.Null()])),
         status: t.Number(),
         parcelDetails: t.String({ minLength: 1, maxLength: 255 }),
         parcelContent: t.String({ minLength: 1, maxLength: 255 }),

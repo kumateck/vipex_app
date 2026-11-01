@@ -11,6 +11,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { companies, branches, users, locations } from '../core';
 import { customers, cards } from '../customers';
+import { employees } from '../hr';
 import { sql } from 'drizzle-orm';
 import { ParcelStatus, PaymentMethod } from '../enums';
 import { createId } from '@paralleldrive/cuid2';
@@ -86,6 +87,9 @@ export const parcels = pgTable(
     parcelValuePsw: bigint('parcel_value_psw', { mode: 'number' })
       .notNull()
       .default(sql`0`),
+    chargeExemptCustomerType: smallint('charge_exempt_customer_type'),
+    relatedStaffId: varchar('related_staff_id', { length: 25 }).references(() => employees.id),
+    relatedStaffNameSnapshot: varchar('related_staff_name_snapshot', { length: 255 }),
     chargePsw: bigint('charge_psw', { mode: 'number' })
       .notNull()
       .default(sql`0`),

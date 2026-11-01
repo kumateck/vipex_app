@@ -1,3 +1,4 @@
+import { ParcelExemptionFields } from '@mobile/features/parcel-create/components/parcel-create-screen/parcel-exemption-fields';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 import {
   AppButton,
@@ -65,6 +66,7 @@ export function SelfServiceCompletionForm({
     valid,
     submit,
     chargeAgent,
+    exemption,
   } = useSelfServiceCompletionForm(draft, canComplete, onComplete);
 
   return (
@@ -97,13 +99,18 @@ export function SelfServiceCompletionForm({
             multiline
             maxLength={255}
           />
-          <AppLabel>Charge (GHS)</AppLabel>
-          <AppInput
-            value={chargeCedis}
-            onChangeText={setChargeCedis}
-            keyboardType="decimal-pad"
-            placeholder="0.00"
-          />
+          <ParcelExemptionFields exemption={exemption} />
+          {exemption.exemptionType == null ? (
+            <>
+              <AppLabel>Charge (GHS)</AppLabel>
+              <AppInput
+                value={chargeCedis}
+                onChangeText={setChargeCedis}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+              />
+            </>
+          ) : null}
           <SelfServicePickupLocationField
             value={pickupLocationId}
             options={locationOptions}
@@ -113,7 +120,7 @@ export function SelfServiceCompletionForm({
             error={locationError}
             onRetry={retryLocations}
           />
-          <ParcelChargeAgentField {...chargeAgent} />
+          {exemption.exemptionType == null ? <ParcelChargeAgentField {...chargeAgent} /> : null}
           <View style={styles.callSenderRow}>
             <View style={styles.callSenderText}>
               <AppLabel>CS — Call Sender before deliver to Receiver</AppLabel>
@@ -124,15 +131,17 @@ export function SelfServiceCompletionForm({
             </View>
             <Switch value={callSender} onValueChange={setCallSender} />
           </View>
-          <AppSelectField
-            label="Payment responsibility"
-            value={paymentResponsibility}
-            options={PAYMENT_OPTIONS}
-            onValueChange={(value) =>
-              setPaymentResponsibility(value as typeof paymentResponsibility)
-            }
-          />
-          {paymentResponsibility === 'SPLIT' ? (
+          {exemption.exemptionType == null ? (
+            <AppSelectField
+              label="Payment responsibility"
+              value={paymentResponsibility}
+              options={PAYMENT_OPTIONS}
+              onValueChange={(value) =>
+                setPaymentResponsibility(value as typeof paymentResponsibility)
+              }
+            />
+          ) : null}
+          {exemption.exemptionType == null && paymentResponsibility === 'SPLIT' ? (
             <View>
               <AppLabel>Sender partial payment (GHS)</AppLabel>
               <AppInput

@@ -1,3 +1,4 @@
+import { customerTypeLabel } from '@/shared/customers/customer-types';
 import { ParcelCreditChargeAction } from '@/features/operations/parcel-credit-charge';
 import { memo } from 'react';
 import {
@@ -32,6 +33,12 @@ export const PaymentsSection = memo(function PaymentsSection({
       <DetailCard title="Charges">
         <DetailGrid
           items={[
+            parcel.chargeExemptCustomerType != null
+              ? {
+                  label: 'Charge status',
+                  value: `${customerTypeLabel(parcel.chargeExemptCustomerType)} — Exempt from every charge`,
+                }
+              : null,
             { label: 'Parcel Charge', value: formatMoney(parcel.chargePsw) },
             {
               label: 'To Be Paid by Receiver (planned)',
@@ -55,7 +62,7 @@ export const PaymentsSection = memo(function PaymentsSection({
             },
           ]}
         />
-        {parcel.chargePsw === 0 ? (
+        {parcel.chargePsw === 0 && parcel.chargeExemptCustomerType == null ? (
           <div className="mt-4">
             <ParcelCreditChargeAction
               key={parcel.id}

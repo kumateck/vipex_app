@@ -1,3 +1,4 @@
+import { isChargeExemptCustomerType } from '@/shared/customers/customer-types';
 import { ParcelStatus } from '@/db/schemas';
 import {
   DEFAULT_PARCEL_AGEING_POLICY,
@@ -21,6 +22,7 @@ export async function getCompanyParcelAgeingPolicy(companyId: string): Promise<P
 }
 
 export function computeParcelAgeingSnapshot(input: {
+  chargeExemptCustomerType?: number | null;
   status: number;
   receivedAt: Date | null;
   policy: ParcelAgeingPolicy;
@@ -39,7 +41,9 @@ export function computeParcelAgeingSnapshot(input: {
       storageChargeStartAt: null,
       storageChargeDays: 0,
       storageChargePsw: 0,
-      storageFeePerDayPsw: input.policy.storageFeePerDayPsw,
+      storageFeePerDayPsw: isChargeExemptCustomerType(input.chargeExemptCustomerType)
+        ? 0
+        : input.policy.storageFeePerDayPsw,
       storageChargeGraceDays: input.policy.gracePeriodDays,
       ageingThresholdMonths: input.policy.agedThresholdMonths,
     };
@@ -52,10 +56,12 @@ export function computeParcelAgeingSnapshot(input: {
   const storageChargeStartAt = new Date(
     input.receivedAt.getTime() + input.policy.gracePeriodDays * STORAGE_DAY_MS,
   );
-  const chargeDays = Math.max(
-    0,
-    Math.floor((input.now.getTime() - storageChargeStartAt.getTime()) / STORAGE_DAY_MS),
-  );
+  const chargeDays = isChargeExemptCustomerType(input.chargeExemptCustomerType)
+    ? 0
+    : Math.max(
+        0,
+        Math.floor((input.now.getTime() - storageChargeStartAt.getTime()) / STORAGE_DAY_MS),
+      );
   const isAged =
     addMonths(input.receivedAt, input.policy.agedThresholdMonths).getTime() <= input.now.getTime();
 
@@ -66,13 +72,16 @@ export function computeParcelAgeingSnapshot(input: {
     storageChargeStartAt: storageChargeStartAt.toISOString(),
     storageChargeDays: chargeDays,
     storageChargePsw: chargeDays * input.policy.storageFeePerDayPsw,
-    storageFeePerDayPsw: input.policy.storageFeePerDayPsw,
+    storageFeePerDayPsw: isChargeExemptCustomerType(input.chargeExemptCustomerType)
+      ? 0
+      : input.policy.storageFeePerDayPsw,
     storageChargeGraceDays: input.policy.gracePeriodDays,
     ageingThresholdMonths: input.policy.agedThresholdMonths,
   };
 }
 
 export function computeStorageAccrualPsw(input: {
+  chargeExemptCustomerType?: number | null;
   status: number;
   receivedAt: Date | null;
   policy: ParcelAgeingPolicy;
@@ -82,13 +91,20 @@ export function computeStorageAccrualPsw(input: {
     input.status === ParcelStatus.AWAITING_PICKUP ||
     input.status === ParcelStatus.HOME_DELIVERY_REQUESTED ||
     input.status === ParcelStatus.AGED_IN_WAREHOUSE;
-  if (!isCollectionStatus || !input.receivedAt) return 0;
+  if (
+    isChargeExemptCustomerType(input.chargeExemptCustomerType) ||
+    !isCollectionStatus ||
+    !input.receivedAt
+  )
+    return 0;
   const storageChargeStartAt = new Date(
     input.receivedAt.getTime() + input.policy.gracePeriodDays * STORAGE_DAY_MS,
   );
-  const chargeDays = Math.max(
-    0,
-    Math.floor((input.now.getTime() - storageChargeStartAt.getTime()) / STORAGE_DAY_MS),
-  );
+  const chargeDays = isChargeExemptCustomerType(input.chargeExemptCustomerType)
+    ? 0
+    : Math.max(
+        0,
+        Math.floor((input.now.getTime() - storageChargeStartAt.getTime()) / STORAGE_DAY_MS),
+      );
   return chargeDays * input.policy.storageFeePerDayPsw;
 }

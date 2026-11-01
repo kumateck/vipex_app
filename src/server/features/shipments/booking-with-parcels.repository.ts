@@ -1,3 +1,4 @@
+import { assertBookingExemptionsUnchanged, resolveReceivingStaff } from './charge-exemption';
 import {
   assertBookingLocationCapabilitiesRepo,
   resolveReceivingPickupLocationsRepo,
@@ -22,7 +23,13 @@ import { sanitizeString } from '@/lib/utils';
 import { generateBookingCode, generateTrackingCode } from '@/server/utils/codegen';
 import { assertParcelChargeAgentsRepo } from './parcel-charge-agents.repository';
 
-export type CreatedParcelRef = { id: string; trackingCode: string; bookingCode: string };
+export type CreatedParcelRef = {
+  id: string;
+  trackingCode: string;
+  bookingCode: string;
+  chargeExemptCustomerType?: number | null;
+  relatedStaffNameSnapshot?: string | null;
+};
 export type CreatedPaymentRef = { id: string };
 
 export type CreateBookingWithParcelsInput = {
@@ -54,6 +61,8 @@ export type CreateBookingWithParcelsInput = {
     senderPaymentMethod?: PaymentMethod; // fallback to parcel.method if not provided
     cashierUserId: string; // sending cashier user id for this parcel
     chargeAgentUserId?: string | null;
+    chargeExemptCustomerType?: number | null;
+    relatedStaffId?: string | null;
     processedBy?: string | null;
     branchId: string; // branch taking the cash
     callSender?: boolean; // sender must be called before parcel is given to receiver
@@ -73,20 +82,6 @@ function getErrorCode(error: unknown, depth = 0): string | undefined {
   if (typeof err.code === 'string' && err.code.length > 0) return err.code;
   return getErrorCode(err.cause, depth + 1);
 }
-
-// Simple, readable booking code generator: BK-YYMMDD-XXXXX
-// export function generateBookingCode(now: Date): string {
-//   const yy = String(now.getFullYear()).slice(-2);
-//   const mm = String(now.getMonth() + 1).padStart(2, '0');
-//   const dd = String(now.getDate()).padStart(2, '0');
-//   const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
-//   return `BK-${yy}${mm}${dd}-${rand}`;
-// }
-
-// // Tracking code generator: TRK-XXXXXXXXXX (uppercase base36)
-// export function generateTrackingCode(): string {
-//   return `TRK-${Math.random().toString(36).slice(2, 12).toUpperCase()}`;
-// }
 
 // Fetch authenticated cashier's branch name (used for booking code initial)
 async function getCashierBranchName(
@@ -148,6 +143,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
   },
 ): Promise<CreateBookingWithParcelsOutput> {
   return db.transaction(async (tx) => {
+    await assertBookingExemptionsUnchanged(input, tx);
     await assertBookingLocationCapabilitiesRepo(input, tx);
     const resolvedParcels = await resolveReceivingPickupLocationsRepo(
       input.companyId,
@@ -176,6 +172,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
     const createdPayments: CreatedPaymentRef[] = [];
 
     for (const p of resolvedParcels) {
+      const relatedStaff = await resolveReceivingStaff(input.companyId, p, tx);
       const tracking = await createUniqueTrackingCode(tx, input.companyId);
 
       const code = generateBookingCode(branchName, bookingCreatedAt);
@@ -194,6 +191,8 @@ export async function createBookingWithParcelsAndPaymentsRepo(
         parcelDetails: p.parcelDetails,
         parcelContent: p.parcelContent,
         parcelValuePsw: p.parcelValuePsw ?? 0,
+        chargeExemptCustomerType: p.chargeExemptCustomerType ?? null,
+        ...relatedStaff,
         chargePsw: p.chargePsw ?? 0,
         plannedToBePaidPsw: p.plannedToBePaidPsw ?? 0,
         method: p.method,
@@ -227,6 +226,8 @@ export async function createBookingWithParcelsAndPaymentsRepo(
         id: sanitizeString(parcelRow?.id),
         trackingCode: sanitizeString(parcelRow?.trackingCode),
         bookingCode: code,
+        chargeExemptCustomerType: p.chargeExemptCustomerType ?? null,
+        relatedStaffNameSnapshot: relatedStaff.relatedStaffNameSnapshot,
       });
 
       if (p.senderPaymentPsw && p.senderPaymentPsw > 0) {

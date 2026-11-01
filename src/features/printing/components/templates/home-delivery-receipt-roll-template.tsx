@@ -11,11 +11,13 @@ export function HomeDeliveryReceiptRollTemplate(
   return (
     <ReceiptRollShell
       paperFormat={props.paperFormat}
+      isChargeExempt={props.isChargeExempt}
       title="Tax Invoice"
       issuedAtLabel={props.issuedAtLabel}
       cashierName={props.cashierName}
       qrValue={props.qrValue}
     >
+      {props.isChargeExempt ? <strong>EXEMPT — NO PAYMENT DUE</strong> : null}
       <ReceiptRollField label="Booking" value={props.bookingCode} />
       <ReceiptRollField
         label="Receiver Info"

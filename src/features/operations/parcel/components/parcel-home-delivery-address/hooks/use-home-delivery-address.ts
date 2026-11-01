@@ -53,7 +53,7 @@ export function useHomeDeliveryAddress() {
         parcelId: selectedParcel.id,
         userId,
         dropoffAddress: dropoffAddress.trim(),
-        deliveryFeeCedis: deliveryFee,
+        deliveryFeeCedis: selectedParcel.chargeExemptCustomerType != null ? '0' : deliveryFee,
       }).unwrap();
       toast.success('Address and delivery fee saved');
       setSelectedParcel(null);
@@ -66,7 +66,7 @@ export function useHomeDeliveryAddress() {
   const onCollectAddress = useCallback((parcel: ParcelSearchRow) => {
     setSelectedParcel(parcel);
     setDropoffAddress('');
-    setDeliveryFee('');
+    setDeliveryFee(parcel.chargeExemptCustomerType != null ? '0' : '');
   }, []);
   const onSearch = () => {
     const term = searchInput.trim();

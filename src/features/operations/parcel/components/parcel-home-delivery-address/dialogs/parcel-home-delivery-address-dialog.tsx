@@ -59,9 +59,12 @@ export function ParcelHomeDeliveryAddressDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="delivery-fee">Delivery Fee (GHS)</Label>
+            <Label htmlFor="delivery-fee">
+              Delivery Fee (GHS){parcel?.chargeExemptCustomerType != null ? ' — Exempt' : ''}
+            </Label>
             <Input
               id="delivery-fee"
+              disabled={parcel?.chargeExemptCustomerType != null}
               inputMode="decimal"
               value={deliveryFee}
               onChange={(event) => onDeliveryFeeChange(event.target.value)}

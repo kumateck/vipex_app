@@ -132,10 +132,10 @@ legacy amount-only requests are rejected. Existing ledger history is not migrate
 
 This workflow replaces the previous direct edit of an unpaid positive credit charge. **Only
 an existing zero parcel charge** can be corrected. Positive charges cannot be edited here.
-New parcel creation still rejects zero charges.
+Ordinary new parcel creation rejects zero charges. Explicit [customer charge exemptions](CUSTOMER_CHARGE_EXEMPTIONS.md) permit zero and cannot be converted to CREDIT.
 
 1. A staff member with **CanUpdateParcelCharge** opens Parcel Details → Payments → Charges
-   → **Request charge correction**. The button appears only for a zero charge.
+   → **Request charge correction**. The button appears only for an unclassified zero charge; exempt parcels are excluded.
 2. Enter the proposed GHS charge, a reason (3–500 characters), and tick **Record this charge
    as CREDIT owed by the parcel sender**. The sender's credit account is shown automatically;
    there is no person or staff selector. The sender must already be credit eligible.

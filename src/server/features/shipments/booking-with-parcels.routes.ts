@@ -1,3 +1,4 @@
+import { listReceivingStaffOptions } from './charge-exemption';
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
@@ -18,6 +19,18 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateBookingWithParcels)],
     detail: { tags: ['Shipments'], summary: 'List active charge agents at my branch' },
   })
+  .get(
+    '/receiving-staff-options',
+    ({ query, user }) => listReceivingStaffOptions(user!.companyId ?? '', query.destinationId),
+    {
+      query: t.Object({ destinationId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateBookingWithParcels)],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'List active receiving staff at a destination branch',
+      },
+    },
+  )
   .post(
     '/create-with-parcels',
     async ({ body, set, user }) => {
@@ -49,6 +62,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
           paymentResponsibility?: number;
           callSender?: boolean;
           chargeAgentUserId?: string | null;
+          relatedStaffId?: string | null;
         }>;
       };
       if (payload.completeToBePaid && payload.deferSenderCashierCompletion) {
@@ -117,6 +131,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
             ),
             callSender: t.Optional(t.Boolean()),
             chargeAgentUserId: t.Optional(t.Union([UUID, t.Null()])),
+            relatedStaffId: t.Optional(t.Union([UUID, t.Null()])),
           }),
           { minItems: 1 },
         ),
