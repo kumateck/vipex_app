@@ -44,6 +44,9 @@ export const PeopleRouteSection = memo(function PeopleRouteSection({
               value: joinPhones(summary?.receiverPhone, summary?.receiverPhone2),
             },
             { label: 'Card', value: parcel.cardNumber },
+            parcel.relatedStaffNameSnapshot
+              ? { label: 'Receiving staff', value: parcel.relatedStaffNameSnapshot }
+              : null,
             parcel.secondReceiverId
               ? {
                   label: 'Second Receiver',

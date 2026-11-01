@@ -45,6 +45,7 @@ export async function doorToDoorAddressCollectedSvc(input: {
     createdBy: input.userId,
   });
   const doorstepFeeValidationError = getParcelChargeValidationError({
+    chargeExemptCustomerType: parcel.chargeExemptCustomerType,
     chargeCedis: Number(input.deliveryFeeCedis),
     plannedToBePaidCedis: 0,
   });

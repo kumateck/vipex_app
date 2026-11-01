@@ -37,6 +37,7 @@ export async function requestDeliveryChangeSvc(input: {
   if (!feeInput) throw BadRequest('Enter the new delivery fee');
   const feeCedis = Number(feeInput);
   const feeValidationError = getParcelChargeValidationError({
+    chargeExemptCustomerType: context.chargeExemptCustomerType,
     chargeCedis: feeCedis,
     plannedToBePaidCedis: 0,
   });

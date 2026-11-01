@@ -645,6 +645,13 @@
       "when": 1793030400000,
       "tag": "0091_parcel_charge_correction_approvals",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1793491200000,
+      "tag": "0092_customer_charge_exemptions",
+      "breakpoints": true
     }
   ]
 }

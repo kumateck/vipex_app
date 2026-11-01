@@ -52,12 +52,17 @@ export function CustomerLookupSection({
   );
   const customers = canLookup ? lookupCustomers : EMPTY_CUSTOMERS;
 
+  const customerTypeName = customerIdName.replace(
+    /customerId$/,
+    'customerType',
+  ) as 'sender.customerType';
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
   const shouldEnableName = canLookup && !isFetching && customers.length === 0;
   const isExistingCustomer = Boolean(selectedCustomer);
 
   useEffect(() => {
     if (!canLookup) {
+      setValue(customerTypeName, undefined);
       if (selectedCustomerId) {
         setValue(customerIdName, '', { shouldDirty: true, shouldValidate: true });
         setValue(fullnameName, '', { shouldDirty: true, shouldValidate: true });
@@ -67,6 +72,7 @@ export function CustomerLookupSection({
     }
 
     if (!customers.length) {
+      setValue(customerTypeName, undefined);
       if (selectedCustomerId) {
         setValue(customerIdName, '', { shouldDirty: true, shouldValidate: true });
         setValue(fullnameName, '', { shouldDirty: true, shouldValidate: true });
@@ -76,6 +82,7 @@ export function CustomerLookupSection({
     }
 
     const nextCustomer = selectedCustomer ?? customers[0];
+    setValue(customerTypeName, nextCustomer?.customerType);
     if (nextCustomer && nextCustomer.id !== selectedCustomerId) {
       setValue(customerIdName, nextCustomer.id, { shouldDirty: true, shouldValidate: true });
     }
@@ -93,6 +100,7 @@ export function CustomerLookupSection({
   }, [
     canLookup,
     customerIdName,
+    customerTypeName,
     customers,
     fullnameName,
     phoneName,
@@ -240,6 +248,7 @@ export function CustomerLookupSection({
                   onValueChange={(value) => {
                     field.onChange(value);
                     const matched = customers.find((customer) => customer.id === value);
+                    setValue(customerTypeName, matched?.customerType);
                     if (matched?.fullname) {
                       setValue(fullnameName, matched.fullname, {
                         shouldDirty: true,

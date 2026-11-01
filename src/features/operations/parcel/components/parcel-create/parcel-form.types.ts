@@ -7,6 +7,7 @@ export type CustomerFormValues = {
   telephone: string;
   telephone2: string;
   customerId: string;
+  customerType?: number;
   fullname: string;
 };
 
@@ -19,6 +20,7 @@ export type ParcelFormValues = {
   parcelValue: string;
   charge: string;
   chargeAgentUserId: string;
+  relatedStaffId?: string;
   paymentResponsibility: PaymentResponsibility;
   senderSettlementMode: SenderSettlementMode;
   senderPartialPayment: string;
@@ -38,6 +40,8 @@ export type ReceiptSummary = {
   senderId?: string;
   parcels: Array<{
     parcelId?: string;
+    chargeExemptCustomerType?: number | null;
+    relatedStaffNameSnapshot?: string | null;
     bookingCode: string;
     trackingCode: string;
     callSender?: boolean;

@@ -48,7 +48,8 @@ export function AddressCollectionForm(props: Props) {
           />
           <AppLabel>Delivery fee (GHS)</AppLabel>
           <AppInput
-            value={fee}
+            value={props.parcel.chargeExemptCustomerType != null ? '0' : fee}
+            editable={props.parcel.chargeExemptCustomerType == null}
             onChangeText={setFee}
             keyboardType="decimal-pad"
             placeholder="0.00"

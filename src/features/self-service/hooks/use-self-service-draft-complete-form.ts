@@ -17,6 +17,7 @@ import { getRequiredPickupLocationError } from '@/shared/shipments/pickup-locati
 function buildFormValues(draft?: SelfServiceDraft): ParcelBookingFormValues {
   return {
     sender: {
+      customerType: draft?.senderCustomerType,
       telephone: draft?.senderPhone ?? '',
       telephone2: draft?.senderPhone2 ?? '',
       customerId: '',
@@ -38,6 +39,7 @@ function buildFormValues(draft?: SelfServiceDraft): ParcelBookingFormValues {
         senderPartialPayment: '',
         callSender: draft?.callSender ?? false,
         receiver: {
+          customerType: draft?.receiverCustomerType,
           telephone: draft?.receiverPhone ?? '',
           telephone2: draft?.receiverPhone2 ?? '',
           customerId: '',
@@ -88,6 +90,10 @@ export function useSelfServiceDraftCompleteForm(draft: SelfServiceDraft | undefi
   }, [draft, form]);
 
   const { control, clearErrors, setValue } = form;
+  useEffect(() => {
+    form.setValue('sender.customerType', draft?.senderCustomerType);
+    form.setValue('parcels.0.receiver.customerType', draft?.receiverCustomerType);
+  }, [draft?.senderCustomerType, draft?.receiverCustomerType, form]);
   const destinationBranchId = sanitizeString(
     useWatch({ control, name: 'parcels.0.destinationBranchId' }),
   );

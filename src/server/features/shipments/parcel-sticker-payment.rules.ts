@@ -1,3 +1,4 @@
+import { isChargeExemptCustomerType } from '@/shared/customers/customer-types';
 import { PaymentMethod } from '@/db/schemas/enums';
 import { Conflict } from '@/server/utils/http-error';
 import type { VerifiedStickerPayment } from '@/shared/printing';
@@ -5,6 +6,8 @@ import type { VerifiedStickerPayment } from '@/shared/printing';
 export type StickerPaymentRecord = {
   bookingCode: string;
   trackingCode: string;
+  relatedStaffNameSnapshot?: string | null;
+  chargeExemptCustomerType?: number | null;
   chargePsw: number;
   plannedToBePaidPsw: number;
   senderPaidPsw: number;
@@ -25,6 +28,20 @@ export function verifyStickerPaymentRecord(record: StickerPaymentRecord): Verifi
     Conflict(
       'Sticker not printed: payment status is not confirmed. Complete sender payment or confirm the receiver amount or approved credit.',
     );
+  if (isChargeExemptCustomerType(record.chargeExemptCustomerType)) {
+    if (
+      [charge, planned, sender, receiver, credit].some((amount) => amount !== 0) ||
+      record.method === PaymentMethod.CREDIT
+    )
+      throw blocked();
+    return {
+      bookingCode: record.bookingCode,
+      trackingCode: record.trackingCode,
+      status: 'EXEMPT',
+      amountCedis: 0,
+      relatedStaffNameSnapshot: record.relatedStaffNameSnapshot ?? null,
+    };
+  }
   if (
     ![charge, planned, sender, receiver, credit].every(
       (value) => Number.isSafeInteger(value) && value >= 0,

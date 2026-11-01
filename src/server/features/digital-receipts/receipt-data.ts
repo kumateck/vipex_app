@@ -10,6 +10,8 @@ export type ReceiptParcelRow = {
   parcelDetails: string;
   parcelContent: string;
   parcelValuePsw: number | null;
+  chargeExemptCustomerType?: number | null;
+  relatedStaffNameSnapshot?: string | null;
   chargePsw: number;
   plannedToBePaidPsw: number;
   method?: number;
@@ -58,6 +60,8 @@ export function buildSenderReceiptData(
     row.method === PaymentMethod.CREDIT && (!recorded || recorded.grossAmountPsw <= 0);
   const plannedSenderPaidCedis = isCredit ? 0 : Math.max(totalChargeCedis - receiverToPayCedis, 0);
   const base: ReceiptPrintData = {
+    chargeExemptCustomerType: row.chargeExemptCustomerType,
+    relatedStaffNameSnapshot: row.relatedStaffNameSnapshot,
     bookingCode: row.bookingCode,
     trackingCode: row.trackingCode,
     callSender: row.callSender,

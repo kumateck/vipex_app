@@ -31,6 +31,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 - [Accounting](ACCOUNTING_MODULE.md)
 - [Parcel tax data generation](PARCEL_TAX_DATA.md)
 - [Customer and CRM](CRM_SYSTEM.md)
+- [Customer charge exemptions and staff recipients](CUSTOMER_CHARGE_EXEMPTIONS.md)
 - [Customer website enquiries, complaints and feedback](CUSTOMER_WEBSITE_MESSAGES.md)
 - [Customer wallet and credit](CUSTOMER_WALLET_CREDIT_MODULE.md)
 - [Customer wallet and credit QA](CUSTOMER_WALLET_CREDIT_QA_CHECKLIST.md)

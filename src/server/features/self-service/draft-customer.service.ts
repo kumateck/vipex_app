@@ -1,3 +1,4 @@
+import { withDraftCustomerTypes } from '../shipments/charge-exemption';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { auditLogs, selfServiceBookingDrafts } from '@/db/schemas';
@@ -31,7 +32,7 @@ export async function updateSelfServiceDraftSvc(
   )
     throw BadRequest('The same customer number must have consistent sender and receiver details');
   const parcel = input.details ? normalizeDraftParcel(input.details) : null;
-  return db.transaction(async (tx) => {
+  const updatedDraft = await db.transaction(async (tx) => {
     const [draft] = await tx
       .select()
       .from(selfServiceBookingDrafts)
@@ -121,6 +122,7 @@ export async function updateSelfServiceDraftSvc(
     });
     return updated!;
   });
+  return withDraftCustomerTypes(updatedDraft);
 }
 
 export const updateSelfServiceDraftCustomersSvc = (

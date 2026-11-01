@@ -7,6 +7,7 @@ import { isVerticalReceiptPaper } from '@/shared/printing';
 import { HomeDeliveryReceiptRollTemplate } from './home-delivery-receipt-roll-template';
 
 export type HomeDeliveryReceiptA5Props = {
+  isChargeExempt?: boolean;
   cashierName?: string | null;
   issuedAtLabel: string;
   bookingCode: string;
@@ -62,6 +63,9 @@ export function HomeDeliveryReceiptA5Template(props: HomeDeliveryReceiptA5Props)
         lineHeight: 1.1,
       }}
     >
+      {props.isChargeExempt ? (
+        <p style={{ fontWeight: 700 }}>Exempt from every charge. No payment is due.</p>
+      ) : null}
       <InvoiceA5Header
         issuedAtLabel={props.issuedAtLabel}
         title="Tax Invoice"
@@ -123,7 +127,7 @@ export function HomeDeliveryReceiptA5Template(props: HomeDeliveryReceiptA5Props)
           totalPaid={props.grossPsw / 100}
         />
       </div>
-      <InvoiceA5Terms />
+      <InvoiceA5Terms isChargeExempt={props.isChargeExempt} />
     </div>
   );
 }

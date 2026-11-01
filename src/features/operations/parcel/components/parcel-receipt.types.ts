@@ -1,6 +1,8 @@
 import type { StickerPaymentStatus, VerifiedStickerPayment } from '@/shared/printing';
 
 export type ReceiptPrintData = {
+  chargeExemptCustomerType?: number | null;
+  relatedStaffNameSnapshot?: string | null;
   bookingCode: string;
   trackingCode: string;
   callSender?: boolean;

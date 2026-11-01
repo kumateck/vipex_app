@@ -263,3 +263,7 @@ Credit eligibility, credit limit, customer type, identity verification, governme
 - Delivery review branch mismatch, already-reviewed conflict, approval, rejection, and optional note.
 - Customer search with no results, read-only details, permitted contact update, duplicate telephone conflict, and company isolation.
 - Android and iOS camera, telephone deep link, keyboard, scrolling, loading, and offline recovery checks.
+
+## Exempt Customer Bookings
+
+Family, Friends, Director and Staff customers qualify new parcels for full charge exemption when either the sender or receiver has that type. Transport, delivery, storage and every other charge remain zero. Only Staff parcels require an active destination-branch HR employee as Receiving staff. Updated web/desktop and mobile booking and self-service completion support the selection; stickers show EXEMPT and the preserved staff name while keeping the office contact number. Historical unclassified zero charges remain distinct. See [Customer charge exemptions](CUSTOMER_CHARGE_EXEMPTIONS.md) for current rules, permissions, failure cases, migration rollout and QA.

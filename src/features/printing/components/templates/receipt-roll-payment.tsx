@@ -4,6 +4,7 @@ import { receiptTaxRows } from './receipt-tax-rows';
 import { isToBePaidDeliveryReceipt } from './invoice-a5-template.utils';
 
 export function ReceiptRollPayment(props: InvoiceA5TemplateProps) {
+  if (props.isChargeExempt) return <strong>PAYMENT STATUS: EXEMPT — NO PAYMENT DUE</strong>;
   const money = props.formatMoney;
   const unpaid = isToBePaidDeliveryReceipt(props);
   if (props.settlementMode === 'CREDIT')

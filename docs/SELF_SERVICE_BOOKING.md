@@ -450,3 +450,7 @@ normalizes names/phones/value and excludes changing request IP and server timest
 submissions do not increment the booking count or daily counters. Using **New booking** intentionally
 starts another blank parcel form with its next token; the service does not merge separate intended
 parcels merely because they have the same sender or contents.
+
+## Exempt Customer Completion
+
+Family, Friends, Director and Staff customers qualify new parcels for full charge exemption when either the sender or receiver has that type. Transport, delivery, storage and every other charge remain zero. Only Staff parcels require an active destination-branch HR employee as Receiving staff. Updated web/desktop and mobile booking and self-service completion support the selection; stickers show EXEMPT and the preserved staff name while keeping the office contact number. Historical unclassified zero charges remain distinct. See [Customer charge exemptions](CUSTOMER_CHARGE_EXEMPTIONS.md) for current rules, permissions, failure cases, migration rollout and QA.

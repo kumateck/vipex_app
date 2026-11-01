@@ -4,6 +4,7 @@ import { deliveredPrincipalPayers, formatCurrency } from './utils';
 
 type SuperSearchPayment = {
   parcelValuePsw: number;
+  chargeExemptCustomerType?: number | null;
   chargePsw: number;
   paidPrincipalPsw?: number;
   plannedToBePaidPsw: number;
@@ -13,6 +14,7 @@ type SuperSearchPayment = {
 };
 
 export function ParcelSuperSearchPaymentCell({ parcel }: { parcel: SuperSearchPayment }) {
+  if (parcel.chargeExemptCustomerType != null) return <Badge variant="secondary">Exempt</Badge>;
   const chargePsw = Math.max(Number(parcel.chargePsw ?? 0), 0);
   const toBePaidPsw = Math.max(Number(parcel.plannedToBePaidPsw ?? 0), 0);
   const paidPsw = Math.max(
