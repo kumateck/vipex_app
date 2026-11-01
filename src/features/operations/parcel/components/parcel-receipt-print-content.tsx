@@ -64,7 +64,9 @@ export function ParcelReceiptPrintContent({
     senderName: data.senderName,
     senderTelephone: data.senderTelephone,
     senderTelephone2: data.senderTelephone2,
-    receiverName: data.receiverName,
+    receiverName: payment?.relatedStaffNameSnapshot
+      ? `${data.receiverName} — ${payment.relatedStaffNameSnapshot}`
+      : data.receiverName,
     receiverTelephone: data.receiverTelephone,
     receiverTelephone2: data.receiverTelephone2,
     callSender: data.callSender,
@@ -102,13 +104,21 @@ export function ParcelReceiptPrintContent({
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '148mm' }}>
         <div ref={invoiceRef}>
           <InvoiceA5Template
-            {...buildInvoiceA5Props(data, {
-              amountPaidCedis,
-              tax,
-              qrUrl,
-              cashierName: printedByName,
-              isDuplicate,
-            })}
+            {...buildInvoiceA5Props(
+              {
+                ...data,
+                stickerStatusLabel: payment?.status ?? data.stickerStatusLabel,
+                relatedStaffNameSnapshot:
+                  payment?.relatedStaffNameSnapshot ?? data.relatedStaffNameSnapshot,
+              },
+              {
+                amountPaidCedis,
+                tax,
+                qrUrl,
+                cashierName: printedByName,
+                isDuplicate,
+              },
+            )}
           />
         </div>
       </div>

@@ -52,6 +52,7 @@ export async function listParcelsSvc(p: ListParcelsParams) {
       return {
         ...row,
         ...computeParcelAgeingSnapshot({
+          chargeExemptCustomerType: row.chargeExemptCustomerType,
           status: row.status,
           receivedAt: row.receivedAt,
           policy: rowPolicy,

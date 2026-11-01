@@ -9,6 +9,10 @@ export function ParcelChargesCard({ details }: { details: ParcelFullDetails }) {
     <ParcelDetailCard
       title="Charges"
       rows={[
+        parcel.chargeExemptCustomerType != null && [
+          'Charge status',
+          'Exempt from all charges, including storage',
+        ],
         ['Parcel Charge', formatCedis(parcel.chargePsw)],
         ['To Be Paid by Receiver', formatCedis(parcel.plannedToBePaidPsw)],
         summary && ['Paid (parcel charge)', formatCedis(summary.paidPrincipalPsw)],

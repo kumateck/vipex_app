@@ -54,7 +54,9 @@ export function CustomerTransactionsTab({
                   <Badge variant="secondary">
                     {PARCEL_PAYMENT_STATUS_LABEL[row.paymentStatus] ?? 'Payment status unavailable'}
                   </Badge>
-                  {row.chargePsw === 0 && row.paymentStatus !== 'CHARGE_MISSING' ? (
+                  {row.chargePsw === 0 &&
+                  row.paymentStatus !== 'CHARGE_MISSING' &&
+                  row.paymentStatus !== 'EXEMPT' ? (
                     <Badge variant="destructive">Charge missing</Badge>
                   ) : null}
                   <Badge variant={row.transactionRole === 'SENDER' ? 'default' : 'secondary'}>

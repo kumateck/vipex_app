@@ -1,3 +1,4 @@
+import { ParcelChargeExemption } from '@/features/operations/parcel-charge-exemption';
 import { useEffect, useRef } from 'react';
 import { useFormContext, useWatch, type FieldPathByValue } from 'react-hook-form';
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
@@ -229,6 +230,7 @@ export function ParcelCard({
               />
             </div>
 
+            <ParcelChargeExemption index={index} />
             <div className="grid gap-4 xl:grid-cols-2">
               <ParcelCardInfoSection
                 control={control}
@@ -238,6 +240,7 @@ export function ParcelCard({
                 callSenderName={callSenderName}
               />
               <ParcelCardChargeSection
+                index={index}
                 control={control}
                 parcelChargeName={parcelChargeName}
                 parcelChargeAgentName={`parcels.${index}.chargeAgentUserId`}

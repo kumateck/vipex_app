@@ -4,7 +4,10 @@ import { NotFound } from '@/server/utils/http-error';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { ensureCompanyModuleEnabledSvc } from '../company-modules/service';
 import { getStickerPaymentRecord } from './parcel-sticker-payment.repository';
-import { verifyStickerPaymentRecord } from './parcel-sticker-payment.rules';
+import {
+  type StickerPaymentRecord,
+  verifyStickerPaymentRecord,
+} from './parcel-sticker-payment.rules';
 
 export function canVerifyStickerPayment(
   user: AuthUser,
@@ -24,7 +27,19 @@ export async function getVerifiedStickerPayment(
   input: { trackingCode: string; bookingCode: string },
   user: AuthUser,
   deps: {
-    load: typeof getStickerPaymentRecord;
+    load: (
+      companyId: string,
+      trackingCode: string,
+      bookingCode: string,
+    ) => Promise<
+      | (StickerPaymentRecord & {
+          companyId: string;
+          sourceId: string;
+          destinationId: string;
+          status: number;
+        })
+      | null
+    >;
     ensureModule: (companyId: string, moduleCode: string) => Promise<unknown>;
   } = { load: getStickerPaymentRecord, ensureModule: ensureCompanyModuleEnabledSvc },
 ) {

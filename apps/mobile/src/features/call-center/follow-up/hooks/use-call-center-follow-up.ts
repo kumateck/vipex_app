@@ -67,7 +67,7 @@ export function useCallCenterFollowUp(
             parcelId: selected.id,
             userId,
             dropoffAddress: dropoffAddress.trim(),
-            deliveryFeeCedis,
+            deliveryFeeCedis: selected.chargeExemptCustomerType != null ? '0' : deliveryFeeCedis,
           }),
         );
         notifySuccess('The parcel is ready for supervisor dispatch.', 'Address collected');

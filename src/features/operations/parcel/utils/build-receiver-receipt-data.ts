@@ -12,6 +12,8 @@ type ReceiverTaxBreakdown = {
 
 type ReceiptParcelFields = Pick<
   ParcelSearchRow,
+  | 'chargeExemptCustomerType'
+  | 'relatedStaffNameSnapshot'
   | 'bookingCode'
   | 'trackingCode'
   | 'callSender'
@@ -50,6 +52,8 @@ export function buildReceiverReceiptData({
   taxBreakdown,
 }: BuildReceiverReceiptDataArgs): ReceiptPrintData {
   return {
+    chargeExemptCustomerType: parcel.chargeExemptCustomerType,
+    relatedStaffNameSnapshot: parcel.relatedStaffNameSnapshot,
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
     callSender: parcel.callSender,

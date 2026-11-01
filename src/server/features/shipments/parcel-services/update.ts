@@ -1,3 +1,4 @@
+import { assertParcelCanAccrueCharge } from '../charge-exemption';
 import { fromPesewas, toPesewas } from '@/server/utils/gh-money';
 import { ParcelStatus, PaymentMethod } from '@/db/schemas';
 import { BadRequest, Conflict, NotFound } from '../../../utils/http-error';
@@ -50,6 +51,7 @@ export async function updateParcelSvc(
   }
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
+  if (patch.chargeCedis !== undefined) assertParcelCanAccrueCharge(cur, Number(patch.chargeCedis));
   if (
     patch.status === ParcelStatus.RETURN_TO_SOURCE &&
     cur.status !== ParcelStatus.RETURN_TO_SOURCE

@@ -1,4 +1,5 @@
 export type InvoiceA5TemplateProps = {
+  isChargeExempt?: boolean;
   settlementMode?: 'CREDIT';
   bookingCode: string;
   issuedAtLabel: string;

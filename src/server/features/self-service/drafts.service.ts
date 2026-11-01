@@ -1,3 +1,8 @@
+import {
+  resolveBookingExemptions,
+  withDraftCustomerTypes,
+  withDraftCustomerTypesList,
+} from '../shipments/charge-exemption';
 import { BadRequest, Conflict, Forbidden, NotFound } from '@/server/utils/http-error';
 import { fromPesewas } from '@/server/utils/gh-money';
 import { findOrCreateCustomerSvc } from '@/server/features/customers/service';
@@ -26,11 +31,12 @@ import { resolveCompletedCallSender } from './draft-completion-call-sender';
 export async function listSelfServiceDraftsSvc(agentUser: AuthUser) {
   if (!agentUser.companyId || !agentUser.branchId) throw Forbidden('Branch context is required');
   await deleteExpiredSelfServiceDraftsRepo();
-  return listSelfServiceDraftsForBranchRepo({
+  const drafts = await listSelfServiceDraftsForBranchRepo({
     companyId: agentUser.companyId,
     branchId: agentUser.branchId,
     statuses: [SelfServiceDraftStatus.PENDING, SelfServiceDraftStatus.CLAIMED],
   });
+  return withDraftCustomerTypesList(drafts);
 }
 
 async function getOwnedDraft(id: string, agentUser: AuthUser) {
@@ -45,7 +51,7 @@ async function getOwnedDraft(id: string, agentUser: AuthUser) {
 }
 
 export async function getSelfServiceDraftSvc(id: string, agentUser: AuthUser) {
-  return getOwnedDraft(id, agentUser);
+  return withDraftCustomerTypes(await getOwnedDraft(id, agentUser));
 }
 
 export async function claimSelfServiceDraftSvc(id: string, agentUser: AuthUser) {
@@ -56,7 +62,7 @@ export async function claimSelfServiceDraftSvc(id: string, agentUser: AuthUser) 
     claimedBy: agentUser.sub,
   });
   if (!claimed) throw Conflict('This draft was already claimed or completed by someone else');
-  return claimed;
+  return withDraftCustomerTypes(claimed);
 }
 
 export type CompleteSelfServiceDraftInput = {
@@ -69,6 +75,7 @@ export type CompleteSelfServiceDraftInput = {
   senderPartialPaymentCedis?: number | string | null;
   callSender?: boolean;
   chargeAgentUserId?: string | null;
+  relatedStaffId?: string | null;
 };
 
 export async function completeSelfServiceDraftSvc(
@@ -119,7 +126,13 @@ export async function completeSelfServiceDraftSvc(
         ? Math.max(chargeCedis - partialCedis, 0)
         : 0;
 
+  const [exemptionType] = await resolveBookingExemptions({
+    companyId: agentUser.companyId!,
+    senderId,
+    parcels: [{ receiverId }],
+  });
   const chargeValidationError = getParcelChargeValidationError({
+    chargeExemptCustomerType: exemptionType,
     chargeCedis,
     plannedToBePaidCedis,
   });
@@ -156,6 +169,7 @@ export async function completeSelfServiceDraftSvc(
         parcelValueCedis: fromPesewas(BigInt(draft.parcelValuePsw)),
         chargeCedis,
         chargeAgentUserId: agentInput.chargeAgentUserId ?? null,
+        relatedStaffId: agentInput.relatedStaffId ?? null,
         plannedToBePaidCedis,
         method,
         senderPaymentCedis: 0,

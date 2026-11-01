@@ -113,6 +113,9 @@ export function useParcelStatusColumns({
                 <CallSenderBadge className="h-5 px-1.5 text-[10px]" />
               ) : null}
             </div>
+            {row.original.relatedStaffNameSnapshot ? (
+              <p className="text-xs">Receiving staff: {row.original.relatedStaffNameSnapshot}</p>
+            ) : null}
             <p className="text-muted-foreground text-xs">
               {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
             </p>

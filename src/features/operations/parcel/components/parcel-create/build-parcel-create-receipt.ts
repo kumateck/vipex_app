@@ -41,6 +41,8 @@ export function buildParcelCreateReceipt({
 
       return {
         parcelId: parcel.id,
+        chargeExemptCustomerType: parcel.chargeExemptCustomerType,
+        relatedStaffNameSnapshot: parcel.relatedStaffNameSnapshot,
         bookingCode: parcel.bookingCode ?? response.bookingId,
         trackingCode: parcel.trackingCode ?? '-',
         callSender: formParcel?.callSender ?? false,

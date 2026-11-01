@@ -1,3 +1,4 @@
+import { useParcelExemptionType } from '@/features/operations/parcel-charge-exemption';
 import type { Control, FieldPathByValue } from 'react-hook-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -23,6 +24,7 @@ import { ParcelChargeAgentField } from './parcel-charge-agent-field';
 import type { ParcelChargeAgentSource } from '../../types';
 
 type ParcelCardChargeSectionProps = {
+  index?: number;
   control: Control<ParcelBookingFormValues>;
   parcelChargeName: FieldPathByValue<ParcelBookingFormValues, string>;
   parcelChargeAgentName: FieldPathByValue<ParcelBookingFormValues, string>;
@@ -44,6 +46,7 @@ const parseCurrency = (value: string | number | null | undefined) => {
 };
 
 export function ParcelCardChargeSection({
+  index = 0,
   control,
   parcelChargeName,
   parcelChargeAgentName,
@@ -55,6 +58,8 @@ export function ParcelCardChargeSection({
   senderIsCreditEligible,
   parcelChargeValue,
 }: ParcelCardChargeSectionProps) {
+  const exemptionType = useParcelExemptionType(index);
+  if (exemptionType != null) return null;
   return (
     <Card size="sm" className="border-muted/50 bg-muted/20 shadow-none">
       <CardHeader className="pb-2">

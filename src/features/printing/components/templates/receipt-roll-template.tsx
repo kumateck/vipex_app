@@ -18,13 +18,18 @@ export function ReceiptRollTemplate(
   return (
     <ReceiptRollShell
       paperFormat={props.paperFormat}
+      isChargeExempt={props.isChargeExempt}
       issuedAtLabel={props.issuedAtLabel}
-      title={unpaid || isCredit ? 'ACKNOWLEDGEMENT NOTE' : 'Tax Invoice'}
+      title={props.isChargeExempt || unpaid || isCredit ? 'ACKNOWLEDGEMENT NOTE' : 'Tax Invoice'}
       cashierName={props.cashierName}
       duplicate={props.duplicate}
       qrValue={props.qrValue}
     >
-      {isCredit ? (
+      {props.isChargeExempt ? (
+        <div style={{ border: '0.25mm solid #000', padding: '1.5mm', fontWeight: 700 }}>
+          Exempt from every charge, including storage and delivery fees. No payment is due.
+        </div>
+      ) : isCredit ? (
         <div style={{ border: '0.25mm solid #000', padding: '1.5mm', fontWeight: 700 }}>
           NOTICE: No payment was collected for this parcel. {money(props.totalChargeCedis)} was
           charged to the sender's credit account.

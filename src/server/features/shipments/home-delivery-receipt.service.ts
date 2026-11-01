@@ -84,6 +84,8 @@ export async function buildHomeDeliveryReceiptSvc(
   }
 
   return {
+    chargeExemptCustomerType: parcel.chargeExemptCustomerType,
+    relatedStaffNameSnapshot: parcel.relatedStaffNameSnapshot,
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
     parcelDetails: parcel.parcelDetails,

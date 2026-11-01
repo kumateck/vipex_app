@@ -10,6 +10,9 @@ export async function printParcelSticker(
   const result: unknown = await RNPrint.print({
     html: buildMobileStickerHtml({
       ...sticker,
+      receiverName: payment.relatedStaffNameSnapshot
+        ? `${sticker.receiverName} — ${payment.relatedStaffNameSnapshot}`
+        : sticker.receiverName,
       paymentStatusLabel: payment.status,
       amountCedis: payment.amountCedis,
     }),

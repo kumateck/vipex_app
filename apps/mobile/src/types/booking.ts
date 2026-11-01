@@ -1,6 +1,7 @@
 export type CustomerLookupResult = {
   id: string;
   fullname: string;
+  customerType?: number;
   telephone?: string | null;
   telephone2?: string | null;
 };
@@ -33,6 +34,7 @@ export type CreateBookingWithParcelsInput = {
     parcelValueCedis?: number;
     chargeCedis?: number;
     chargeAgentUserId?: string | null;
+    relatedStaffId?: string | null;
     plannedToBePaidCedis?: number;
     senderPaymentCedis?: number;
     paymentResponsibility?: number;

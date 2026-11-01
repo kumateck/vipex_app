@@ -112,6 +112,12 @@ export function ParcelSuperSearchTable({
               <span className="text-muted-foreground">Receiver:</span>{' '}
               {row.original.receiverName ?? '-'}
             </p>
+            {row.original.relatedStaffNameSnapshot ? (
+              <p>
+                <span className="text-muted-foreground">Receiving staff:</span>{' '}
+                {row.original.relatedStaffNameSnapshot}
+              </p>
+            ) : null}
             <p>
               <span className="text-muted-foreground">Tel:</span>{' '}
               {[row.original.receiverPhone, row.original.receiverPhone2]

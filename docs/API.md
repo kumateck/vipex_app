@@ -643,7 +643,7 @@ SMS sending change. See [SMS location context](NOTIFICATION_HUB_MODULE.md#locati
 
 ### Customer parcel credit settlement
 
-- `GET /v1/customers?customerType=0|1`: filters Individual/Business before paging;
+- `GET /v1/customers?customerType=0|1|2|3|4|5`: filters Individual/Business/Family/Friends/Director/Staff before paging;
   still requires `CanReadCustomers` and company scope.
 - `GET /v1/customers/:id/credit/parcels` (`CanReadCustomers`) and
   `GET /v1/customer-wallet-credit/accounts/:customerId/open-parcels`
@@ -683,9 +683,30 @@ referenceId?: string|null, notes?: string|null }`. Select 1–200 distinct owned
   PARTIAL, CREDIT or CHARGE_MISSING), `paidPrincipalPsw` and `creditPaidPsw`. Status uses active
   principal payments per parcel and credit allocations, excludes voided payments/fees, ignores
   cash anomalies for CREDIT, and never treats a zero charge as Paid.
-- New parcel charges must be at least GHS 0.01, including agent completion of
+- Ordinary new parcel charges must be at least GHS 0.01, including agent completion of
   self-service drafts. Unpriced drafts are not yet booked parcels.
 
 Web and desktop expose these flows. Other API clients must adopt explicit parcel
 selection; old amount-only credit payment requests are rejected. Details and
 failure handling: [Customer Wallet & Credit Control](CUSTOMER_WALLET_CREDIT_MODULE.md).
+
+## Customer charge exemptions
+
+CRM customer types now accept 0–5 (Individual, Business, Family, Friends, Director, Staff).
+Booking lookup returns `customerType`. Either-party eligibility is resolved by the server; clients
+cannot supply the authoritative exemption. Exempt parcels must have zero charge, receiver balance
+and sender payment, with no CREDIT settlement or later charges. Only Staff requires nullable
+`relatedStaffId` in booking/direct parcel creation and agent self-service completion requests.
+
+`GET /v1/shipments/bookings/receiving-staff-options?destinationId=...` requires
+`CanCreateBookingWithParcels`; `GET /v1/self-service/receiving-staff-options?destinationId=...`
+requires `CanCompleteSelfServiceBookings`. Both return `{ id, fullname, employeeNumber }` for active
+HR employees at the destination branch in the authenticated company. Staff selection is rechecked
+at booking; invalid selections fail atomically. Agent draft reads/claims/edits include
+`senderCustomerType` and `receiverCustomerType`.
+
+Parcel responses expose `chargeExemptCustomerType`, `relatedStaffId` and
+`relatedStaffNameSnapshot` where applicable. Verified sticker responses accept status `EXEMPT`
+with `amountCedis: 0` and an optional `relatedStaffNameSnapshot`. New column migration `0092`
+is required before backend rollout. Old clients need updating to create/print exempt parcels.
+See [Customer charge exemptions](CUSTOMER_CHARGE_EXEMPTIONS.md) for the complete contract and QA.

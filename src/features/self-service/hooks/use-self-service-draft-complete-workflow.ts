@@ -48,7 +48,8 @@ export function useSelfServiceDraftCompleteWorkflow() {
         pickupLocationId: parcel.destinationLocationId,
         parcelDetails: parcel.parcelDetails,
         chargeCedis: sanitizeString(parcel.charge).replace(/,/g, ''),
-        chargeAgentUserId: parcel.chargeAgentUserId,
+        chargeAgentUserId: parcel.chargeAgentUserId || null,
+        relatedStaffId: parcel.relatedStaffId || null,
         paymentResponsibility: parcel.paymentResponsibility,
         senderSettlementMode: parcel.senderSettlementMode,
         senderPartialPaymentCedis:

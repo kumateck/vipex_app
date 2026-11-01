@@ -3,7 +3,13 @@ const RECEIPT_TERMS = [
   'Information collected will be used only for the intended purpose and handled in accordance with applicable data protection requirements.',
 ] as const;
 
-export function InvoiceA5Terms() {
+export function InvoiceA5Terms({ isChargeExempt = false }: { isChargeExempt?: boolean } = {}) {
+  const terms = isChargeExempt
+    ? [
+        'This parcel is exempt from all charges, including storage and delivery fees.',
+        RECEIPT_TERMS[1],
+      ]
+    : RECEIPT_TERMS;
   return (
     <div
       style={{
@@ -15,7 +21,7 @@ export function InvoiceA5Terms() {
       }}
     >
       <div style={{ fontWeight: 700 }}>TERMS AND CONDITIONS</div>
-      {RECEIPT_TERMS.map((term) => (
+      {terms.map((term) => (
         <div key={term} style={{ marginTop: '0.4mm' }}>
           • {term}
         </div>
