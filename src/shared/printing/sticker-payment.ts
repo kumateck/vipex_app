@@ -1,6 +1,7 @@
-export type StickerPaymentStatus = 'PAID' | 'TO BE PAID' | 'CREDIT';
+export type StickerPaymentStatus = 'PAID' | 'TO BE PAID' | 'CREDIT' | 'EXEMPT';
 
 export type VerifiedStickerPayment = {
+  relatedStaffNameSnapshot?: string | null;
   bookingCode: string;
   trackingCode: string;
   status: StickerPaymentStatus;
@@ -12,7 +13,7 @@ export function resolveStickerPayment(amountCedis: number | undefined, status: u
   if (amountCedis !== undefined && (!Number.isFinite(amountCedis) || amountCedis < 0)) {
     throw new Error('Sticker payment amount must be a finite, non-negative number');
   }
-  if (!['PAID', 'TO BE PAID', 'CREDIT'].includes(String(status))) {
+  if (!['PAID', 'TO BE PAID', 'CREDIT', 'EXEMPT'].includes(String(status))) {
     throw new Error('Sticker printing requires a verified PAID, TO BE PAID or CREDIT status');
   }
   const hasToBePaid = status === 'TO BE PAID';

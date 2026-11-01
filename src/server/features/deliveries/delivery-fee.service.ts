@@ -1,3 +1,4 @@
+import { assertParcelCanAccrueCharge } from '../shipments/charge-exemption';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { auditLogs, deliveries, users } from '@/db/schemas';
@@ -66,6 +67,7 @@ export async function updateDeliveryFeeSvc(
   const chargePsw = Number(toPesewas(fee));
   const result = await db.transaction(async (tx) => {
     const { parcel, delivery, paidFeePsw } = await getEditableContext(input, tx);
+    assertParcelCanAccrueCharge(parcel, chargePsw);
     if (
       delivery.chargePsw !== input.expectedChargePsw ||
       delivery.updatedAt.toISOString() !== input.expectedUpdatedAt

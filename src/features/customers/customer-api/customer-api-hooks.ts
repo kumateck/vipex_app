@@ -1,0 +1,26 @@
+import { customersApi } from './customer-endpoints';
+
+export const {
+  useListCustomersQuery,
+  useGetCustomerByIdQuery,
+  useFindCustomersByTelephoneQuery,
+  useResolveSecondReceiverMutation,
+  useCreateCustomerMutation,
+  useCreateCustomerCrmMutation,
+  useUpdateCustomerMutation,
+  useUpdateCustomerCrmMutation,
+  useDeleteCustomerMutation,
+  useListCardOptionsQuery,
+  useListCustomerCardsQuery,
+  useAddCustomerCardMutation,
+  useUpdateCustomerCardMutation,
+  useGetCustomerCreditSummaryQuery,
+  useListCustomerCreditTransactionsQuery,
+  useGetCustomerStatementQuery,
+  useListCustomerTransactionsQuery,
+  useListCustomerPaymentsQuery,
+  useGetCustomerPaymentsMonthlyQuery,
+  useGetCustomerTransactionsMonthlyQuery,
+  useListCustomerCreditOpenItemsQuery,
+  usePostCustomerCreditPaymentMutation,
+} = customersApi;

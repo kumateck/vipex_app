@@ -1,15 +1,18 @@
 export type PaymentStatusParcel = {
+  chargeExemptCustomerType?: number | null;
   chargePsw: number;
   plannedToBePaidPsw: number;
 };
 
 export const CONSIGNMENT_PAYMENT_STATUS_LEGEND = [
+  { label: 'Exempt', dotClassName: 'bg-violet-500' },
   { label: 'Paid', dotClassName: 'bg-emerald-500' },
   { label: 'To Be Paid', dotClassName: 'bg-amber-500' },
   { label: 'Partial', dotClassName: 'bg-sky-500' },
 ];
 
 export function getConsignmentPaymentStatus(parcel: PaymentStatusParcel) {
+  if (parcel.chargeExemptCustomerType != null) return { dotClassName: 'bg-violet-500' };
   const charge = Number(parcel.chargePsw ?? 0);
   const receiverDue = Math.max(Number(parcel.plannedToBePaidPsw ?? 0), 0);
 

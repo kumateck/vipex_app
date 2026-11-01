@@ -23,6 +23,9 @@ export function ParcelPeopleSection({
           ['Sender', summary?.senderName],
           ['Sender Telephone', joinPhones(summary?.senderPhone, extras?.senderPhone2)],
           ['Receiver', summary?.receiverName],
+          details.parcel.relatedStaffNameSnapshot
+            ? ['Receiving staff', details.parcel.relatedStaffNameSnapshot]
+            : null,
           ['Receiver Telephone', joinPhones(summary?.receiverPhone, summary?.receiverPhone2)],
           extras?.secondReceiverName ? ['Second Receiver', extras.secondReceiverName] : null,
           extras?.secondReceiverPhone

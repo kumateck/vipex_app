@@ -1,8 +1,8 @@
+import { customerTypeLabel } from '@/shared/customers/customer-types';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  CustomerType,
   type Customer,
   type CustomerPaymentsMonthly,
   type CustomerTransactionsMonthly,
@@ -42,9 +42,7 @@ export function CustomerDetailsHeader({
           {customer.telephone || '-'} {customer.email ? `• ${customer.email}` : ''}
         </p>
         <div className="mt-2 flex gap-2">
-          <Badge variant="outline">
-            {customer.customerType === CustomerType.Business ? 'Business' : 'Individual'}
-          </Badge>
+          <Badge variant="outline">{customerTypeLabel(customer.customerType)}</Badge>
           {customer.creditEligible ? (
             <Badge>Credit Eligible</Badge>
           ) : (

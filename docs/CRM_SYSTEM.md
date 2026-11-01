@@ -1,12 +1,12 @@
 # CRM System (Current Implementation)
 
-This document describes the current live CRM implementation in the application.
+This document describes the current repository CRM implementation. Exempt customer types require migration `0092` and updated clients before use in deployed environments; this change does not establish production rollout.
 
 ## Scope
 
 The CRM system currently provides:
 
-- Customer classification (`Individual`, `Business`)
+- Customer classification (`Individual`, `Business`, `Family`, `Friends`, `Director`, `Staff`)
 - Business-only credit eligibility controls
 - Customer credit ledger (charges and payments)
 - Customer card assignment
@@ -18,6 +18,7 @@ The CRM system currently provides:
 - `customerType` enum is fixed as:
   - `Individual = 0`
   - `Business = 1`
+  - `Family = 2`, `Friends = 3`, `Director = 4`, `Staff = 5`
 - Default customer type is always `Individual`.
 - Existing non-CRM customer creation/update flows remain unchanged.
 - Customer Management name edits through standard or CRM customer PATCH endpoints preserve
@@ -31,7 +32,7 @@ The CRM system currently provides:
   exact primary or secondary telephone match in the authenticated company links the active
   existing customer; otherwise a new individual customer is created. The existing record is not
   renamed or edited. Ordinary customer creation still rejects duplicate telephone numbers.
-- Business creation/update is enforced through CRM endpoints only.
+- Business and exempt classification creation/promotion is enforced through CRM endpoints only.
 - Credit booking is allowed only for credit-eligible customers.
 - Credit settings persist on customer records and are not session-bound.
 
@@ -267,8 +268,8 @@ Payment with that module's dedicated permissions. See
 [CUSTOMER_WALLET_CREDIT_MODULE.md](CUSTOMER_WALLET_CREDIT_MODULE.md) for the API
 contract, failures, permissions, and zero-charge correction approval workflow.
 
-The Customers list now has Individual and Business tabs. The `customerType` filter
-(0 or 1) is applied on the server before pagination and counting. Search and tab
+The Customers list has Individual, Business, Family, Friends, Director and Staff tabs. The `customerType` filter
+(0 through 5) is applied on the server before pagination and counting. Search and tab
 changes reset pagination. Existing records keep their recorded customer type.
 
 Credit ledger entries remain immutable. Legacy zero charges can be proposed as CREDIT through
@@ -276,18 +277,19 @@ Parcel Details and take effect only after independent approval. Dedicated role g
 `CanUpdateParcelCharge` and `CanApproveParcelCharge` control the two steps. There are no person
 selectors; the sender owns the debt and the system records requester and approver. Positive
 charges cannot be edited through this flow. See the wallet module document for restrictions.
-New parcel creation and charge requests reject zero (minimum GHS 0.01).
+Ordinary new parcel charges and legacy correction requests reject zero (minimum GHS 0.01). Family, Friends, Director and Staff bookings are explicitly exempt from all charges; see [Customer charge exemptions](CUSTOMER_CHARGE_EXEMPTIONS.md) for qualification, staff, snapshot and client rules.
 
 The transaction API includes `paymentStatus`, `paidPrincipalPsw`, and `creditPaidPsw`. The list
 shows Paid/To Be Paid/Partial based on active principal payments, or Credit until the sender's
 parcel principal debt is fully allocated. CREDIT parcels ignore phantom cash records for this
-label. Zero charges are never shown as Paid; zero cash shows Charge missing, zero CREDIT also
-has a Charge missing warning. Sender and receiver views use the same parcel-scoped calculation.
+label. Explicitly exempt parcels show Exempt. Unclassified zero charges are never shown as Paid;
+zero cash shows Charge missing, and zero CREDIT also has a Charge missing warning. Sender and
+receiver views use the same parcel-scoped calculation.
 
 ## Defaults and Compatibility
 
 - Existing operational customer creation continues defaulting to `Individual`.
-- Existing parcel creation UX does not require customer-type selection.
+- Booking officers select existing customers; their saved types determine the exemption. Staff parcels additionally require the receiving employee.
 - Business/credit controls are centralized in CRM to avoid breaking current workflows.
 
 ## Validation

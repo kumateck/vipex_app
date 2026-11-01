@@ -35,6 +35,8 @@ export function buildStickerPaymentQuery(
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
       status: parcels.status,
+      relatedStaffNameSnapshot: parcels.relatedStaffNameSnapshot,
+      chargeExemptCustomerType: parcels.chargeExemptCustomerType,
       chargePsw: parcels.chargePsw,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       method: parcels.method,

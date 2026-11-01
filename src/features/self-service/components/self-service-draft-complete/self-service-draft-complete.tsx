@@ -1,3 +1,4 @@
+import { ParcelChargeExemption } from '@/features/operations/parcel-charge-exemption';
 import { SelfServiceDraftDialog } from '../../dialogs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -85,6 +86,7 @@ export function SelfServiceDraftComplete() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <ParcelChargeExemption index={0} source="self-service" />
           <div className="grid gap-4 xl:grid-cols-2">
             <ParcelCardDestinationSection
               control={control}

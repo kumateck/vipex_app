@@ -6,6 +6,7 @@ import { InvoiceA5Terms } from './invoice-a5-terms';
 
 export function ReceiptRollShell({
   paperFormat,
+  isChargeExempt,
   title,
   issuedAtLabel,
   cashierName,
@@ -14,6 +15,7 @@ export function ReceiptRollShell({
   children,
 }: {
   paperFormat: VerticalReceiptPaperFormat;
+  isChargeExempt?: boolean;
   title: 'Tax Invoice' | 'ACKNOWLEDGEMENT NOTE';
   issuedAtLabel: string;
   cashierName?: string | null;
@@ -59,7 +61,7 @@ export function ReceiptRollShell({
           style={{ width: '25mm', height: '25mm' }}
         />
       </div>
-      <InvoiceA5Terms />
+      <InvoiceA5Terms isChargeExempt={isChargeExempt} />
     </div>
   );
 }

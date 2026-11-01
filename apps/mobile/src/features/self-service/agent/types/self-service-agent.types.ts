@@ -2,6 +2,8 @@ export type SelfServiceDraft = {
   id: string;
   branchId: string;
   status: number;
+  senderCustomerType?: number;
+  receiverCustomerType?: number;
   senderFullname: string;
   senderPhone: string;
   senderPhone2: string | null;
@@ -27,6 +29,7 @@ export type CompleteSelfServiceDraftInput = {
   parcelDetails: string;
   chargeCedis: string;
   chargeAgentUserId?: string | null;
+  relatedStaffId?: string | null;
   paymentResponsibility: 'SENDER' | 'RECEIVER' | 'SPLIT';
   senderSettlementMode: 'PAY_NOW';
   senderPartialPaymentCedis: string | null;

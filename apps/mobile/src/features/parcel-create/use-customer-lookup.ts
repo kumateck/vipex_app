@@ -122,6 +122,7 @@ export function useCustomerLookup(withAuth: WithAuth) {
     fullname,
     setFullname,
     customerId,
+    customerType: matches.find((row) => row.id === customerId)?.customerType,
     matches,
     hasLookedUp,
     isLookingUp,

@@ -1,3 +1,4 @@
+import { resolveParcelExemptionType } from '@/shared/customers/customer-types';
 import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
@@ -171,6 +172,10 @@ export function useParcelCreateFormWorkflow() {
               ? Math.max(charge - partial, 0)
               : 0;
         const chargeValidationError = getParcelChargeValidationError({
+          chargeExemptCustomerType: resolveParcelExemptionType(
+            values.sender.customerType,
+            parcel.receiver.customerType,
+          ),
           chargeCedis: charge,
           plannedToBePaidCedis: plannedToBePaid,
         });
@@ -213,7 +218,8 @@ export function useParcelCreateFormWorkflow() {
                 : PaymentMethod.CASH,
             parcelValueCedis: amounts[index]?.value,
             chargeCedis: amounts[index]?.charge,
-            chargeAgentUserId: parcel.chargeAgentUserId,
+            chargeAgentUserId: parcel.chargeAgentUserId || null,
+            relatedStaffId: parcel.relatedStaffId || null,
             callSender: parcel.callSender,
             senderPaymentCedis: 0,
             plannedToBePaidCedis:

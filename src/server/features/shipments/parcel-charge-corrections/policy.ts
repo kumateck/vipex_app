@@ -1,3 +1,4 @@
+import { assertParcelCanAccrueCharge } from '../charge-exemption';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
@@ -46,6 +47,7 @@ export async function lockZeroChargeParcel(
     )
     .for('update');
   if (!parcel || !customer) throw NotFound('Parcel or sender credit account not found');
+  assertParcelCanAccrueCharge(parcel, 1);
   if (parcel.senderId !== customerId)
     throw Conflict('Parcel sender changed. Reject this request and submit a new correction.');
   if (parcel.chargePsw !== 0 || parcel.plannedToBePaidPsw !== 0)

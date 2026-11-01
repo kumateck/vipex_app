@@ -19,6 +19,7 @@ export async function getParcelStorageSettlementSvc(
   const parcel = await getParcelSvc(parcelId, executor);
   const policy = await getCompanyParcelAgeingPolicy(parcel.companyId);
   const accruedPsw = computeStorageAccrualPsw({
+    chargeExemptCustomerType: parcel.chargeExemptCustomerType,
     status: parcel.status,
     receivedAt: parcel.receivedAt,
     policy,

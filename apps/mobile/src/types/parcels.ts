@@ -27,6 +27,8 @@ export type ParcelSearchRow = {
   callCenterAssignedToUserName?: string | null;
   callCenterCalledAt?: string | null;
   status: number;
+  chargeExemptCustomerType?: number | null;
+  relatedStaffNameSnapshot?: string | null;
   chargePsw?: number;
   parcelValuePsw?: number;
   plannedToBePaidPsw: number;
@@ -77,6 +79,8 @@ export type ParcelFullDetails = {
     parcelDetails: string;
     parcelContent: string;
     parcelValuePsw: number;
+    chargeExemptCustomerType?: number | null;
+    relatedStaffNameSnapshot?: string | null;
     chargePsw: number;
     plannedToBePaidPsw: number;
     createdAt: string;
@@ -132,6 +136,8 @@ export type ParcelFullDetails = {
     status: string;
     dropoffAddress: string | null;
     deliveredAt: string | null;
+    chargeExemptCustomerType?: number | null;
+    relatedStaffNameSnapshot?: string | null;
     chargePsw: number;
     amountPaidPsw: number;
     mode?: number;

@@ -30,6 +30,7 @@ export async function createDeliverySvc(input: {
 
   if (input.chargeCedis != null) {
     const chargeValidationError = getParcelChargeValidationError({
+      chargeExemptCustomerType: parcel.chargeExemptCustomerType,
       chargeCedis: Number(input.chargeCedis),
       plannedToBePaidCedis: 0,
     });

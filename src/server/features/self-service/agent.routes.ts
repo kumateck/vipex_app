@@ -1,3 +1,4 @@
+import { listReceivingStaffOptions } from '../shipments/charge-exemption';
 import { draftCustomerRoutes } from './draft-customer.routes';
 import { Elysia, t } from 'elysia';
 import { UUID } from '../../schemas/common';
@@ -22,6 +23,21 @@ export const selfServiceAgentRoutes = new Elysia({ name: 'self-service-agent' })
     ],
     detail: { tags: ['Self-Service'], summary: 'List active charge agents at my branch' },
   })
+  .get(
+    '/receiving-staff-options',
+    ({ query, user }) => listReceivingStaffOptions(user!.companyId ?? '', query.destinationId),
+    {
+      query: t.Object({ destinationId: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCompleteSelfServiceBookings),
+      ],
+      detail: {
+        tags: ['Self-Service'],
+        summary: 'List active destination staff for an exempt booking',
+      },
+    },
+  )
   .get('/drafts', async ({ user }) => listSelfServiceDraftsCtrl(user!), {
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadSelfServiceBookings)],
     detail: { tags: ['Self-Service'], summary: 'List self-service drafts for my branch' },
@@ -64,6 +80,7 @@ export const selfServiceAgentRoutes = new Elysia({ name: 'self-service-agent' })
         ),
         callSender: t.Optional(t.Boolean()),
         chargeAgentUserId: t.Optional(t.Union([UUID, t.Null()])),
+        relatedStaffId: t.Optional(t.Union([UUID, t.Null()])),
       }),
       beforeHandle: [
         requireAuth(),
