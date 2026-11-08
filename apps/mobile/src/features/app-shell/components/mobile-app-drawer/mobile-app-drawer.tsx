@@ -29,6 +29,7 @@ import CallCenterFollowUpScreen from '../../../../../app/(app)/call-center-follo
 import ReceiveDiscrepanciesScreen from '../../../../../app/(app)/receive-discrepancies';
 import DeliveryChangeReviewScreen from '../../../../../app/(app)/delivery-change-reviews';
 import MobileCustomerDirectoryScreen from '../../../../../app/(app)/customers';
+import OfficePickupScreen from '../../../../../app/(app)/office-pickup';
 
 const Drawer = createDrawerNavigator();
 const Tabs = createBottomTabNavigator();
@@ -201,6 +202,11 @@ export function MobileAppDrawer() {
         name="Customers"
         component={MobileCustomerDirectoryScreen}
         options={{ title: 'Customers', drawerItemStyle: hidden }}
+      />
+      <Drawer.Screen
+        name="OfficePickup"
+        component={OfficePickupScreen}
+        options={{ title: 'Waiting for Pickup', drawerItemStyle: hidden }}
       />
       <Drawer.Screen
         name="CommunicationThread"

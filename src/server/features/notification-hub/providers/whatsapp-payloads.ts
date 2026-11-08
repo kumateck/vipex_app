@@ -31,7 +31,7 @@ export function resolveWhatsAppConfig(configJson: unknown): WhatsAppConfig {
     accessToken: text(config.accessToken) || text(env.WHATSAPP_ACCESS_TOKEN),
     phoneNumberId: text(config.phoneNumberId) || text(env.WHATSAPP_PHONE_NUMBER_ID),
     wabaId: text(config.wabaId),
-    apiVersion: text(config.apiVersion) || text(env.WHATSAPP_API_VERSION) || 'v21.0',
+    apiVersion: text(config.apiVersion) || text(env.WHATSAPP_API_VERSION) || 'v24.0',
     appSecret: text(config.appSecret) || text(env.WHATSAPP_APP_SECRET),
     webhookVerifyToken: text(config.webhookVerifyToken) || text(env.WHATSAPP_WEBHOOK_VERIFY_TOKEN),
   };

@@ -46,8 +46,18 @@ The Rider Dashboard and Rider tab presentation require `userType = RIDER`. Rider
 | Receiving discrepancies        | `CanReadParcelIncoming`                                                                    | Create/list use the same current server permission; evidence upload is authenticated and linked to the discrepancy. |
 | Delivery-change review         | `CanMarkDoorstepCalled`                                                                    | Approve/reject also requires server branch match and pending state.                                                 |
 | Customer directory             | `CanReadCustomers`                                                                         | Limited contact edit: `CanUpdateCustomers`.                                                                         |
+| Waiting for Pickup             | `CanCompleteOfficePickup`                                                                  | Required helper reads and optional customer mutations retain their existing grants; see below.                      |
 
 The mobile access-control tests compare every mobile permission key with the desktop permission catalog to detect spelling or catalog drift.
+
+## Office Pickup Helper Permissions
+
+Waiting for Pickup (`/(app)/office-pickup`, native `OfficePickup`) is implemented under
+`CanCompleteOfficePickup`, including its Operations card and destination guard. Required
+helper reads retain `CanReadParcels`, `CanReadCustomers` and `CanReadUsers`; saving new cards
+needs `CanUpdateCustomers` and resolving a new second receiver needs `CanCreateCustomers`.
+The entry permission alone does not grant those actions. See
+[Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md) for the full current API dependency matrix.
 
 ## Current Module-Gate Gap
 
@@ -64,25 +74,27 @@ Required parity work:
 
 ## Desktop Capabilities to Build on Mobile
 
-The five frontline workflows above were implemented on 2026-08-27. Their current behavior and remaining limitations are maintained in [Mobile Frontline Workflows](MOBILE_FRONTLINE_WORKFLOWS.md).
+The original five frontline workflows were implemented on 2026-08-27. Current behavior and
+remaining limitations, including the added office-pickup flow, are maintained in
+[Mobile Frontline Workflows](MOBILE_FRONTLINE_WORKFLOWS.md).
 
 ### Priority 1: Frontline and Field Operations
 
 These benefit most from camera, mobility, quick actions, signatures, OTPs, and work away from a desk.
 
-| Desktop capability            | Mobile experience                                                                                | Primary permission family                                       |
-| ----------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| Sender Cashier Payments       | Find created parcel, collect sender payment, choose method, print/reprint.                       | `CanCreateSenderPayments`, cashier session permissions.         |
-| Receiver Cashier              | Lookup/scan parcel, collect receiver payment, verify OTP, complete handover.                     | `CanCreateReceiverPayments`, `CanCompleteOfficePickup`.         |
-| Sticker printing everywhere   | Shared unrestricted positive-whole-number copies and supported native/Bluetooth printer routing. | Existing workflow print/reprint permissions.                    |
-| Pickup queue boards           | Full sender/receiver boards, ticket share, call action, and completion.                          | Queue read/create and office-pickup permissions.                |
-| Outgoing consignment dispatch | Scan parcels into a consignment, review manifest, dispatch.                                      | `CanReadParcelOutgoing`, consignment create/update permissions. |
-| Receiving discrepancies       | Record missing, extra, damaged, or unresolved items with evidence.                               | `CanReadParcelIncoming`, parcel update permissions.             |
-| Internal custody transfers    | Scan, create, acknowledge, cancel, and show printable/shareable transfer slip.                   | Internal-transfer read/create/acknowledge/cancel permissions.   |
-| Call center follow-up         | Call sender/receiver, record outcomes, capture address, preserve follow-up queue.                | Call-center and doorstep-call permissions.                      |
-| Self-service agent completion | Claim draft, complete operational details, settle, and print.                                    | Self-service read/complete plus payment permissions.            |
-| Delivery change review        | Branch supervisor approves/rejects rider address or fee changes.                                 | Dispatch/review permission enforced by the delivery API.        |
-| Customer lookup               | Search, inspect contact/cards, create or update limited customer data.                           | Customer read/create/update permissions.                        |
+| Desktop capability            | Mobile experience                                                                                                                                  | Primary permission family                                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Sender Cashier Payments       | Find created parcel, collect sender payment, choose method, print/reprint.                                                                         | `CanCreateSenderPayments`, cashier session permissions.         |
+| Receiver Cashier              | Receiver payment collection remains planned. Settled-parcel scan/search, collection OTP and office handover are implemented in Waiting for Pickup. | `CanCreateReceiverPayments`, `CanCompleteOfficePickup`.         |
+| Sticker printing everywhere   | Shared unrestricted positive-whole-number copies and supported native/Bluetooth printer routing.                                                   | Existing workflow print/reprint permissions.                    |
+| Pickup queue boards           | Full sender/receiver boards, ticket share, call action, and completion.                                                                            | Queue read/create and office-pickup permissions.                |
+| Outgoing consignment dispatch | Scan parcels into a consignment, review manifest, dispatch.                                                                                        | `CanReadParcelOutgoing`, consignment create/update permissions. |
+| Receiving discrepancies       | Record missing, extra, damaged, or unresolved items with evidence.                                                                                 | `CanReadParcelIncoming`, parcel update permissions.             |
+| Internal custody transfers    | Scan, create, acknowledge, cancel, and show printable/shareable transfer slip.                                                                     | Internal-transfer read/create/acknowledge/cancel permissions.   |
+| Call center follow-up         | Call sender/receiver, record outcomes, capture address, preserve follow-up queue.                                                                  | Call-center and doorstep-call permissions.                      |
+| Self-service agent completion | Claim draft, complete operational details, settle, and print.                                                                                      | Self-service read/complete plus payment permissions.            |
+| Delivery change review        | Branch supervisor approves/rejects rider address or fee changes.                                                                                   | Dispatch/review permission enforced by the delivery API.        |
+| Customer lookup               | Search, inspect contact/cards, create or update limited customer data.                                                                             | Customer read/create/update permissions.                        |
 
 ### Priority 2: Approvals and Work on the Move
 

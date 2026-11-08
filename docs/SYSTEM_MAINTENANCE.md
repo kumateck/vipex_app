@@ -52,6 +52,12 @@ seeds, resets and build/deployment tools are excluded because they are not booki
 operations. Adding an eligible script requires an adapter; the source-coverage test detects
 unregistered booking-code scripts rather than silently hiding them.
 
+The source-coverage test explicitly excludes the operator-only
+`scripts/repair-missing-parcel-locations.ts` bulk backfill. Its booking-code references are for
+audit output; it takes a company ID, not a booking-code filter. The test verifies this reviewed
+exception still exists and remains outside the runtime catalog. Other unregistered matching
+scripts still fail coverage, with their paths listed in the failure output.
+
 ### Repair validation
 
 All new code-based adapters resolve a single active parcel in the authenticated company.
@@ -111,6 +117,42 @@ locations, delivery evidence or latest status audit invalidate the preview. The 
 and `PARCEL_RECEIVING_WORKFLOW_REPAIRED` records the admin, before/after state, exact changes and
 supporting evidence atomically with the repair. Audit failure rolls everything back. The console
 is available on web and desktop; repaired data is shared with mobile, which has no maintenance UI.
+
+### Bulk missing destination pickup locations (operator CLI)
+
+`scripts/repair-missing-parcel-locations.ts` fills `parcels.pickup_location_id` only when it is
+NULL, scoped to the required `--company-id`. It reads `.env` by default; use `--env-file` for
+another environment. Preview is read-only:
+
+```sh
+bun scripts/repair-missing-parcel-locations.ts --company-id tsewbv18o1935sa4v1dlahq2
+bun scripts/repair-missing-parcel-locations.ts --company-id tsewbv18o1935sa4v1dlahq2 --apply
+```
+
+The user-approved backfill policy assigns Kumasi to Anloga Junction, location ID
+`kc8wsnk8tpltz48egk7uy26s`. `--kumasi-location-id` supports another environment, but the selected
+location must still be named Anloga Junction and belong to the receiving Kumasi branch/company.
+Every other destination must have exactly one active, receiving-enabled location. An unavailable
+branch, missing receiver, or ambiguous non-Kumasi branch aborts the entire run.
+
+This historical data backfill covers **all statuses**, including already delivered/confirmed
+parcels, while excluding soft-deleted parcels. Historical locations are inferred from the approved
+policy, not asserted as evidence of where a past handover occurred. It preserves existing pickup
+locations, source locations, statuses, receipt timestamps, payments, and caller/shelf assignments.
+Only missing pickup locations and their `updated_at` are changed. A serializable transaction locks
+the selected parcels and location configuration; every change gets an atomic
+`PARCEL_PICKUP_LOCATION_BACKFILLED` audit with run ID, previous status, exact location patch, and
+`historicalLocationInferred: true`. CLI repairs use a null actor rather than impersonating an app
+user. Audit failure rolls back the complete run; reruns with no missing locations make no changes.
+
+This bulk CLI is separate from the ten booking-code maintenance console operations and adds no
+API endpoint or permission change. Updated records are shared by web, desktop, and mobile. It
+does not change booking defaults or mark in-transit parcels received.
+
+QA: run `bun test scripts/parcel-location-repair.test.ts`. On an isolated database, verify preview
+writes nothing; apply fills both sole-location and Kumasi cases; existing, deleted, and other-company
+rows remain untouched; statuses remain unchanged; audit metadata is a JSON object; rerun is a no-op;
+ambiguous configuration blocks writes; and an audit insert failure rolls back parcel changes.
 
 ## Workflow
 
@@ -199,6 +241,8 @@ another booking code after preview and verify execution is unavailable until pre
 Inspect a cleared delivery fee without changing it. Test financial repairs with sender/recipient
 payments, a fully paid parcel, CREDIT, reversed delivery, filed tax and a missing customer name.
 Browser interaction remains a manual check when local browser automation is disabled.
+Run `bun test tests/utils/maintenance-catalog.spec.ts` to verify catalog coverage, the explicit
+operator-only bulk-backfill exception, and source-file existence before the full pre-push suite.
 
 Receiving QA: preview a missing-location arrived parcel without modifying it; execute and verify
 its location-scoped assignment search. Preview a called pickup regression, execute, and verify

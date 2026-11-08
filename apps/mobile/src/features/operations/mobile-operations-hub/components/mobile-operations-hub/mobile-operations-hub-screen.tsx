@@ -6,6 +6,7 @@ import { AppScreen } from '@mobile/components/screen';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import {
+  canCompleteOfficePickup,
   canCreateParcelBooking,
   canReviewDeliveryChanges,
   canUseTransitReceiveScan,
@@ -52,6 +53,7 @@ export function MobileOperationsHubScreen() {
   const canCreateBooking = canCreateParcelBooking(permissions);
   const canSearch = canViewParcelSearch(permissions);
   const canUseQueue = canViewQueueScreen(permissions);
+  const canDeliverPickups = canCompleteOfficePickup(permissions);
   const canScan = canUseTransitReceiveScan(permissions);
   const canReceiveConsignments = canViewIncomingConsignments(permissions);
   const canUseSelfService = canViewSelfServiceBookings(permissions);
@@ -106,6 +108,15 @@ export function MobileOperationsHubScreen() {
           description="Search parcels, issue queue tickets, and track queue boards."
           href="/(app)/queue"
           linkLabel="Open Queue"
+        />
+      ) : null}
+      {canDeliverPickups ? (
+        <ModuleCard
+          icon="hand-left-outline"
+          title="Waiting for Pickup"
+          description="Verify the receiver's collection OTP and hand over sender-paid parcels."
+          href="/(app)/office-pickup"
+          linkLabel="Open Pickup"
         />
       ) : null}
       {canScan ? (

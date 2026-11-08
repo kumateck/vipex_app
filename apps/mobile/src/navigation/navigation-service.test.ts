@@ -9,6 +9,7 @@ describe('mobile frontline navigation', () => {
     ['/(app)/receive-discrepancies', 'ReceiveDiscrepancies'],
     ['/(app)/delivery-change-reviews', 'DeliveryChangeReviews'],
     ['/(app)/customers', 'Customers'],
+    ['/(app)/office-pickup', 'OfficePickup'],
   ])('maps %s to its registered native screen', (href, expectedRoute) => {
     expect(resolveMobileHref(href)).toEqual({ name: expectedRoute, params: {} });
   });

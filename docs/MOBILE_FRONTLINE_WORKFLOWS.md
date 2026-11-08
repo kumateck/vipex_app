@@ -4,13 +4,14 @@ Last audited: 2026-09-21
 
 ## Scope
 
-The mobile client implements five task-focused workflows that reuse the same authenticated APIs, permission keys, company scope, branch scope, and server validation as web and desktop:
+The mobile client implements task-focused workflows that reuse the same authenticated APIs, permission keys, company scope, branch scope, and server validation as web and desktop:
 
 - self-service booking completion
 - call-center follow-up and doorstep address collection
 - receiving discrepancies with photo evidence
 - supervisor delivery-change review
 - customer lookup and limited contact editing
+- settled office pickup with collection OTP, receiver cards and scan/search lookup
 
 The implementation lives under `apps/mobile/src/features`. Route files under `apps/mobile/app/(app)` are one-line feature exports. Navigation entry points are shown only when the corresponding screen permission is present, and every destination screen independently checks access before loading protected data.
 
@@ -18,16 +19,28 @@ Each Operations workflow card opens its registered native screen. The shared mob
 
 ## Permission Matrix
 
-| Workflow                | Read/entry permission                                      | Mutation permission                                                                                                                                                             |
-| ----------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Self-service drafts     | `CanReadSelfServiceBookings`                               | Claim and complete: `CanCompleteSelfServiceBookings`                                                                                                                            |
-| Call-center follow-up   | `CanReadCallCenterParcelStatus` or `CanMarkDoorstepCalled` | Record call: `CanReadCallCenterParcelStatus`; save address/fee: `CanMarkDoorstepCalled`                                                                                         |
-| Receiving discrepancies | `CanReadParcelIncoming`                                    | The current server discrepancy endpoints use `CanReadParcelIncoming` for create/list/resolve; photo upload requires authentication and is linked to the authorized discrepancy. |
-| Delivery-change review  | `CanMarkDoorstepCalled`                                    | Approve/reject: `CanMarkDoorstepCalled`, plus server branch matching.                                                                                                           |
-| Customer directory      | `CanReadCustomers`                                         | Limited contact update: `CanUpdateCustomers`                                                                                                                                    |
-| Parcel creation         | `CanCreateBookingWithParcels` for minimal telephone lookup | New customer creation: `CanCreateCustomers`; booking submission: `CanCreateBookingWithParcels`                                                                                  |
+| Workflow                | Read/entry permission                                      | Mutation permission                                                                                                                                                                       |
+| ----------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Self-service drafts     | `CanReadSelfServiceBookings`                               | Claim and complete: `CanCompleteSelfServiceBookings`                                                                                                                                      |
+| Call-center follow-up   | `CanReadCallCenterParcelStatus` or `CanMarkDoorstepCalled` | Record call: `CanReadCallCenterParcelStatus`; save address/fee: `CanMarkDoorstepCalled`                                                                                                   |
+| Receiving discrepancies | `CanReadParcelIncoming`                                    | The current server discrepancy endpoints use `CanReadParcelIncoming` for create/list/resolve; photo upload requires authentication and is linked to the authorized discrepancy.           |
+| Delivery-change review  | `CanMarkDoorstepCalled`                                    | Approve/reject: `CanMarkDoorstepCalled`, plus server branch matching.                                                                                                                     |
+| Customer directory      | `CanReadCustomers`                                         | Limited contact update: `CanUpdateCustomers`                                                                                                                                              |
+| Parcel creation         | `CanCreateBookingWithParcels` for minimal telephone lookup | New customer creation: `CanCreateCustomers`; booking submission: `CanCreateBookingWithParcels`                                                                                            |
+| Waiting for Pickup      | `CanCompleteOfficePickup`                                  | Same grant for collection OTP and shared status PATCH; helper reads need parcel/customer/user reads, new cards need `CanUpdateCustomers`, new second receivers need `CanCreateCustomers`. |
 
 Read access never substitutes for a separate mutation permission. The server remains authoritative when a cached screen or stale session attempts an action.
+
+## Waiting for Pickup
+
+Operations → Waiting for Pickup mirrors the web settled-parcel handover. It searches/scans
+Awaiting Pickup parcels without collection due, applies branch queue/OTP settings, records
+the shelf picker and optional ID cards, verifies the main receiver's collection OTP and
+marks Delivered by Office. SMS is the default; configured WhatsApp is optional. A second
+receiver may collect, and Request home delivery uses the existing status PATCH.
+See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md) for payloads, helper permissions,
+failure recovery, first-20-result limitation and platform differences. Receiver payment
+collection and receipt printing are not part of this mobile screen.
 
 ## Rider Third-party Handover
 

@@ -44,7 +44,7 @@ export function WhatsAppSettingsPage() {
               canManage={settings.canManageProvider}
             />
             {settings.canManageProvider && settings.data.provider.exists ? (
-              <WhatsAppTestCard />
+              <WhatsAppTestCard events={settings.data.events} />
             ) : null}
           </TabsContent>
           <TabsContent value="templates" className="mt-4">
