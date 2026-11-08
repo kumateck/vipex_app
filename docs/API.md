@@ -568,6 +568,8 @@ retry behavior, permissions and deployment requirements.
 - `GET /v1/whatsapp/availability`, `GET /v1/whatsapp/settings`, `PUT /v1/whatsapp/settings/provider`,
   `PUT /v1/whatsapp/settings/events/:eventCode`, `POST /v1/whatsapp/settings/test`: see
   [WhatsApp messaging](WHATSAPP_MESSAGING.md#api-summary). Secrets are never returned.
+- `GET /v1/whatsapp/spend?from=&to=`, `PUT /v1/whatsapp/spend/rates`,
+  `DELETE /v1/whatsapp/spend/rates/:id`: WhatsApp spend report and date-based client billing prices, see [WhatsApp spend report](WHATSAPP_MESSAGING.md#spend-report).
 - Public `GET|POST /v1/public/whatsapp/webhook`: Meta verify-token handshake and signed delivery
   status callbacks (403 on a bad token or signature).
 - `GET|PUT /v1/digital-receipts/customers/:id/preference`, `GET /v1/digital-receipts/parcels/:id/options?kind=`,

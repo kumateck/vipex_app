@@ -6,12 +6,34 @@ const STATUS_RANK: Record<string, number> = {
   read: 3,
 };
 
+/** Meta's per-message pricing, sent with `sent`/`delivered` statuses. */
+export type WhatsAppMessagePricing = {
+  billable: boolean;
+  category: string | null;
+  type: string | null;
+};
+
 export type WhatsAppStatusUpdate = {
   phoneNumberId: string | null;
   providerMessageId: string;
   status: 'sent' | 'delivered' | 'read' | 'failed';
   errorMessage: string | null;
+  pricing: WhatsAppMessagePricing | null;
 };
+
+const lowerOrNull = (value: unknown) =>
+  typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
+
+export function parseWhatsAppPricing(value: unknown): WhatsAppMessagePricing | null {
+  if (!value || typeof value !== 'object') return null;
+  const pricing = value as { billable?: unknown; category?: unknown; type?: unknown };
+  if (typeof pricing.billable !== 'boolean') return null;
+  return {
+    billable: pricing.billable,
+    category: lowerOrNull(pricing.category),
+    type: lowerOrNull(pricing.type),
+  };
+}
 
 /** Pulls `statuses[]` out of a WhatsApp Business Account webhook payload. */
 export function extractWhatsAppStatusUpdates(payload: unknown): WhatsAppStatusUpdate[] {
@@ -51,6 +73,7 @@ export function extractWhatsAppStatusUpdates(payload: unknown): WhatsAppStatusUp
                 500,
               )
             : null,
+          pricing: parseWhatsAppPricing(item.pricing),
         });
       }
     }

@@ -63,7 +63,7 @@ export function WhatsAppProviderCard({
             id="wa-api-version"
             label="Graph API version"
             value={form.values.apiVersion}
-            placeholder="v21.0"
+            placeholder="v24.0"
             onChange={(value) => form.setField('apiVersion', value)}
             disabled={disabled}
           />

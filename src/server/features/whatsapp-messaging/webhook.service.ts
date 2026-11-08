@@ -7,11 +7,13 @@ import {
   findWhatsAppProviderByPhoneNumberIdRepo,
   findWhatsAppProviderByVerifyTokenRepo,
 } from './repository';
+import { recordWhatsAppDispatchPricingRepo } from './spend.repository';
 import { extractWhatsAppStatusUpdates, nextDispatchStatus } from './webhook-status';
 
 /** Meta's subscription handshake: echo `hub.challenge` when the verify token matches. */
 export async function verifyWhatsAppWebhookChallengeSvc(query: Record<string, string | undefined>) {
-  const token = query['hub.verify_token'] ?? '';
+  // Trimmed: a pasted token with a stray space should still match.
+  const token = (query['hub.verify_token'] ?? '').trim();
   if (query['hub.mode'] !== 'subscribe' || !token) throw Forbidden('Invalid webhook verification');
 
   const envToken = env.WHATSAPP_WEBHOOK_VERIFY_TOKEN?.trim();
@@ -47,6 +49,10 @@ export async function processWhatsAppWebhookSvc(rawBody: string, signature: stri
     const dispatch = await findWhatsAppDispatchByMessageIdRepo(update.providerMessageId);
     if (!dispatch) continue;
     if (provider && dispatch.companyId !== provider.companyId) continue;
+    // Pricing is recorded even when the status does not move (it feeds the spend report).
+    if (update.pricing) {
+      await recordWhatsAppDispatchPricingRepo(dispatch.id, dispatch.companyId, update.pricing);
+    }
     const status = nextDispatchStatus(dispatch.status, update.status);
     if (!status) continue;
     await updateNotificationDispatchResultRepo(dispatch.id, dispatch.companyId, {

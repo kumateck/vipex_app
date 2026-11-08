@@ -398,6 +398,7 @@ const catalog = [
   ['CanCreateAuditExportJob', 'Create audit export job', 'Audit'],
   ['CanManageCompanyModules', 'Enable or disable company modules', 'Platform'],
   ['CanReadCompanyProfile', 'View company profile settings', 'Platform'],
+  ['CanViewWhatsAppSpend', 'View WhatsApp spend and billing report', 'Platform'],
   ['CanManageParcelAgeingPolicy', 'Manage parcel ageing and storage charges', 'Platform'],
   ['CanManagePrinterRouting', 'Manage desktop printer routing', 'Platform'],
   [
@@ -980,6 +981,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/settings/company': PermissionKeys.CanReadCompanyProfile,
   '/settings/sms': PermissionKeys.CanReadCompanyProfile,
   '/settings/whatsapp': PermissionKeys.CanReadCompanyProfile,
+  '/settings/whatsapp/spend': PermissionKeys.CanViewWhatsAppSpend,
   '/settings/modules': PermissionKeys.CanManageCompanyModules,
   '/settings/parcel-ageing': PermissionKeys.CanManageParcelAgeingPolicy,
   '/settings/app-updates': PermissionKeys.CanManageDesktopUpdates,

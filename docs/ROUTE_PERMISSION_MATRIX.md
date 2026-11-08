@@ -68,6 +68,10 @@ See [Native Device Registration](DEVICE_REGISTRATION.md).
 `whatsapp_messaging` module (route-module mapped, so the sidebar hides it when the module is off).
 Saving the provider or templates additionally needs `CanManageNotificationProviders` /
 `CanManageNotificationTemplates` (or `CanManageCompanyModules`) on the server.
+`/settings/whatsapp/spend` (WhatsApp Spend) requires `CanViewWhatsAppSpend` and the same module.
+The API also accepts `CanManageCompanyModules`; only that permission sees Meta's cost and margin
+and can change billing prices.
+
 See [WhatsApp Messaging](WHATSAPP_MESSAGING.md).
 
 Storage clearance history at `/parcels/storage-clearances` also accepts request, approve, or

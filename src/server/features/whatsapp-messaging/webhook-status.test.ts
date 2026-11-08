@@ -35,14 +35,39 @@ describe('extractWhatsAppStatusUpdates', () => {
         providerMessageId: 'wamid.1',
         status: 'delivered',
         errorMessage: null,
+        pricing: null,
       },
-      { phoneNumberId: 'PNID', providerMessageId: 'wamid.2', status: 'read', errorMessage: null },
+      {
+        phoneNumberId: 'PNID',
+        providerMessageId: 'wamid.2',
+        status: 'read',
+        errorMessage: null,
+        pricing: null,
+      },
       {
         phoneNumberId: 'PNID',
         providerMessageId: 'wamid.3',
         status: 'failed',
         errorMessage: 'WhatsApp delivery failed (code 131026): Message undeliverable',
+        pricing: null,
       },
+    ]);
+  });
+
+  test("reads Meta's per-message pricing and ignores malformed pricing", () => {
+    const updates = extractWhatsAppStatusUpdates(
+      payload([
+        {
+          id: 'wamid.1',
+          status: 'sent',
+          pricing: { billable: true, pricing_model: 'PMP', category: 'UTILITY', type: 'regular' },
+        },
+        { id: 'wamid.2', status: 'delivered', pricing: { billable: 'yes', category: 'utility' } },
+      ]),
+    );
+    expect(updates.map((update) => update.pricing)).toEqual([
+      { billable: true, category: 'utility', type: 'regular' },
+      null,
     ]);
   });
 
