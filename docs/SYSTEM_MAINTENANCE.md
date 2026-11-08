@@ -52,6 +52,12 @@ seeds, resets and build/deployment tools are excluded because they are not booki
 operations. Adding an eligible script requires an adapter; the source-coverage test detects
 unregistered booking-code scripts rather than silently hiding them.
 
+The source-coverage test explicitly excludes the operator-only
+`scripts/repair-missing-parcel-locations.ts` bulk backfill. Its booking-code references are for
+audit output; it takes a company ID, not a booking-code filter. The test verifies this reviewed
+exception still exists and remains outside the runtime catalog. Other unregistered matching
+scripts still fail coverage, with their paths listed in the failure output.
+
 ### Repair validation
 
 All new code-based adapters resolve a single active parcel in the authenticated company.
@@ -235,6 +241,8 @@ another booking code after preview and verify execution is unavailable until pre
 Inspect a cleared delivery fee without changing it. Test financial repairs with sender/recipient
 payments, a fully paid parcel, CREDIT, reversed delivery, filed tax and a missing customer name.
 Browser interaction remains a manual check when local browser automation is disabled.
+Run `bun test tests/utils/maintenance-catalog.spec.ts` to verify catalog coverage, the explicit
+operator-only bulk-backfill exception, and source-file existence before the full pre-push suite.
 
 Receiving QA: preview a missing-location arrived parcel without modifying it; execute and verify
 its location-scoped assignment search. Preview a called pickup regression, execute, and verify
