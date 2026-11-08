@@ -112,6 +112,42 @@ and `PARCEL_RECEIVING_WORKFLOW_REPAIRED` records the admin, before/after state, 
 supporting evidence atomically with the repair. Audit failure rolls everything back. The console
 is available on web and desktop; repaired data is shared with mobile, which has no maintenance UI.
 
+### Bulk missing destination pickup locations (operator CLI)
+
+`scripts/repair-missing-parcel-locations.ts` fills `parcels.pickup_location_id` only when it is
+NULL, scoped to the required `--company-id`. It reads `.env` by default; use `--env-file` for
+another environment. Preview is read-only:
+
+```sh
+bun scripts/repair-missing-parcel-locations.ts --company-id tsewbv18o1935sa4v1dlahq2
+bun scripts/repair-missing-parcel-locations.ts --company-id tsewbv18o1935sa4v1dlahq2 --apply
+```
+
+The user-approved backfill policy assigns Kumasi to Anloga Junction, location ID
+`kc8wsnk8tpltz48egk7uy26s`. `--kumasi-location-id` supports another environment, but the selected
+location must still be named Anloga Junction and belong to the receiving Kumasi branch/company.
+Every other destination must have exactly one active, receiving-enabled location. An unavailable
+branch, missing receiver, or ambiguous non-Kumasi branch aborts the entire run.
+
+This historical data backfill covers **all statuses**, including already delivered/confirmed
+parcels, while excluding soft-deleted parcels. Historical locations are inferred from the approved
+policy, not asserted as evidence of where a past handover occurred. It preserves existing pickup
+locations, source locations, statuses, receipt timestamps, payments, and caller/shelf assignments.
+Only missing pickup locations and their `updated_at` are changed. A serializable transaction locks
+the selected parcels and location configuration; every change gets an atomic
+`PARCEL_PICKUP_LOCATION_BACKFILLED` audit with run ID, previous status, exact location patch, and
+`historicalLocationInferred: true`. CLI repairs use a null actor rather than impersonating an app
+user. Audit failure rolls back the complete run; reruns with no missing locations make no changes.
+
+This bulk CLI is separate from the ten booking-code maintenance console operations and adds no
+API endpoint or permission change. Updated records are shared by web, desktop, and mobile. It
+does not change booking defaults or mark in-transit parcels received.
+
+QA: run `bun test scripts/parcel-location-repair.test.ts`. On an isolated database, verify preview
+writes nothing; apply fills both sole-location and Kumasi cases; existing, deleted, and other-company
+rows remain untouched; statuses remain unchanged; audit metadata is a JSON object; rerun is a no-op;
+ambiguous configuration blocks writes; and an audit insert failure rolls back parcel changes.
+
 ## Workflow
 
 1. Select a script. Enter its parameters, if any.
