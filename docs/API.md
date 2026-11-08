@@ -2,6 +2,14 @@
 
 Base URL: `/v1`
 
+Mobile Waiting for Pickup reuses `POST /payments/receiver-otp/request`,
+`POST /payments/receiver-otp/verify` and `PATCH /shipments/parcels/:id` for settled office
+handover. The request targets the main receiver with a primary/secondary phone slot and
+SMS/available WhatsApp channel; verification returns the token used in the Delivered by
+Office PATCH. No mobile-specific endpoint or payment is created. Shared helper permissions,
+payloads, failure behavior and current limitations are documented in
+[Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md#api-and-permission-dependencies).
+
 System Admin maintenance endpoints:
 
 - `GET /maintenance/scripts`: all ten supported booking-code operations, descriptors,

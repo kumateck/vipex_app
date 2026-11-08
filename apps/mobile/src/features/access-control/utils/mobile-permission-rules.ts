@@ -7,6 +7,7 @@ export const MobilePermissionKeys = {
   CanReadSenderPickupQueue: 'CanReadSenderPickupQueue',
   CanReadReceiverPickupQueue: 'CanReadReceiverPickupQueue',
   CanReadParcels: 'CanReadParcels',
+  CanCompleteOfficePickup: 'CanCompleteOfficePickup',
   CanReadRiderCurrentParcels: 'CanReadRiderCurrentParcels',
   CanReadRiderHistory: 'CanReadRiderHistory',
   CanCompleteDoorstepDelivery: 'CanCompleteDoorstepDelivery',
@@ -65,6 +66,9 @@ export const canViewSenderQueueBoard = (permissions: MobilePermissions) =>
 
 export const canSearchParcelsForQueue = canViewParcelSearch;
 export const canUseQueueModule = canViewQueueScreen;
+
+export const canCompleteOfficePickup = (permissions: MobilePermissions) =>
+  hasPermission(permissions, MobilePermissionKeys.CanCompleteOfficePickup);
 
 export const canViewRiderCurrent = (permissions: MobilePermissions) =>
   hasPermission(permissions, MobilePermissionKeys.CanReadRiderCurrentParcels);
@@ -146,6 +150,7 @@ export function canViewOperationsHub(permissions: MobilePermissions): boolean {
     canCreateParcelBooking(permissions) ||
     canViewParcelSearch(permissions) ||
     canViewQueueScreen(permissions) ||
+    canCompleteOfficePickup(permissions) ||
     canViewReceiveScreen(permissions) ||
     canViewSelfServiceBookings(permissions) ||
     canViewCallCenterFollowUp(permissions) ||

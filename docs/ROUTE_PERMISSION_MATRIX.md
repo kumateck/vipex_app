@@ -24,6 +24,12 @@ authenticated user. Internal ticket permissions grant no inbox access. See
 
 Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`).
 
+Mobile `/(app)/office-pickup` (native screen `OfficePickup`) and its Operations card require
+`CanCompleteOfficePickup`, matching web/desktop `/parcels/waiting-pickup`. Helper API reads
+still require parcel/customer/user permissions; new cards and new second receivers require
+customer-update and customer-create grants respectively. No new permission is introduced.
+See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md#api-and-permission-dependencies).
+
 Saved call outcome notification resends use
 `POST /v1/notification-hub/events/parcel-status-call/resend`: authentication, the
 `notification_hub` module, and either `CanSendCallCenterNotifications` or
