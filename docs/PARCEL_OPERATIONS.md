@@ -703,7 +703,8 @@ Mobile discrepancy capture supports an expected system parcel that is physically
   Receiver Cashier and Waiting for Pickup OTP sections show an SMS / WhatsApp toggle (default SMS).
   The request sends `channel`; the channel is recorded on `parcel_receiver_otps.channel`. WhatsApp
   delivery has the same accept-or-expire guarantee (503 if not accepted). Requesting WhatsApp while
-  the module is off or unconfigured returns 400 without creating a code. Mobile always uses SMS.
+  the module is off or unconfigured returns 400 without creating a code. Mobile Waiting for
+  Pickup now offers the same optional channel choice; SMS remains the default and fallback.
   See [WhatsApp messaging](WHATSAPP_MESSAGING.md#pickup-otp-over-whatsapp).
 - OTP codes are generated with `crypto.randomInt`.
 
@@ -721,6 +722,12 @@ happen after the transaction succeeds and never roll it back. See [Digital recei
 Automated coverage: `otp-sms-delivery.test.ts`, `sms-provider-payloads.test.ts`.
 
 ## Pickup and Last-Mile Delivery
+
+Mobile Operations → Waiting for Pickup implements settled-parcel office handover with
+scan/search, branch queue and OTP settings, shelf-picker selection and optional receiver
+cards. It reuses the web request/verify OTP APIs and Delivered by Office PATCH, without
+collecting payments or printing receipts. See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md)
+for permissions, validation, failure recovery and remaining client limitations.
 
 ### Customer names retained on parcels
 

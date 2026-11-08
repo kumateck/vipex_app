@@ -37,6 +37,7 @@ const routeMap: Record<string, string> = {
   '/(app)/receive-discrepancies': 'ReceiveDiscrepancies',
   '/(app)/delivery-change-reviews': 'DeliveryChangeReviews',
   '/(app)/customers': 'Customers',
+  '/(app)/office-pickup': 'OfficePickup',
   '/(app)/receive-consignment/[consignmentId]': 'ReceiveConsignment',
   '/(app)/rider': 'Rider',
   '/(app)/rider-assigned': 'RiderAssigned',

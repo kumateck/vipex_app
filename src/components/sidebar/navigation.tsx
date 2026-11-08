@@ -1147,6 +1147,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadCompanyProfile,
           },
           {
+            title: 'WhatsApp Spend',
+            url: '/settings/whatsapp/spend',
+            permissionKey: PermissionKeys.CanViewWhatsAppSpend,
+          },
+          {
             title: 'Module Management',
             url: '/settings/modules',
             permissionKey: PermissionKeys.CanManageCompanyModules,

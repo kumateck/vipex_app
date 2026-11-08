@@ -1,5 +1,10 @@
 import { api } from '@/services/api';
-import type { WhatsAppAvailability, WhatsAppProviderFormValues, WhatsAppSettings } from '../types';
+import type {
+  WhatsAppAvailability,
+  WhatsAppProviderFormValues,
+  WhatsAppSettings,
+  WhatsAppTestResult,
+} from '../types';
 
 const SETTINGS_TAG = { type: 'NotificationHub' as const, id: 'WHATSAPP_SETTINGS' };
 const AVAILABILITY_TAG = { type: 'NotificationHub' as const, id: 'WHATSAPP_AVAILABILITY' };
@@ -29,7 +34,7 @@ export const whatsappSettingsApi = api.injectEndpoints({
       }),
       invalidatesTags: [SETTINGS_TAG],
     }),
-    sendWhatsAppTest: builder.mutation<{ providerMessageId: string | null }, { phone: string }>({
+    sendWhatsAppTest: builder.mutation<WhatsAppTestResult, { phone: string; template: string }>({
       query: (body) => ({ url: '/whatsapp/settings/test', method: 'POST', body }),
     }),
   }),

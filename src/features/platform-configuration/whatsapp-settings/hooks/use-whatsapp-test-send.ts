@@ -1,20 +1,21 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { useSendWhatsAppTestMutation } from '../services';
-import { getWhatsAppSettingsErrorMessage } from '../utils';
+import { DEFAULT_TEST_TEMPLATE, getWhatsAppSettingsErrorMessage } from '../utils';
 
 export function useWhatsAppTestSend() {
   const [phone, setPhone] = useState('');
+  const [template, setTemplate] = useState(DEFAULT_TEST_TEMPLATE);
   const [send, { isLoading: isSending }] = useSendWhatsAppTestMutation();
 
   const submit = useCallback(async () => {
     try {
-      await send({ phone }).unwrap();
-      toast.success('Test message accepted by WhatsApp');
+      const result = await send({ phone, template }).unwrap();
+      toast.success(`Test message (${result.templateName}) accepted by WhatsApp`);
     } catch (error) {
       toast.error(getWhatsAppSettingsErrorMessage(error, 'WhatsApp test failed'));
     }
-  }, [phone, send]);
+  }, [phone, template, send]);
 
-  return { phone, setPhone, submit, isSending };
+  return { phone, setPhone, template, setTemplate, submit, isSending };
 }

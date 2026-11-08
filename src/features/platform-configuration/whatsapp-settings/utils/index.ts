@@ -6,3 +6,9 @@ export function getWhatsAppSettingsErrorMessage(
 ) {
   return getErrorMessage(error, fallback);
 }
+export {
+  DEFAULT_TEST_TEMPLATE,
+  HELLO_WORLD_TEST_TEMPLATE,
+  buildWhatsAppTestTemplateOptions,
+  type WhatsAppTestTemplateOption,
+} from './test-template-options';
