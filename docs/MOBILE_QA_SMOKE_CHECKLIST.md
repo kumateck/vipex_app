@@ -1,6 +1,44 @@
 # Mobile QA Smoke Checklist
 
-Last updated: 2026-10-19
+Last updated: 2026-11-08
+
+## Waiting for Pickup
+
+Run on Android and iOS, in light/dark mode. These device scenarios are pending execution;
+automated logic tests do not establish device or live provider success. See
+[Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md) for current behavior and API dependencies.
+
+- Verify the Operations card and direct destination require `CanCompleteOfficePickup`;
+  parcel-read permission alone grants neither. Check missing company/branch context.
+- Load branch settings, then fail/retry the lookup. Do not allow handover using guessed
+  disabled OTP settings. Verify helper-read denial reports details unavailable.
+- With queues enabled, verify initial queued results, then search an unqueued parcel and
+  confirm handover is blocked until a ticket exists. With queues disabled, require search.
+  Confirm status/company/destination scope and no principal/storage collection due.
+- Search tracking/booking codes, receiver name and telephone; scan bare codes, current
+  tracking URLs and legacy QR payloads. Deny camera permission and use manual search.
+  With more than 20 matches, narrow the search (there is no load-more control).
+- Verify details-load failure/retry, existing parcel/queue picker assignment, active location
+  staff choices and missing assigned location. Missing picker must block confirmation.
+- Test no card, existing card and new card for each collector; invalid choices must make no
+  writes. Test a linked second receiver and a new name/ten-digit phone; main collection
+  retains a linked second receiver and clears second-card handover fields.
+- Send/verify SMS to primary and secondary main-receiver numbers. With WhatsApp availability
+  enabled/configured, select WhatsApp and verify delivery; unavailable/failed availability
+  leaves SMS. Switching channel preserves a sent code; changing collector/phone clears it.
+- Test wrong/incomplete/expired code, excessive attempts, provider failure, resend and
+  consumed/expired verification token. No failed verification may complete delivery. OTP
+  still targets the main receiver when the second receiver collects. Reopen with an active
+  code and record the known first-send conflict/recovery limitation.
+- With branch pickup OTP disabled, verify the warning and absence of token fields in the
+  PATCH. With OTP enabled, verify the token and `receiverOtpTarget: 'main'` are sent.
+- Fail new-card save, second-receiver resolution and final delivery independently. Later
+  calls must stop; earlier saved cards/contacts may persist. After an ambiguous network
+  failure, refresh/reopen before retrying to avoid duplicate writes. Check missing customer
+  create/update permissions and the server's balance/reconciliation rejection messages.
+- Confirm success shows Delivered by Office and removes the parcel from refreshed results;
+  Request home delivery instead updates that status and closes the panel. Verify no
+  receiver-payment or receipt-print action is offered by this screen.
 
 ## Self-service completion and stickers
 

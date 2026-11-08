@@ -121,7 +121,7 @@ const EnvSchema = z.object({
 
   // WhatsApp Cloud API (optional — used as a fallback when a company's
   // whatsapp provider configJson doesn't set its own values)
-  WHATSAPP_API_VERSION: z.string().default('v21.0'),
+  WHATSAPP_API_VERSION: z.string().default('v24.0'),
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_APP_SECRET: z.string().optional(),

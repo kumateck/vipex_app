@@ -71,6 +71,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 - [Mobile implementation](MOBILE_APP_IMPLEMENTATION.md)
 - [Mobile permission parity and feature roadmap](MOBILE_PERMISSION_PARITY_AND_ROADMAP.md)
 - [Mobile frontline workflows](MOBILE_FRONTLINE_WORKFLOWS.md)
+- [Mobile office pickup and collection OTP](MOBILE_OFFICE_PICKUP.md)
 - [Mobile QA](MOBILE_QA_SMOKE_CHECKLIST.md)
 - [Electron shell](ELECTRON_SHELL_IMPLEMENTATION.md)
 - [Private app update pipeline](PRIVATE_APP_UPDATE_PIPELINE.md)

@@ -49,3 +49,9 @@ export type WhatsAppProviderFormValues = {
   webhookVerifyToken: string;
   isActive: boolean;
 };
+
+export type WhatsAppTestResult = {
+  providerMessageId: string | null;
+  templateName: string;
+  language: string;
+};

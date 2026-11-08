@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
   MobilePermissionKeys,
   canCollectDoorstepAddress,
+  canCompleteOfficePickup,
   canCompleteSelfServiceBookings,
   canRecordCallCenterContact,
   canUseTransitReceiveScan,
@@ -10,6 +11,7 @@ import {
   canViewCallCenterFollowUp,
   canViewCustomers,
   canViewIncomingConsignments,
+  canViewOperationsHub,
   canViewQueueScreen,
   canViewRiderCurrent,
   canViewRiderHistory,
@@ -22,6 +24,12 @@ describe('mobile permission parity', () => {
     for (const key of Object.values(MobilePermissionKeys)) {
       expect(DesktopPermissionKeys[key]).toBe(key);
     }
+  });
+
+  it('gates office pickup on the same permission as the web Waiting for Pickup page', () => {
+    expect(canCompleteOfficePickup(['CanReadParcels'])).toBeFalse();
+    expect(canCompleteOfficePickup(['CanCompleteOfficePickup'])).toBeTrue();
+    expect(canViewOperationsHub(['CanCompleteOfficePickup'])).toBeTrue();
   });
 
   it('does not treat parcel read access as queue access', () => {

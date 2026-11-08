@@ -24,6 +24,7 @@ export * from './fleet-transport';
 export * from './reconciliation';
 export * from './it-support';
 export * from './notification-hub';
+export * from './whatsapp-billing';
 export * from './parcel-receiver-otps';
 export * from './self-service';
 export * from './self-service-sessions';

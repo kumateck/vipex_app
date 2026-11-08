@@ -24,6 +24,7 @@ Platform, user, dashboard, accounting, and other core route overrides.
 | `/settings/company`                | `CanReadCompanyProfile`             |
 | `/settings/sms`                    | `CanReadCompanyProfile`             |
 | `/settings/whatsapp`               | `CanReadCompanyProfile`             |
+| `/settings/whatsapp/spend`         | `CanViewWhatsAppSpend`              |
 | `/settings/modules`                | `CanManageCompanyModules`           |
 | `/settings/parcel-ageing`          | `CanManageParcelAgeingPolicy`       |
 | `/settings/app-updates`            | `CanManageDesktopUpdates`           |

@@ -1,11 +1,7 @@
 import { env } from '@/server/utils/env';
 import { BadRequest, Conflict } from '@/server/utils/http-error';
 import { recordAuditLog } from '../audit/logger';
-import {
-  WHATSAPP_PROVIDER_KEY,
-  resolveWhatsAppConfig,
-  sendWhatsAppTemplate,
-} from '../notification-hub/providers';
+import { WHATSAPP_PROVIDER_KEY, resolveWhatsAppConfig } from '../notification-hub/providers';
 import {
   clearDefaultProviderByChannelRepo,
   createNotificationProviderRepo,
@@ -167,17 +163,4 @@ export async function updateWhatsAppEventTemplateSvc(input: {
     metadata: { eventCode: definition.code, templateName, language },
   });
   return { id: saved.id, eventCode: definition.code };
-}
-
-/** Sends Meta's built-in `hello_world` template to confirm credentials end to end. */
-export async function sendWhatsAppTestSvc(input: { companyId: string; phone: string }) {
-  const provider = await findWhatsAppProviderRepo(input.companyId);
-  if (!provider) throw BadRequest('Save the WhatsApp provider settings first');
-  const result = await sendWhatsAppTemplate({
-    config: provider.configJson,
-    recipient: input.phone,
-    message: { templateName: 'hello_world', language: 'en_US', bodyParams: [] },
-  });
-  if (result.status !== 'sent') throw BadRequest(result.errorMessage ?? 'WhatsApp test failed');
-  return { providerMessageId: result.providerMessageId ?? null };
 }
