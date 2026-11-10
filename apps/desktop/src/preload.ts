@@ -46,6 +46,10 @@ contextBridge.exposeInMainWorld('api', {
   },
   platform: async () => process.platform,
   ping: async () => 'pong',
+  captureReceiverSignature:
+    process.platform === 'win32'
+      ? async () => ipcRenderer.invoke('receiver-signature:capture')
+      : undefined,
   retryDesktopLoad: async () => ipcRenderer.invoke('app:retry-load'),
   getNetworkDiagnostics: async () =>
     ipcRenderer.invoke('app:get-network-diagnostics') as Promise<DesktopNetworkDiagnostics>,

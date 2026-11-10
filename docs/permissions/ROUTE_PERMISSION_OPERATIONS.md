@@ -62,6 +62,13 @@ non-deleted office-delivered parcels with recorded receiver payments are eligibl
 desktop support the action; mobile does not. QA: test cashier permission, missing permission,
 other company/branch, deleted parcel, and a reversed delivery; denied requests must not print.
 
+## Receiver Cashier signatures
+
+Mobile **Operations → Receiver Signatures** and the Receiver Cashier pending, capture, preview
+and confirm APIs use `CanCreateReceiverPayments` and the authenticated company and destination
+branch. Vipex Desktop reviews, confirms and prints. Confirmation requires an active cashier
+session. See [Receiver Cashier signatures](../RECEIVER_CASHIER_SIGNATURES.md).
+
 ## Parcel information edits
 
 `GET /v1/shipments/parcels/:id/details` and `GET /v1/shipments/parcels/:id/history` require

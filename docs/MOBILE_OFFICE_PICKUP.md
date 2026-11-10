@@ -10,7 +10,7 @@ web/desktop `/parcels/waiting-pickup`. The feature lives in
 Android and iOS use the same feature. Native device smoke testing remains required.
 
 This completes office handover without collecting payment. Parcels with outstanding principal
-or storage charges belong in Receiver Cashier. Mobile receiver-payment collection, receipt
+or storage charges belong in Receiver Cashier. Mobile Receiver Signatures captures signatures for payments already processed in Receiver Cashier. See [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md). Mobile receiver-payment collection, receipt
 printing and the full web cashier table are not implemented by this feature.
 
 ## Finding a parcel

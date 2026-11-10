@@ -25,6 +25,7 @@ export const branchFormSchema = z.object({
   usePickupQueue: z.boolean().default(false),
   requirePickupOtp: z.boolean().default(true),
   requireReceiverOtp: z.boolean().default(true),
+  requireReceiverCashierSignature: z.boolean().default(false),
 });
 
 export type BranchFormInput = z.input<typeof branchFormSchema>;

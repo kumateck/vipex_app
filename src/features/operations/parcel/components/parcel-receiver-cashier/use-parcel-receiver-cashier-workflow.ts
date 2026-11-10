@@ -1,4 +1,6 @@
 import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
+import { useState } from 'react';
+import type { ReceiverHandoverWatchKey } from '@/shared/shipments/receiver-cashier-signature';
 import { toast } from 'sonner';
 import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import {
@@ -39,6 +41,7 @@ export function useParcelReceiverCashierWorkflow() {
   });
   const currentBranch = currentBranchQuery.data;
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
+  const requireSignature = currentBranch?.requireReceiverCashierSignature === true;
   const isReceiverOtpRequired = currentBranch?.requireReceiverOtp ?? true;
 
   const receiverTable = useReceiverCashierTable({ companyId, branchId, isPickupQueueEnabled });
@@ -46,6 +49,13 @@ export function useParcelReceiverCashierWorkflow() {
 
   const dialog = useReceiverCashierDialogState();
   const selectedParcel = dialog.selectedParcel;
+  const [pending, setPending] = useState<{
+    branchId: string | null;
+    key: ReceiverHandoverWatchKey;
+  }>();
+  const pendingHandover = pending?.branchId === branchId ? pending.key : undefined;
+  const openPendingHandover = (key: ReceiverHandoverWatchKey) => setPending({ branchId, key });
+  const closePendingHandover = () => setPending(undefined);
 
   const [addCustomerCard, { isLoading: isAddingCard }] = useAddCustomerCardMutation();
   const [resolveSecondReceiver, { isLoading: isCreatingCustomer }] =
@@ -129,7 +139,7 @@ export function useParcelReceiverCashierWorkflow() {
       selectedParcel.destinationId;
     const destinationLocationName = pickupLocation?.name ?? selectedParcel.pickupLocationId ?? '-';
 
-    const { receipt } = await confirmReceiverDelivery({
+    const result = await confirmReceiverDelivery({
       selectedParcel,
       pickerStaffId: dialog.pickerStaffId,
       paymentAmount: dialog.paymentAmount,
@@ -154,6 +164,7 @@ export function useParcelReceiverCashierWorkflow() {
       destinationBranchName,
       destinationLocationName,
       isReceiverOtpRequired,
+      requestSignature: requireSignature,
       receiverOtpVerificationToken: dialog.otpVerificationToken,
       momoTransactionId: dialog.momoTransactionId || null,
       addCustomerCard: (args) => addCustomerCard(args).unwrap(),
@@ -162,12 +173,17 @@ export function useParcelReceiverCashierWorkflow() {
     });
 
     // A digital receipt only exists when the receiver actually paid something.
-    if (receiverDuePsw > 0 || storageOutstandingPsw > 0) {
-      void receiptDelivery.deliver([selectedParcel.id], 'receiver_payment');
+    if (result.awaitingSignature) {
+      openPendingHandover({ parcelId: selectedParcel.id, handoverId: result.handoverId });
+    } else {
+      if (receiverDuePsw > 0 || storageOutstandingPsw > 0) {
+        void receiptDelivery.deliver([selectedParcel.id], 'receiver_payment');
+      }
+      if (receiptDelivery.includesPhysical) dialog.setLastPrintedReceipt(result.receipt);
     }
-    if (receiptDelivery.includesPhysical) dialog.setLastPrintedReceipt(receipt);
     dialog.setSelectedParcel(null);
-    await listQuery.refetch();
+    void listQuery.refetch();
+    return result.awaitingSignature;
   };
 
   return {
@@ -179,6 +195,7 @@ export function useParcelReceiverCashierWorkflow() {
       canRequestStorageClearance,
       isPickupQueueEnabled,
       isReceiverOtpRequired,
+      requireSignature,
     },
     table: {
       ...receiverTable,
@@ -193,6 +210,9 @@ export function useParcelReceiverCashierWorkflow() {
     },
     dialog: {
       ...dialog,
+      pendingHandover,
+      openPendingHandover,
+      closePendingHandover,
       parcelDetails,
       hasPickupQueue,
       receiverDuePsw,

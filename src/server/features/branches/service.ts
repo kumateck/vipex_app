@@ -36,6 +36,7 @@ export async function createBranchSvc(input: {
   usePickupQueue?: boolean;
   requirePickupOtp?: boolean;
   requireReceiverOtp?: boolean;
+  requireReceiverCashierSignature?: boolean;
   createdBy: string;
 }) {
   const dup = await findBranchByNameRepo(input.companyId, input.name);
@@ -52,6 +53,7 @@ export async function createBranchSvc(input: {
       usePickupQueue: input.usePickupQueue ?? false,
       requirePickupOtp: input.requirePickupOtp ?? true,
       requireReceiverOtp: input.requireReceiverOtp ?? true,
+      requireReceiverCashierSignature: input.requireReceiverCashierSignature ?? false,
       isDeleted: false,
       createdBy: input.createdBy,
     });
@@ -72,6 +74,7 @@ export async function createBranchSvc(input: {
         usePickupQueue: input.usePickupQueue ?? false,
         requirePickupOtp: input.requirePickupOtp ?? true,
         requireReceiverOtp: input.requireReceiverOtp ?? true,
+        requireReceiverCashierSignature: input.requireReceiverCashierSignature ?? false,
       },
     });
     return { id: restored?.id ?? dup.id };
@@ -94,6 +97,7 @@ export async function createBranchSvc(input: {
       usePickupQueue: input.usePickupQueue ?? false,
       requirePickupOtp: input.requirePickupOtp ?? true,
       requireReceiverOtp: input.requireReceiverOtp ?? true,
+      requireReceiverCashierSignature: input.requireReceiverCashierSignature ?? false,
     },
   });
   return { id: created?.id };
@@ -109,6 +113,7 @@ export async function updateBranchSvc(
     usePickupQueue?: boolean;
     requirePickupOtp?: boolean;
     requireReceiverOtp?: boolean;
+    requireReceiverCashierSignature?: boolean;
   },
   actorUserId?: string | null,
 ) {
@@ -143,6 +148,7 @@ export async function updateBranchSvc(
         usePickupQueue: existing.usePickupQueue,
         requirePickupOtp: existing.requirePickupOtp,
         requireReceiverOtp: existing.requireReceiverOtp,
+        requireReceiverCashierSignature: existing.requireReceiverCashierSignature,
         isDeleted: existing.isDeleted,
         createdBy: existing.createdBy,
       },
@@ -159,6 +165,7 @@ export async function updateBranchSvc(
             usePickupQueue: after.usePickupQueue,
             requirePickupOtp: after.requirePickupOtp,
             requireReceiverOtp: after.requireReceiverOtp,
+            requireReceiverCashierSignature: after.requireReceiverCashierSignature,
             isDeleted: after.isDeleted,
             createdBy: after.createdBy,
           }
@@ -191,6 +198,7 @@ export async function deleteBranchSvc(id: string, actorUserId?: string | null) {
         usePickupQueue: existing.usePickupQueue,
         requirePickupOtp: existing.requirePickupOtp,
         requireReceiverOtp: existing.requireReceiverOtp,
+        requireReceiverCashierSignature: existing.requireReceiverCashierSignature,
       },
     },
   });

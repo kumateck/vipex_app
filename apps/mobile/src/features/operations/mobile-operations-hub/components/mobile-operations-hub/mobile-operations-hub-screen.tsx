@@ -6,6 +6,7 @@ import { AppScreen } from '@mobile/components/screen';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import {
+  canCaptureReceiverSignature,
   canCompleteOfficePickup,
   canCreateParcelBooking,
   canReviewDeliveryChanges,
@@ -117,6 +118,15 @@ export function MobileOperationsHubScreen() {
           description="Verify the receiver's collection OTP and hand over sender-paid parcels."
           href="/(app)/office-pickup"
           linkLabel="Open Pickup"
+        />
+      ) : null}
+      {canCaptureReceiverSignature(permissions) ? (
+        <ModuleCard
+          icon="create-outline"
+          title="Receiver Signatures"
+          description="Capture signatures for parcels processed by Receiver Cashier."
+          href="/(app)/receiver-signatures"
+          linkLabel="Open Receiver Signatures"
         />
       ) : null}
       {canScan ? (

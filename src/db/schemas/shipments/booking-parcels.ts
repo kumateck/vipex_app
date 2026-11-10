@@ -8,6 +8,7 @@ import {
   uniqueIndex,
   smallint,
   jsonb,
+  check,
 } from 'drizzle-orm/pg-core';
 import { companies, branches, users, locations } from '../core';
 import { customers, cards } from '../customers';
@@ -16,6 +17,8 @@ import { sql } from 'drizzle-orm';
 import { ParcelStatus, PaymentMethod } from '../enums';
 import { createId } from '@paralleldrive/cuid2';
 import type { DeliveryConfirmationSnapshot } from '@/shared/shipments/delivery-confirmation-snapshot';
+
+import type { PendingReceiverHandover } from '@/shared/shipments/pending-receiver-handover';
 
 // Bookings: pure header (no destinationId, invoice, paymentMode, actionType)
 // id is UUID primary key; parcels link via bookingId
@@ -79,6 +82,8 @@ export const parcels = pgTable(
       'delivery_confirmation_snapshot',
     ).$type<DeliveryConfirmationSnapshot>(),
 
+    pendingReceiverHandover: jsonb('pending_receiver_handover').$type<PendingReceiverHandover>(),
+
     status: smallint('status').notNull().default(ParcelStatus.CREATED),
     parcelDetails: varchar('parcel_details', { length: 255 }).notNull(),
     parcelContent: varchar('parcel_content', { length: 255 }).notNull(),
@@ -132,6 +137,20 @@ export const parcels = pgTable(
   },
   (t) => ({
     byBookingId: index('parcels_booking_id_idx').on(t.bookingId),
+    pendingReceiverHandoverIndex: index('parcels_pending_receiver_handover_idx')
+      .on(t.companyId, t.destinationId, t.id)
+      .where(sql`${t.pendingReceiverHandover} is not null`),
+    pendingReceiverHandoverCheck: check(
+      'parcels_pending_receiver_handover_check',
+      sql`${t.pendingReceiverHandover} is null or (
+        ${t.status} = ${sql.raw(String(ParcelStatus.AWAITING_PICKUP))} and ${t.confirmedAt} is null and not ${t.isDeleted}
+        and (${t.pendingReceiverHandover}->>'companyId') is not distinct from ${t.companyId}
+        and (${t.pendingReceiverHandover}->>'branchId') is not distinct from ${t.destinationId}
+        and (${t.pendingReceiverHandover}->>'receiverId') is not distinct from ${t.receiverId}
+        and (${t.pendingReceiverHandover}->>'collectorId') is not distinct from
+          (case when ${t.pendingReceiverHandover}->>'handoverTarget' = 'second' then ${t.secondReceiverId} else ${t.receiverId} end)
+      )`,
+    ),
     byBookingCode: index('parcels_booking_code_idx').on(t.bookingCode),
     uqTrackingPerCompany: uniqueIndex('parcels_company_tracking_uq').on(
       t.companyId,

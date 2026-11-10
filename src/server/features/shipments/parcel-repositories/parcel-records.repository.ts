@@ -42,6 +42,7 @@ export async function getParcelRepo(
         string | null
       >`coalesce(nullif(btrim(${parcels.secondReceiverNameSnapshot}), ''), ${secondReceiver.fullname})`,
       status: parcels.status,
+      hasPendingReceiverHandover: sql<boolean>`${parcels.pendingReceiverHandover} is not null`,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
       parcelValuePsw: parcels.parcelValuePsw,

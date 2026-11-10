@@ -187,6 +187,26 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   Ghana rules. It is for the A5 receiver receipt only and is not persisted as payment tax. With
   no storage payment, the receiver receipt continues to use the principal payment's saved tax
   breakdown. Storage-only collection returns a receipt breakdown even when `payment` is null.
+  For a destination branch with `requireReceiverCashierSignature`, submit
+  `requestSignature: true`, `handoverTarget`, `expectedReceiverId`, and
+  `expectedSecondReceiverId` when selecting the second receiver. Payment returns
+  `awaitingSignature: true` with status Awaiting Pickup and the new `handoverId`. A stale branch setting or
+  already processed handover returns 409.
+- `GET /payments/receiver-handovers` lists the branch's pending parcels with the collector,
+  associate, and nullable `signedAt`. It supports `search` and `after` pagination. A desktop
+  dialog filters by exact `parcelId` and `handoverId` to watch one request independently of
+  the visible page. Pass the returned `revision` as `since` to wait up to four seconds for a change.
+- `POST /payments/receiver-handovers/:parcelId/signature` accepts `{ handoverId, signature }`.
+  Mobile sends `{ source: "touchscreen", signatureImage }`. Desktop Topaz sends
+  `{ source: "topaz", signatureImage, sigString }`. Invalid captures return 400.
+- `GET /payments/receiver-handovers/:parcelId/signature?handoverId=…` returns the signature
+  image and timestamp for desktop preview. `POST /payments/receiver-handovers/:parcelId/confirm`
+  accepts `{ handoverId }`, requires a signed handover and active cashier session, and returns
+  `{ id, alreadyConfirmed }`. These routes use the authenticated company and destination branch
+  and require `CanCreateReceiverPayments`. Preview and confirmation require the desktop client.
+- `GET /shipments/parcels/:id/receiver-receipt-reprint?includeParcel=true` also includes the
+  receipt display fields used by desktop after a signed handover. The existing receipt access
+  rules apply.
 - `GET /shipments/parcels`: optional `sentDate=YYYY-MM-DD` filters by the linked consignment's
   creation day (inclusive start, exclusive next day, UTC); optional `consignmentNumber` matches
   its daily serial or full code. Both can be combined with the existing `sourceId`, `destinationId`,
@@ -194,7 +214,7 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   cannot match either consignment filter. These predicates apply to both result rows and total count.
   The optional `cashierCollectionRequired` list filter is mutually exclusive routing support for
   pickup workflows. `true` returns parcels with outstanding principal or storage; `false` returns
-  parcels with neither. Storage is computed from the company ageing policy, effective received
+  parcels with neither. Both exclude pending Receiver Cashier signatures. Storage is computed from the company ageing policy, effective received
   time, non-voided storage payments, and waivers. The response remains paginated after filtering.
 - `GET /shipments/parcels/call-center`: require `CanReadCallCenterAssignment` and return Arrived,
   Customer Contacted, Returned to Office, Awaiting Pickup, Home Delivery Requested, Address

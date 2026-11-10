@@ -14,9 +14,11 @@ export const receiptReprintRoutes = new Elysia({ name: 'receipt-reprint' })
   .use(authPlugin)
   .get(
     '/v1/shipments/parcels/:id/receiver-receipt-reprint',
-    ({ params, user }) => getReceiverReceiptReprintSvc(params.id, user as AuthUser),
+    ({ params, query, user }) =>
+      getReceiverReceiptReprintSvc(params.id, user as AuthUser, query.includeParcel === 'true'),
     {
       params: t.Object({ id: UUID }),
+      query: t.Object({ includeParcel: t.Optional(t.Literal('true')) }),
       beforeHandle: [
         requireAuth(),
         requireAnyPermissions(PermissionKeys.CanCreateReceiverPayments),

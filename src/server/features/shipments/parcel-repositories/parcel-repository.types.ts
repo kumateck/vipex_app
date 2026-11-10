@@ -20,6 +20,7 @@ export function effectiveParcelReceivedAt() {
 }
 
 export type ParcelRow = {
+  hasPendingReceiverHandover?: boolean;
   id: string;
   companyId: string;
   sourceId: string;

@@ -25,7 +25,7 @@ const NUMBER = /^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i;
 const DIMENSIONS = /^([\d.]+)" height="([\d.]+)" viewBox="0 0 \1 \2$/;
 
 /** Only accept the drawing pad's static SVG format and numeric drawing commands. */
-export function isHandoverSignature(value: string) {
+export function isHandoverSignature(value: string, requireVisibleInk = false) {
   if (value.length > MAX_HANDOVER_SIGNATURE_LENGTH || !value.startsWith(DATA_URL_PREFIX)) {
     return false;
   }
@@ -42,6 +42,10 @@ export function isHandoverSignature(value: string) {
     const parts = path.split(' ');
     if (parts.length < 6 || parts.length % 3 !== 0 || parts[0] !== 'M') return false;
     let lastCommand = '';
+    let lastPoint: SignaturePoint | undefined;
+    let hasInk = false;
+    const width = Number(size[1]);
+    const height = Number(size[2]);
     for (let index = 0; index < parts.length; index += 3) {
       const command = parts[index];
       const x = parts[index + 1] ?? '';
@@ -55,9 +59,22 @@ export function isHandoverSignature(value: string) {
       ) {
         return false;
       }
+      if (requireVisibleInk) {
+        const point = { x: Number(x), y: Number(y) };
+        const inside = (p: SignaturePoint) => p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= height;
+        if (
+          command === 'L' &&
+          lastPoint &&
+          (inside(point) || inside(lastPoint)) &&
+          Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y) >= 1
+        ) {
+          hasInk = true;
+        }
+        lastPoint = point;
+      }
       lastCommand = command;
     }
-    return lastCommand === 'L';
+    return lastCommand === 'L' && (!requireVisibleInk || hasInk);
   } catch {
     return false;
   }

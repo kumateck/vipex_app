@@ -31,6 +31,8 @@ import DeliveryChangeReviewScreen from '../../../../../app/(app)/delivery-change
 import MobileCustomerDirectoryScreen from '../../../../../app/(app)/customers';
 import OfficePickupScreen from '../../../../../app/(app)/office-pickup';
 
+import ReceiverSignaturesScreen from '../../../../../app/(app)/receiver-signatures';
+
 const Drawer = createDrawerNavigator();
 const Tabs = createBottomTabNavigator();
 
@@ -202,6 +204,11 @@ export function MobileAppDrawer() {
         name="Customers"
         component={MobileCustomerDirectoryScreen}
         options={{ title: 'Customers', drawerItemStyle: hidden }}
+      />
+      <Drawer.Screen
+        name="ReceiverSignatures"
+        component={ReceiverSignaturesScreen}
+        options={{ title: 'Receiver Signatures', drawerItemStyle: hidden }}
       />
       <Drawer.Screen
         name="OfficePickup"

@@ -89,7 +89,7 @@ describe('confirmReceiverDelivery branch OTP policy', () => {
   });
 
   it('prints a storage-only receipt with combined-amount receipt tax', async () => {
-    const { receipt } = await confirmReceiverDelivery({
+    const result = await confirmReceiverDelivery({
       selectedParcel: PARCEL,
       pickerStaffId: 'staff-1',
       paymentAmount: '0',
@@ -132,6 +132,8 @@ describe('confirmReceiverDelivery branch OTP policy', () => {
         };
       },
     });
+    if (result.awaitingSignature) throw new Error('Expected a completed handover');
+    const { receipt } = result;
     expect(receipt.amountPaidCedis).toBe(6);
     expect(receipt.storageChargeCedis).toBe(6);
     expect(receipt.taxBreakdown?.taxTotalCedis).toBe(0.5);
