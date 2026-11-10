@@ -68,6 +68,7 @@ function PickupTable({ cashier }: { cashier: boolean }) {
 
 function ShelfTable() {
   const columns = useShelfPickerUpdateColumns({
+    isPickupQueueEnabled: false,
     onOpenUpdateDialog: noop,
     onEdit: noop,
     onEditSecondReceiver: noop,

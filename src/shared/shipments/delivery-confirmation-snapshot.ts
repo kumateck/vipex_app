@@ -6,6 +6,12 @@ export type DeliveryConfirmationSnapshot = {
   paymentIds: string[];
   creditChargeIds: string[];
   pickupQueueId: string | null;
+  officePickupSignature?: {
+    signatureImage: string;
+    handoverTarget: 'main' | 'second';
+    customerId: string;
+    capturedBy: string;
+  };
   handover: {
     secondReceiverId: string | null;
     secondReceiverNameSnapshot: string | null;

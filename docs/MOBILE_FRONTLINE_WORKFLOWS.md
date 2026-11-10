@@ -27,7 +27,7 @@ Each Operations workflow card opens its registered native screen. The shared mob
 | Delivery-change review  | `CanMarkDoorstepCalled`                                    | Approve/reject: `CanMarkDoorstepCalled`, plus server branch matching.                                                                                                                     |
 | Customer directory      | `CanReadCustomers`                                         | Limited contact update: `CanUpdateCustomers`                                                                                                                                              |
 | Parcel creation         | `CanCreateBookingWithParcels` for minimal telephone lookup | New customer creation: `CanCreateCustomers`; booking submission: `CanCreateBookingWithParcels`                                                                                            |
-| Waiting for Pickup      | `CanCompleteOfficePickup`                                  | Same grant for collection OTP and shared status PATCH; helper reads need parcel/customer/user reads, new cards need `CanUpdateCustomers`, new second receivers need `CanCreateCustomers`. |
+| Waiting for Pickup      | `CanCompleteOfficePickup`                                  | Same grant for collection OTP and signed confirmation; helper reads need parcel/customer/user reads, new cards need `CanUpdateCustomers`, new second receivers need `CanCreateCustomers`. |
 
 Read access never substitutes for a separate mutation permission. The server remains authoritative when a cached screen or stale session attempts an action.
 
@@ -37,7 +37,8 @@ Operations → Waiting for Pickup mirrors the web settled-parcel handover. It se
 Awaiting Pickup parcels without collection due, applies branch queue/OTP settings, records
 the shelf picker and optional ID cards, verifies the main receiver's collection OTP and
 marks Delivered by Office. SMS is the default; configured WhatsApp is optional. A second
-receiver may collect, and Request home delivery uses the existing status PATCH.
+receiver may collect. The selected collector signs on the same drawing pad used for rider
+handover. Request home delivery uses the existing status PATCH.
 See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md) for payloads, helper permissions,
 failure recovery, first-20-result limitation and platform differences. Receiver payment
 collection and receipt printing are not part of this mobile screen.

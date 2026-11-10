@@ -2,7 +2,7 @@ import { getParcelDetails, mobileApiGet, mobileApiPatch, mobileApiPost } from '@
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import type {
   BranchPickupSettings,
-  DeliveredPatch,
+  SignedPickupConfirmation,
   OtpChannel,
   PhoneSlot,
   PickupCardOption,
@@ -116,12 +116,12 @@ export function resolvePickupSecondReceiver(
 export function markParcelDeliveredByOffice(
   token: string,
   parcelId: string,
-  patch: DeliveredPatch,
+  confirmation: SignedPickupConfirmation,
 ) {
-  return mobileApiPatch<{ id: string }>({
-    path: `/shipments/parcels/${parcelId}`,
+  return mobileApiPost<{ id: string }>({
+    path: `/shipments/parcels/${parcelId}/confirm-office-pickup`,
     token,
-    body: patch,
+    body: confirmation,
   });
 }
 

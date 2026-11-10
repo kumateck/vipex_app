@@ -52,7 +52,7 @@ export function createParcelListOrder(
         : [asc(parcels.createdAt), asc(parcels.id)];
   const pickupQueueJoin = and(
     eq(pickupQueues.parcelId, parcels.id),
-    p.shelfPickerAssigned
+    p.shelfPickerAssigned || p.shelfPickerAssignmentOrder
       ? sql`${pickupQueues.id} = (
         select pq_latest.id from pickup_queues pq_latest
         where pq_latest.parcel_id = ${parcels.id} and pq_latest.ended_at is null

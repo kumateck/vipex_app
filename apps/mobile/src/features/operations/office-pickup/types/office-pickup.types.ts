@@ -5,7 +5,7 @@ export type HandoverTarget = 'main' | 'second';
 export type PhoneSlot = 'primary' | 'secondary';
 export type OtpChannel = 'sms' | 'whatsapp';
 
-export type PickupParcel = ParcelSearchRow;
+export type PickupParcel = ParcelSearchRow & { pickupQueueEndedAt?: string | null };
 export type PickupParcelDetails = ParcelFullDetails;
 
 /** Mirrors GET /v1/branches/:id/operations-settings. */
@@ -60,6 +60,7 @@ export type PickupListQuery = {
   page: number;
   pageSize: number;
   search?: string;
+  parcelCode?: string;
   companyId: string;
   destinationId: string;
   status: number;
@@ -67,8 +68,11 @@ export type PickupListQuery = {
   hasPickupQueue?: boolean;
 };
 
-export type DeliveredPatch = {
-  status: number;
+export type SignedPickupConfirmation = {
+  handoverTarget: HandoverTarget;
+  signatureImage: string;
+  expectedMainReceiverId: string;
+  expectedSecondReceiverId: string | null;
   confirmedBy: string;
   cardId: string | null;
   cardNumber: string | null;
@@ -76,5 +80,4 @@ export type DeliveredPatch = {
   secondCardId: string | null;
   secondCardNumber: string | null;
   receiverOtpVerificationToken?: string;
-  receiverOtpTarget?: 'main';
 };

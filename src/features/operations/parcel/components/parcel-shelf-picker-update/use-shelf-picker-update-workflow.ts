@@ -13,7 +13,7 @@ import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ParcelRow } from './shelf-picker-update-types';
 import { useListShelfPickerStaffQuery } from './services';
 
-type ParcelListResponse = { data: ParcelRow[]; meta: PaginationMeta };
+type ParcelListResponse = { data: ParcelRow[]; meta: PaginationMeta; usePickupQueue?: boolean };
 
 type TableQuery = {
   page?: number;
@@ -195,6 +195,7 @@ export function useShelfPickerUpdateWorkflow() {
       companyId,
       branchId,
       userId,
+      isPickupQueueEnabled: listData.usePickupQueue === true,
     },
     table: {
       query,

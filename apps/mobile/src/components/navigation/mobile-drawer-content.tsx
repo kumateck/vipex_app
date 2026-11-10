@@ -10,6 +10,7 @@ import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import {
   canChangeOwnPassword,
+  canCompleteOfficePickup,
   canCreateParcelBooking,
   canUseTransitReceiveScan,
   canViewOperationsHub,
@@ -30,6 +31,7 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
   const locationName = user?.location?.name || user?.branch?.location || 'No location';
   const permissions = user?.permissions ?? [];
   const canUseQueue = canViewQueueScreen(permissions);
+  const canUseOfficePickup = canCompleteOfficePickup(permissions);
   const canUseOperations = canViewOperationsHub(permissions);
   const canUseReceive = canUseTransitReceiveScan(permissions);
   const canUseSelfService = canViewSelfServiceBookings(permissions);
@@ -130,6 +132,17 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
                 <Ionicons name="ticket-outline" size={size} color={color} />
               )}
               onPress={() => props.navigation.navigate('Queue')}
+              inactiveTintColor={theme.colors.text}
+            />
+          ) : null}
+          {canUseOfficePickup ? (
+            <DrawerItem
+              label="Waiting for Pickup"
+              labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+              icon={({ size, color }) => (
+                <Ionicons name="hand-left-outline" size={size} color={color} />
+              )}
+              onPress={() => props.navigation.navigate('OfficePickup')}
               inactiveTintColor={theme.colors.text}
             />
           ) : null}

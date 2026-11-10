@@ -12,25 +12,38 @@ export function usePickupHandoverForm(onOtpInvalidated: () => void) {
   const [handoverTarget, setHandoverTargetState] = useState<HandoverTarget>('main');
   const [mainCard, setMainCard] = useState<CardSelection>(EMPTY_CARD_SELECTION);
   const [secondCard, setSecondCard] = useState<CardSelection>(EMPTY_CARD_SELECTION);
-  const [secondNewName, setSecondNewName] = useState('');
-  const [secondNewPhone, setSecondNewPhone] = useState('');
+  const [secondNewName, setSecondNewNameState] = useState('');
+  const [secondNewPhone, setSecondNewPhoneState] = useState('');
+  const [signatureImage, setSignatureImage] = useState('');
 
   const resetFor = useCallback((parcel: PickupParcel) => {
     setPickerStaffId('');
     setHandoverTargetState(parcel.secondReceiverId ? 'second' : 'main');
     setMainCard(EMPTY_CARD_SELECTION);
     setSecondCard(EMPTY_CARD_SELECTION);
-    setSecondNewName('');
-    setSecondNewPhone('');
+    setSecondNewNameState('');
+    setSecondNewPhoneState('');
+    setSignatureImage('');
   }, []);
 
   const setHandoverTarget = useCallback(
     (target: HandoverTarget) => {
       onOtpInvalidated();
       setHandoverTargetState(target);
+      setSignatureImage('');
     },
     [onOtpInvalidated],
   );
+
+  const setSecondNewName = useCallback((value: string) => {
+    setSecondNewNameState(value);
+    setSignatureImage('');
+  }, []);
+
+  const setSecondNewPhone = useCallback((value: string) => {
+    setSecondNewPhoneState(value);
+    setSignatureImage('');
+  }, []);
 
   return {
     pickerStaffId,
@@ -45,6 +58,8 @@ export function usePickupHandoverForm(onOtpInvalidated: () => void) {
     setSecondNewName,
     secondNewPhone,
     setSecondNewPhone,
+    signatureImage,
+    setSignatureImage,
     resetFor,
   };
 }

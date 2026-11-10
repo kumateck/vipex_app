@@ -176,15 +176,15 @@ export async function verifyReceiverOtpSvc(input: {
   };
 }
 
-export async function assertReceiverOtpVerifiedSvc(input: {
-  parcelId: string;
-  targetReceiver: TargetReceiver;
-  verificationToken: string;
-}) {
+export async function assertReceiverOtpVerifiedSvc(
+  input: { parcelId: string; targetReceiver: TargetReceiver; verificationToken: string },
+  executor?: Parameters<typeof getVerifiedOtpByTokenRepo>[3],
+) {
   const verified = await getVerifiedOtpByTokenRepo(
     input.parcelId,
     input.targetReceiver,
     input.verificationToken,
+    executor,
   );
   if (!verified) {
     throw Unauthorized('Receiver OTP verification required or expired. Please re-verify.');
@@ -192,6 +192,9 @@ export async function assertReceiverOtpVerifiedSvc(input: {
   return verified;
 }
 
-export async function consumeReceiverOtpTokenSvc(id: string) {
-  await consumeOtpTokenRepo(id);
+export async function consumeReceiverOtpTokenSvc(
+  id: string,
+  executor?: Parameters<typeof consumeOtpTokenRepo>[1],
+) {
+  await consumeOtpTokenRepo(id, executor);
 }

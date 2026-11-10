@@ -45,6 +45,17 @@ describe('parcel history: audit entries', () => {
     expect(new Set(drafts.map((draft) => draft.id)).size).toBe(2);
   });
 
+  test('shows who signed an office pickup in the status history', () => {
+    const [draft] = mapAuditEntry(
+      entry('PARCEL_UPDATED', {
+        patch: { status: ParcelStatus.DELIVERED_BY_OFFICE },
+        signatureCaptured: true,
+        handoverTarget: 'second',
+      }),
+    );
+    expect(draft?.description).toBe('Second receiver signature captured');
+  });
+
   test('names the assigned picker as the subject', () => {
     const [draft] = mapAuditEntry(
       entry('PARCEL_SHELF_PICKER_ASSIGNED', { pickerStaffId: 'picker-9' }),

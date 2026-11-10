@@ -70,10 +70,14 @@ export function mapAuditEntry(entry: AuditEntry): ParcelHistoryDraft[] {
           draft(entry, {
             category: 'status',
             title: `Status changed to ${parcelStatusLabel(patch.status)}`,
-            description:
+            description: joinParts([
               typeof previous === 'number' && previous !== patch.status
                 ? `From ${parcelStatusLabel(previous)}`
                 : null,
+              meta.signatureCaptured === true && patch.status === ParcelStatus.DELIVERED_BY_OFFICE
+                ? `${meta.handoverTarget === 'second' ? 'Second' : 'Main'} receiver signature captured`
+                : null,
+            ]),
           }),
         );
       }

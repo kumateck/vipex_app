@@ -5,12 +5,22 @@ import { AppButton, AppCard, AppInput, AppSkeletonCard } from '@mobile/component
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { OfficePickupList } from '../../hooks';
 import type { PickupParcel } from '../../types';
+import { getPickupQueueBadgeNumber } from '../../utils';
 import { pickupStyles } from './office-pickup.styles';
 
 type Props = { list: OfficePickupList; onOpen: (parcel: PickupParcel) => void };
 
-function ParcelRow({ parcel, onOpen }: { parcel: PickupParcel; onOpen: () => void }) {
+function ParcelRow({
+  parcel,
+  showQueueNumber,
+  onOpen,
+}: {
+  parcel: PickupParcel;
+  showQueueNumber: boolean;
+  onOpen: () => void;
+}) {
   const { theme } = useAppearance();
+  const queueNumber = getPickupQueueBadgeNumber(showQueueNumber, parcel);
   return (
     <Pressable onPress={onOpen} accessibilityRole="button">
       <AppCard>
@@ -18,14 +28,17 @@ function ParcelRow({ parcel, onOpen }: { parcel: PickupParcel; onOpen: () => voi
           <Text style={[pickupStyles.title, pickupStyles.flex, { color: theme.colors.text }]}>
             {parcel.trackingCode}
           </Text>
-          {parcel.pickupQueueNumber != null ? (
+          {queueNumber != null ? (
             <Text style={[pickupStyles.hint, { color: theme.colors.primary }]}>
-              Queue #{parcel.pickupQueueNumber}
+              Queue #{queueNumber}
             </Text>
           ) : null}
         </View>
         <Text style={[pickupStyles.text, { color: theme.colors.textMuted }]}>
-          {parcel.receiverName ?? '-'} · {parcel.receiverPhone ?? '-'}
+          Receiver: {parcel.receiverName ?? '-'} · {parcel.receiverPhone ?? '-'}
+        </Text>
+        <Text style={[pickupStyles.text, { color: theme.colors.textMuted }]}>
+          Sender: {parcel.senderName ?? '-'} · {parcel.senderPhone ?? '-'}
         </Text>
         <Text style={[pickupStyles.hint, { color: theme.colors.textSubtle }]} numberOfLines={1}>
           {parcel.bookingCode} · {parcel.parcelDetails}
@@ -50,8 +63,12 @@ export function PickupParcelFinder({ list, onOpen }: Props) {
           onSubmitEditing={() => list.submitSearch()}
           returnKeyType="search"
           autoCapitalize="none"
-          placeholder="Tracking, booking, telephone or receiver name"
+          placeholder="Booking code, tracking code, name or phone"
+          accessibilityLabel="Search by booking code, tracking code, or sender or receiver name or phone"
         />
+        <Text style={[pickupStyles.hint, muted]}>
+          Enter the sender or receiver name or phone number, or scan the QR code on the sticker.
+        </Text>
         <View style={pickupStyles.row}>
           <View style={pickupStyles.flex}>
             <AppButton
@@ -80,7 +97,12 @@ export function PickupParcelFinder({ list, onOpen }: Props) {
         <AppSkeletonCard />
       ) : list.rows.length ? (
         list.rows.map((parcel) => (
-          <ParcelRow key={parcel.id} parcel={parcel} onOpen={() => onOpen(parcel)} />
+          <ParcelRow
+            key={parcel.id}
+            parcel={parcel}
+            showQueueNumber={list.isPickupQueueEnabled}
+            onOpen={() => onOpen(parcel)}
+          />
         ))
       ) : (
         <Text style={[pickupStyles.text, muted]}>
