@@ -90,6 +90,7 @@ export type ListParcelsParams = {
   storageGraceDays?: number | null;
   storageFeePerDayPsw?: number | null;
   search?: string | null; // bookingCode/trackingCode/sender/receiver names/phones
+  parcelCode?: string | null; // Exact tracking or booking code from a sticker
   received?: boolean | null;
   includeDeleted?: boolean | null;
   assignedToUserId?: string | null;

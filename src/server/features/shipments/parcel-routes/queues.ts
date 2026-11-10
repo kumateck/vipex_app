@@ -129,23 +129,29 @@ export const routes = new Elysia({ name: 'parcel-queues' })
     '/shelf-picker',
     async ({ query, user }) => {
       const authUser = user as AuthUser;
-      const branch = authUser.branchId ? await getBranchRepo(authUser.branchId) : null;
-      return listParcelsCtrl({
+      if (!authUser.companyId || !authUser.branchId) {
+        return { ...emptyParcelList(query), usePickupQueue: false };
+      }
+      const branch = await getBranchRepo(authUser.branchId);
+      if (!branch || branch.companyId !== authUser.companyId || branch.isDeleted) {
+        return { ...emptyParcelList(query), usePickupQueue: false };
+      }
+      const usePickupQueue = branch.usePickupQueue;
+      const queuedOnly = usePickupQueue && !query.search?.trim();
+      const list = await listParcelsCtrl({
         page: query.page,
         pageSize: query.pageSize,
         search: query.search,
-        sort:
-          branch?.usePickupQueue && !query.search?.trim()
-            ? [{ field: 'pickupQueueNumber', direction: 'asc' }]
-            : undefined,
+        sort: queuedOnly ? [{ field: 'pickupQueueNumber', direction: 'asc' }] : undefined,
         filters: {
-          companyId: authUser.companyId ?? null,
-          destinationId: authUser.branchId ?? null,
+          companyId: authUser.companyId,
+          destinationId: authUser.branchId,
           status: 5,
           shelfPickerAssignmentOrder: true,
-          hasPickupQueue: branch?.usePickupQueue && !query.search?.trim() ? true : undefined,
+          hasPickupQueue: queuedOnly ? true : undefined,
         },
       });
+      return { ...list, usePickupQueue };
     },
     {
       query: t.Object({

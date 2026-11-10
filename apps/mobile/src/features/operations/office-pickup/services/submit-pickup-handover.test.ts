@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
-import type { DeliveredPatch, PickupParcel } from '../types';
+import { encodeHandoverSignature } from '@/shared/shipments/handover-signature';
+import type { SignedPickupConfirmation, PickupParcel } from '../types';
 import { EMPTY_CARD_SELECTION } from '../utils';
 import { submitPickupHandover, type PickupHandoverInput } from './submit-pickup-handover';
 
@@ -15,6 +16,17 @@ const parcel = {
   status: ParcelStatus.AWAITING_PICKUP,
   plannedToBePaidPsw: 0,
 } as PickupParcel;
+
+const signatureImage = encodeHandoverSignature(
+  [
+    [
+      { x: 10, y: 12 },
+      { x: 26, y: 34 },
+    ],
+  ],
+  300,
+  240,
+);
 
 function input(overrides: Partial<PickupHandoverInput> = {}): PickupHandoverInput {
   return {
@@ -32,13 +44,14 @@ function input(overrides: Partial<PickupHandoverInput> = {}): PickupHandoverInpu
     verificationToken: 'token',
     isPickupQueueEnabled: false,
     hasPickupQueue: false,
+    signatureImage,
     ...overrides,
   };
 }
 
 function recorder() {
   const calls: string[] = [];
-  let patch: DeliveredPatch | null = null;
+  let patch: SignedPickupConfirmation | null = null;
   return {
     calls,
     patch: () => patch,
@@ -50,7 +63,7 @@ function recorder() {
         calls.push(`second:${person.fullname}`);
         return { id: 'second-1' };
       },
-      markDelivered: async (id: string, body: DeliveredPatch) => {
+      markDelivered: async (id: string, body: SignedPickupConfirmation) => {
         calls.push(`deliver:${id}`);
         patch = body;
         return { id };
@@ -65,12 +78,23 @@ describe('submit office pickup handover', () => {
     await submitPickupHandover(input(), r.api);
     expect(r.calls).toEqual(['deliver:parcel-1']);
     expect(r.patch()).toMatchObject({
-      status: ParcelStatus.DELIVERED_BY_OFFICE,
+      handoverTarget: 'main',
+      signatureImage,
       confirmedBy: 'staff',
       receiverOtpVerificationToken: 'token',
-      receiverOtpTarget: 'main',
     });
   });
+
+  test.each(['', 'invalid image'])(
+    'rejects an unusable signature before card or contact writes (%j)',
+    async (image) => {
+      const r = recorder();
+      await expect(submitPickupHandover(input({ signatureImage: image }), r.api)).rejects.toThrow(
+        'signature',
+      );
+      expect(r.calls).toEqual([]);
+    },
+  );
 
   test('refuses before writing anything when the OTP is not verified', async () => {
     const r = recorder();
@@ -98,7 +122,12 @@ describe('submit office pickup handover', () => {
       'card:second-1:S1',
       'deliver:parcel-1',
     ]);
-    expect(r.patch()).toMatchObject({ secondReceiverId: 'second-1', secondCardNumber: 'S1' });
+    expect(r.patch()).toMatchObject({
+      handoverTarget: 'second',
+      signatureImage,
+      secondReceiverId: 'second-1',
+      secondCardNumber: 'S1',
+    });
   });
 
   test('validates the second receiver before saving the main receiver card', async () => {
@@ -198,7 +227,7 @@ describe('submit office pickup handover', () => {
           if (failure === 'second') throw new Error('second unavailable');
           return result;
         },
-        markDelivered: async (id: string, body: DeliveredPatch) => {
+        markDelivered: async (id: string, body: SignedPickupConfirmation) => {
           await r.api.markDelivered(id, body);
           throw new Error('deliver unavailable');
         },

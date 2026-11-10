@@ -16,6 +16,13 @@ import { CallCenterAssignmentPaymentCell } from '../parcel-call-center-assignmen
 import type { ParcelRow } from './shelf-picker-update-types';
 import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
+const queueNumberColumn: ColumnDef<ParcelRow> = {
+  id: 'pickupQueueNumber',
+  header: 'Queue Number',
+  enableSorting: false,
+  accessorFn: (parcel) => parcel.pickupQueueNumber ?? '—',
+};
+
 const getStatusLabel = (status: number) => {
   switch (status) {
     case ParcelStatus.CREATED:
@@ -39,6 +46,7 @@ const getStatusVariant = (status: number) => {
 };
 
 export function useShelfPickerUpdateColumns({
+  isPickupQueueEnabled,
   onOpenUpdateDialog,
   onEdit,
   onEditSecondReceiver,
@@ -47,6 +55,7 @@ export function useShelfPickerUpdateColumns({
   isRequestingDelivery,
   canRequestDelivery,
 }: {
+  isPickupQueueEnabled: boolean;
   onOpenUpdateDialog: (parcel: ParcelRow) => void;
   onEdit: (parcel: ParcelRow) => void;
   onEditSecondReceiver: (parcel: ParcelRow) => void;
@@ -66,6 +75,7 @@ export function useShelfPickerUpdateColumns({
         </div>
       ),
     },
+    ...(isPickupQueueEnabled ? [queueNumberColumn] : []),
     {
       accessorKey: 'receiverName',
       header: 'Receiver',

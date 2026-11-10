@@ -309,6 +309,14 @@ rows, including those on later pages; repeat on a branch with pickup queues enab
 Verify both date lines for a newly received parcel and the `-` fallback for a legacy row without a
 receipt timestamp.
 
+Web and Electron **Shelf Picker Update** show a **Queue Number** column when the signed-in
+branch uses pickup queues. It shows the latest active ticket number, or `—` for search results
+without an active ticket. Ended tickets do not supply a number or duplicate rows. The column
+is hidden when queues are disabled. Mobile shows the queue number on **Awaiting Pickup**
+results for active tickets only when the branch uses pickup queues. QA: compare a branch
+with queues enabled and one with queues disabled, then search for parcels with an active ticket,
+only an ended ticket, and no ticket.
+
 On **Shelf Picker Update**, typing in the search field changes only the draft text; it no longer
 fetches parcels or staff on each keystroke. Pressing **Search** commits the trimmed term and
 loads the matching parcel list. Pagination keeps that submitted term, and pressing **Search**
@@ -724,10 +732,11 @@ Automated coverage: `otp-sms-delivery.test.ts`, `sms-provider-payloads.test.ts`.
 ## Pickup and Last-Mile Delivery
 
 Mobile Operations → Waiting for Pickup implements settled-parcel office handover with
-scan/search, branch queue and OTP settings, shelf-picker selection and optional receiver
-cards. It reuses the web request/verify OTP APIs and Delivered by Office PATCH, without
-collecting payments or printing receipts. See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md)
-for permissions, validation, failure recovery and remaining client limitations.
+scan/search, branch queue and OTP settings, shelf-picker selection, optional receiver cards
+and the collector’s handwritten signature. The signed confirmation endpoint stores the
+signature and collector in the existing delivery confirmation snapshot. Parcel history shows
+who signed by receiver role. A delivery reversal clears the active snapshot and a new mobile
+handover requires a fresh signature. See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md).
 
 ### Customer names retained on parcels
 

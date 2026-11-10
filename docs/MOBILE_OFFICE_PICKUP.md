@@ -2,8 +2,9 @@
 
 ## Scope and entry
 
-Operations → **Waiting for Pickup** opens `/(app)/office-pickup` (native screen
-`OfficePickup`). The card and destination require `CanCompleteOfficePickup`, matching
+**Waiting for Pickup** opens `/(app)/office-pickup` (native screen `OfficePickup`) from the
+sidebar's **Operations** section or the **Operations Hub**. Both entries and the screen
+require `CanCompleteOfficePickup`, matching
 web/desktop `/parcels/waiting-pickup`. The feature lives in
 `apps/mobile/src/features/operations/office-pickup/` and shares the existing `/v1` APIs.
 Android and iOS use the same feature. Native device smoke testing remains required.
@@ -16,14 +17,22 @@ printing and the full web cashier table are not implemented by this feature.
 
 - An assigned company and branch are required. Branch operational settings must load before
   searching; failure shows a retry action and does not assume OTP is disabled.
-- Search accepts tracking/booking codes, telephone or receiver name. **Scan sticker** uses the
-  shared camera scanner and code parser. Camera access is needed only for scanning.
+- Search accepts a full or partial booking code, tracking code, sender or receiver name, or
+  either stored phone number for the sender or receiver. Results show both parties so staff
+  can identify the parcel before opening it.
+- **Scan sticker** reads the parcel QR, extracts the code from a tracking URL or legacy
+  `QR-` payload, and immediately looks up the exact code. Bare codes are also accepted.
+  Tap a matching parcel to open its details. Multiple parcels can share a booking code.
+  An unknown or ineligible code returns no results. Manual search remains available if
+  camera access is denied. Deploy the server's `parcelCode` filter before shipping this app build.
 - The query fixes company and destination branch, `status=AWAITING_PICKUP` and
   `cashierCollectionRequired=false`. No payment-method filter is sent: eligibility depends on
   the remaining balance, even though the UI calls these sender-paid parcels.
 - With `usePickupQueue=true`, the initial list is restricted to queued parcels. A search drops
   that queue filter so staff can also find a parcel without a ticket. Handover still requires
   a ticket when queues are enabled; create it through the separate Queue workflow.
+- Awaiting Pickup results show an active ticket’s queue number only when pickup queues are
+  enabled for the branch. Turning queues off hides numbers even on parcels with older tickets.
 - With queues disabled, staff must search or scan before results load. Results are limited to
   the first 20 matches; there is currently no paging/load-more control. Narrow a search when
   needed. Mobile does not send an explicit sort.
@@ -57,38 +66,41 @@ the server rejects it. An existing active code after reopening can produce a con
 first send; there is no dedicated force-resend recovery control for that conflict yet.
 When branch pickup OTP is disabled, the screen shows a warning and omits OTP fields.
 
-Confirm requires a shelf picker, any required queue ticket and required OTP verification.
-Local validation happens before writes. Submission saves new main-receiver cards, resolves a
-new second receiver when needed, saves their new card and finally PATCHes Delivered by Office.
-The patch includes the picker as `confirmedBy`, card fields and the second receiver ID.
-Collecting as the main receiver retains a linked second receiver but clears second-card
-handover fields. Success shows a confirmation card and refreshes the search results.
+Tap **Capture signature** and ask the selected collector to sign with a finger. The dialog
+uses the rider delivery drawing pad. **Clear** starts the drawing again and **Save signature**
+keeps the drawing on the form. A tap without a stroke cannot be saved. Changing collector,
+editing a new second receiver’s details or reopening the parcel requires a fresh signature.
+
+Confirmation requires a shelf picker, any required queue ticket, OTP when enabled, and the
+collector’s signature. Local validation happens before writes. Submission saves new cards,
+resolves a new second receiver when needed and sends the signed confirmation. Collecting as the
+main receiver retains a linked second receiver and clears second-card handover fields.
+Success shows a confirmation card and refreshes the search results.
 **Request home delivery** instead PATCHes `HOME_DELIVERY_REQUESTED`, closes the panel and
 refreshes results without office OTP confirmation or collecting payment.
 
 ## API and permission dependencies
 
-All paths below have the `/v1` prefix. No new endpoint, permission or migration is introduced.
+All paths below have the `/v1` prefix. Signed pickup uses the existing office pickup permission and database schema.
 
-| Request                                                    | Existing gate / behavior                                                                                                                                                                                                          |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /branches/:id/operations-settings`                    | Authentication; own branch, or branch-read access within company. Reads `usePickupQueue` and `requirePickupOtp`.                                                                                                                  |
-| `GET /shipments/parcels`                                   | Parcel read (the endpoint also accepts call-center assignment read); client narrows to company/destination branch and eligible balance/status.                                                                                    |
-| `GET /shipments/parcels/:id/details`                       | `CanReadParcels`; required handover resource.                                                                                                                                                                                     |
-| `GET /users/options`                                       | `CanReadUsers`; active company/branch/location staff.                                                                                                                                                                             |
-| `GET /customers/cards/options`, `GET /customers/:id/cards` | `CanReadCustomers`; required handover resources.                                                                                                                                                                                  |
-| `GET /whatsapp/availability`                               | Authentication; returns company availability, SMS fallback on failure.                                                                                                                                                            |
-| `POST /payments/receiver-otp/request`                      | Receiver-payment or office-pickup permission. Sends `{ parcelId, targetReceiver: 'main', phoneSlot, channel, force }`; returns `{ expiresAt, channel }`.                                                                          |
-| `POST /payments/receiver-otp/verify`                       | Same permission alternatives; sends `{ parcelId, targetReceiver: 'main', otp }`; returns `{ verificationToken, expiresAt }`.                                                                                                      |
-| `POST /customers/:id/cards`                                | `CanUpdateCustomers`; saves a new card before final handover.                                                                                                                                                                     |
-| `POST /customers/resolve-second-receiver`                  | `CanCreateCustomers`; sends `{ fullname, telephone }` and uses returned `id`.                                                                                                                                                     |
-| `PATCH /shipments/parcels/:id`                             | Existing shared parcel-update allow-list includes `CanCompleteOfficePickup`; Delivered by Office sends `receiverOtpVerificationToken` and `receiverOtpTarget: 'main'` when required. Home-delivery request sends only its status. |
+| Request                                                    | Existing gate / behavior                                                                                                                                                                                                                    |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /branches/:id/operations-settings`                    | Authentication; own branch, or branch-read access within company. Reads `usePickupQueue` and `requirePickupOtp`.                                                                                                                            |
+| `GET /shipments/parcels`                                   | Parcel read (the endpoint also accepts call-center assignment read); client narrows to company/destination branch and eligible balance/status.                                                                                              |
+| `GET /shipments/parcels/:id/details`                       | `CanReadParcels`; required handover resource.                                                                                                                                                                                               |
+| `GET /users/options`                                       | `CanReadUsers`; active company/branch/location staff.                                                                                                                                                                                       |
+| `GET /customers/cards/options`, `GET /customers/:id/cards` | `CanReadCustomers`; required handover resources.                                                                                                                                                                                            |
+| `GET /whatsapp/availability`                               | Authentication; returns company availability, SMS fallback on failure.                                                                                                                                                                      |
+| `POST /payments/receiver-otp/request`                      | Receiver-payment or office-pickup permission. Sends `{ parcelId, targetReceiver: 'main', phoneSlot, channel, force }`; returns `{ expiresAt, channel }`.                                                                                    |
+| `POST /payments/receiver-otp/verify`                       | Same permission alternatives; sends `{ parcelId, targetReceiver: 'main', otp }`; returns `{ verificationToken, expiresAt }`.                                                                                                                |
+| `POST /customers/:id/cards`                                | `CanUpdateCustomers`; saves a new card before final handover.                                                                                                                                                                               |
+| `POST /customers/resolve-second-receiver`                  | `CanCreateCustomers`; sends `{ fullname, telephone }` and uses returned `id`.                                                                                                                                                               |
+| `POST /shipments/parcels/:id/confirm-office-pickup`        | `CanCompleteOfficePickup` and authenticated company/destination branch. Accepts `signatureImage`, `handoverTarget`, `confirmedBy`, nullable second receiver and card fields, and an OTP verification token when required. Returns `{ id }`. |
+| `PATCH /shipments/parcels/:id`                             | **Request home delivery** sends only `HOME_DELIVERY_REQUESTED`.                                                                                                                                                                             |
 
 Office-pickup permission alone shows the screen but does not grant these helper permissions.
 Missing required read grants leave details unavailable; missing customer mutation grants fail
-the selected card/contact action. The shared PATCH currently uses a broad workflow permission
-allow-list rather than separate per-transition permissions; this feature does not strengthen
-that pre-existing server boundary. Do not treat client filters or UI gates as server authority.
+the selected card/contact action.
 
 ## Failures, recovery and client differences
 
@@ -98,14 +110,21 @@ reconciliation cases again before office delivery. Provider failure returns 503 
 new code; invalid codes, expiry and excessive attempts require correction or another code.
 See [Parcel operations](PARCEL_OPERATIONS.md#receiver-otp) for shared delivery rules.
 
-Card creation, contact resolution and the final PATCH are separate requests. A later failure
+Card creation, contact resolution and signed confirmation are separate requests. A later failure
 can leave earlier customer/card writes saved while the parcel remains uncompleted; this is
 not an atomic payment flow. The error leaves the panel available. Before retrying after an
 ambiguous network failure, reopen/refresh to inspect current parcel and saved-card state.
 There is no automatic rollback or idempotency key in this mobile submit routine.
 
-Web and Electron retain their existing table/dialog flow; mobile uses a scan/search screen
-and handover panel. No mobile receipt printing, payment capture or WhatsApp administration
+The confirmation saves Delivered by Office, the signature and collector identity, active queue
+closure and any OTP consumption in one database transaction. The server rejects a missing or
+malformed signature and rechecks parcel status, picker, collector and branch rules. It stores the
+image in `parcels.delivery_confirmation_snapshot.officePickupSignature`. Parcel history shows the
+receiver role that signed without exposing the image. Reversal clears the current snapshot and
+retains the audit history. Deploy the signed confirmation endpoint before the mobile build.
+
+The signature is required in the updated Android and iOS handover. Web and Electron use their
+existing pickup flow. No mobile receipt printing, payment capture or WhatsApp administration
 is added. WhatsApp availability is optional for SMS pickup, and the server remains the
 authority for the WhatsApp module/configuration gate.
 
@@ -113,9 +132,9 @@ authority for the WhatsApp module/configuration gate.
 
 Automated logic coverage lives beside the feature: list/queue scope, OTP input/countdown/
 channel fallback, card/contact validation, confirmation gates, payloads, retained second
-receivers, request ordering and failure propagation. Permission and native route mapping
-are covered in the existing access-control/navigation suites. These are logic tests, not
-rendered-hook, device, provider-delivery or end-to-end server tests.
+receivers, signature validation, request ordering and failure propagation. The server integration
+suite verifies persisted collector evidence, queue closure, OTP consumption and concurrent submission. Permission and native route mapping
+are covered in the existing access-control/navigation suites. Device QA covers the physical drawing interaction.
 
 Run `bun test ./apps/mobile/src/features/operations/office-pickup
 ./apps/mobile/src/features/access-control/utils/mobile-permission-rules.test.ts

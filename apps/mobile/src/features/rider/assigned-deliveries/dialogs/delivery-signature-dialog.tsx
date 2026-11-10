@@ -13,7 +13,7 @@ import { AppButton } from '@mobile/components/ui';
 import type { RiderDoorstepRecord } from '@mobile/types/parcels';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
-import { CustomerSignaturePad } from '../components/customer-signature-pad';
+import { CustomerSignaturePad } from '@mobile/components/courier';
 import { RiderCollectionFields } from '../components/rider-collection-fields';
 import { RiderThirdPartyFields } from '../components/rider-third-party-fields';
 import type { DeliveryHandoverInput } from '../types';

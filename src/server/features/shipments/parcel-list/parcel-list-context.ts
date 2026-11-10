@@ -34,6 +34,10 @@ export function createParcelListContext(p: ListParcelsParams) {
   if (p.ids?.length) whereParts.push(inArray(parcels.id, p.ids));
   if (p.sourceId) whereParts.push(eq(parcels.sourceId, p.sourceId));
   if (p.destinationId) whereParts.push(eq(parcels.destinationId, p.destinationId));
+  const parcelCode = p.parcelCode?.trim();
+  if (parcelCode) {
+    whereParts.push(or(eq(parcels.trackingCode, parcelCode), eq(parcels.bookingCode, parcelCode)));
+  }
   if (p.shelfPickerAssigned)
     whereParts.push(
       sql`coalesce(${parcels.shelfPickerStaffId}, ${pickupQueues.pickerStaffId}) is not null`,

@@ -2,6 +2,8 @@ import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { parcelReceiverOtps } from '@/db/schemas';
 
+type DbExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export type TargetReceiver = 'main' | 'second';
 export type PhoneSlot = 'primary' | 'secondary';
 
@@ -62,8 +64,9 @@ export async function getVerifiedOtpByTokenRepo(
   parcelId: string,
   targetReceiver: TargetReceiver,
   token: string,
+  executor: DbExecutor = db,
 ) {
-  const [row] = await db
+  const [row] = await executor
     .select()
     .from(parcelReceiverOtps)
     .where(
@@ -80,8 +83,8 @@ export async function getVerifiedOtpByTokenRepo(
   return row ?? null;
 }
 
-export async function consumeOtpTokenRepo(id: string) {
-  await db
+export async function consumeOtpTokenRepo(id: string, executor: DbExecutor = db) {
+  await executor
     .update(parcelReceiverOtps)
     .set({ verificationToken: null, verificationTokenExpiresAt: null })
     .where(eq(parcelReceiverOtps.id, id));

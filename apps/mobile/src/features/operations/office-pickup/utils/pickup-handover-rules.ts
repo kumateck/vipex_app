@@ -1,8 +1,7 @@
 import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
-import { ParcelStatus } from '@mobile/constants/parcel-status';
 import type {
   CardSelection,
-  DeliveredPatch,
+  SignedPickupConfirmation,
   HandoverTarget,
   PickupCustomerCard,
   PickupParcelDetails,
@@ -58,11 +57,11 @@ export type ConfirmGate = {
   verificationToken: string;
   isPickupQueueEnabled: boolean;
   hasPickupQueue: boolean;
+  signatureImage: string;
 };
 
 /**
- * Why "Confirm Delivered" cannot run yet, or null when it can. Same order
- * and wording as the web Waiting for Pickup dialog.
+ * Why "Confirm Delivered" cannot run yet, or null when it can.
  */
 export function getConfirmBlocker(gate: ConfirmGate): string | null {
   if (gate.isPickupQueueEnabled && !gate.hasPickupQueue) {
@@ -72,11 +71,12 @@ export function getConfirmBlocker(gate: ConfirmGate): string | null {
   if (gate.isPickupOtpRequired && (!gate.otpVerified || !gate.verificationToken)) {
     return 'Verify the customer collection OTP before confirming delivery';
   }
+  if (!gate.signatureImage.trim()) return 'Capture the collector’s signature';
   return null;
 }
 
-/** PATCH /v1/shipments/parcels/:id body that marks the parcel Delivered by Office. */
-export function buildDeliveredPatch(input: {
+/** Body for the signed office pickup confirmation endpoint. */
+export function buildSignedPickupConfirmation(input: {
   pickerStaffId: string;
   mainCard: { cardId: string; cardNumber: string } | null;
   handoverTarget: HandoverTarget;
@@ -84,10 +84,16 @@ export function buildDeliveredPatch(input: {
   secondCard: { cardId: string; cardNumber: string } | null;
   isPickupOtpRequired: boolean;
   verificationToken: string;
-}): DeliveredPatch {
+  signatureImage: string;
+  expectedMainReceiverId: string;
+  expectedSecondReceiverId: string | null;
+}): SignedPickupConfirmation {
   const isSecond = input.handoverTarget === 'second';
-  const patch: DeliveredPatch = {
-    status: ParcelStatus.DELIVERED_BY_OFFICE,
+  const patch: SignedPickupConfirmation = {
+    handoverTarget: input.handoverTarget,
+    signatureImage: input.signatureImage,
+    expectedMainReceiverId: input.expectedMainReceiverId,
+    expectedSecondReceiverId: input.expectedSecondReceiverId,
     confirmedBy: input.pickerStaffId,
     cardId: input.mainCard?.cardId ?? null,
     cardNumber: input.mainCard?.cardNumber ?? null,
@@ -98,7 +104,6 @@ export function buildDeliveredPatch(input: {
   // The OTP always proves the main receiver's presence, whoever collects.
   if (input.isPickupOtpRequired) {
     patch.receiverOtpVerificationToken = input.verificationToken;
-    patch.receiverOtpTarget = 'main';
   }
   return patch;
 }
