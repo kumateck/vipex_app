@@ -62,6 +62,7 @@ export function BranchForm({
       usePickupQueue: false,
       requirePickupOtp: true,
       requireReceiverOtp: true,
+      requireReceiverCashierSignature: false,
     },
     mode: 'onSubmit',
   });
@@ -77,6 +78,7 @@ export function BranchForm({
         usePickupQueue: initialData.usePickupQueue ?? false,
         requirePickupOtp: initialData.requirePickupOtp ?? true,
         requireReceiverOtp: initialData.requireReceiverOtp ?? true,
+        requireReceiverCashierSignature: initialData.requireReceiverCashierSignature ?? false,
       });
       return;
     }
@@ -90,6 +92,7 @@ export function BranchForm({
       usePickupQueue: false,
       requirePickupOtp: true,
       requireReceiverOtp: true,
+      requireReceiverCashierSignature: false,
     });
   }, [initialData, mode, reset]);
 

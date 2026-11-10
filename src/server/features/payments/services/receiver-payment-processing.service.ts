@@ -1,86 +1,39 @@
-import { BadRequest } from '../../../utils/http-error';
+import { BadRequest, Conflict } from '../../../utils/http-error';
 import {
   PaymentComponent,
   Payer,
   CashierType,
-  PaymentMethod,
   parcels,
   pickupQueues,
+  branches,
 } from '@/db/schemas';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { db } from '@/db/config';
 import { and, eq, isNull } from 'drizzle-orm';
-import { toPesewas } from '@/server/utils/gh-money';
-import { getParcelStorageSettlementSvc, getParcelSvc } from '../../shipments/parcels.service';
-import {
-  assertNoOutstandingStorageForHandover,
-  assertValidStorageCollectionAmount,
-} from '../../shipments/storage-accrual-guards';
-import { assertParcelFullyPaid } from '../../shipments/parcel-payment-settlement';
 import { updateParcelRepo } from '../../shipments/parcels.repository';
 import { assertNoOpenParcelReconciliationCaseForDelivery } from '../../shipments/parcel-delivery-reconciliation-guard';
 import { endPickupQueueForParcelSvc } from '../../pickup-queues/service';
-import { getBranchRepo } from '../../branches/repository';
 import {
   assertReceiverOtpVerifiedSvc,
   consumeReceiverOtpTokenSvc,
 } from '../../parcel-receiver-otp/service';
-import type { PaymentCreateResponse } from '../types/payment.types';
+import type { DeliveryConfirmationSnapshot } from '@/shared/shipments/delivery-confirmation-snapshot';
+import { signalReceiverHandoverChange } from './receiver-handover-changes';
+import { prepareReceiverHandover } from './prepare-receiver-handover';
+import type { ReceiverPaymentInput } from '../types/receiver-payment.types';
+import { settleReceiverPayments } from './settle-receiver-payments';
 import { debugPaymentServiceError } from '../utils/payment-diagnostics';
-import { toPaymentAmounts, computeProfileTaxBreakdown } from '../utils/payment-tax';
-import {
-  STORAGE_PAYMENT_NOTE_PREFIX,
-  createPaymentCore,
-  auditPaymentCreated,
-} from './payment-core.service';
+import { auditPaymentCreated } from './payment-core.service';
 
-export async function collectReceiverPaymentAndDeliverSvc(input: {
-  companyId: string;
-  branchId: string;
-  parcelId: string;
-  method: PaymentMethod;
-  cashierUserId: string;
-  confirmedBy: string;
-  secondReceiverId?: string | null;
-  cardId?: string | null;
-  cardNumber?: string | null;
-  secondCardId?: string | null;
-  secondCardNumber?: string | null;
-  amountCedis?: number | string | null;
-  storageAmountCedis?: number | string | null;
-  receiverOtpVerificationToken?: string;
-  receiverOtpTarget?: 'main' | 'second';
-  momoTransactionId?: string | null;
-}) {
+export async function collectReceiverPaymentAndDeliverSvc(input: ReceiverPaymentInput) {
   try {
-    const parcel = await getParcelSvc(input.parcelId);
-    const destinationBranch = await getBranchRepo(parcel.destinationId);
-    if (!destinationBranch) throw BadRequest('Destination branch not found');
-    let verifiedOtp: Awaited<ReturnType<typeof assertReceiverOtpVerifiedSvc>> | null = null;
-    if (destinationBranch.requireReceiverOtp) {
-      if (!input.receiverOtpVerificationToken || !input.receiverOtpTarget) {
-        throw BadRequest('Receiver OTP verification is required before handover');
-      }
-      verifiedOtp = await assertReceiverOtpVerifiedSvc({
-        parcelId: input.parcelId,
-        targetReceiver: input.receiverOtpTarget,
-        verificationToken: input.receiverOtpVerificationToken,
-      });
-    }
-
-    const hasAmount =
-      input.amountCedis !== undefined &&
-      input.amountCedis !== null &&
-      Number(input.amountCedis) > 0;
-    const hasStorageAmount =
-      input.storageAmountCedis !== undefined &&
-      input.storageAmountCedis !== null &&
-      Number(input.storageAmountCedis) > 0;
-
     const result = await db.transaction(async (tx) => {
       const [beforeDelivery] = await tx
         .select({
           status: parcels.status,
+          isDeleted: parcels.isDeleted,
+          receiverId: parcels.receiverId,
+          pending: parcels.pendingReceiverHandover,
           companyId: parcels.companyId,
           destinationId: parcels.destinationId,
           plannedToBePaidPsw: parcels.plannedToBePaidPsw,
@@ -98,132 +51,168 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
         .for('update');
       if (
         !beforeDelivery ||
+        beforeDelivery.isDeleted ||
         beforeDelivery.companyId !== input.companyId ||
         beforeDelivery.destinationId !== input.branchId
       ) {
         throw BadRequest('Parcel is not at this destination branch');
       }
+      if (beforeDelivery.pending) {
+        throw Conflict('Payment is already processed. Open the parcel in Awaiting Signature.');
+      }
+      if (beforeDelivery.status !== ParcelStatus.AWAITING_PICKUP || beforeDelivery.confirmedAt) {
+        throw Conflict('Parcel is no longer awaiting pickup');
+      }
+      const [destinationBranch] = await tx
+        .select()
+        .from(branches)
+        .where(
+          and(
+            eq(branches.id, input.branchId),
+            eq(branches.companyId, input.companyId),
+            eq(branches.isDeleted, false),
+          ),
+        )
+        .for('share');
+      if (!destinationBranch) throw BadRequest('Destination branch not found');
+      const pendingSignature = destinationBranch.requireReceiverCashierSignature;
+      if (pendingSignature !== Boolean(input.requestSignature)) {
+        throw Conflict('Branch signature settings changed. Reopen Receiver Cashier and try again.');
+      }
       if (
-        beforeDelivery.status === ParcelStatus.DELIVERED_BY_OFFICE ||
-        beforeDelivery.status === ParcelStatus.DELIVERED_AT_HOME
+        pendingSignature &&
+        (!input.handoverTarget ||
+          !(Number(input.amountCedis) > 0 || Number(input.storageAmountCedis) > 0))
       ) {
-        throw BadRequest('Parcel is already delivered');
+        throw BadRequest(
+          'Select the collector and enter the receiver payment before requesting a signature',
+        );
+      }
+      if (
+        pendingSignature &&
+        (input.expectedReceiverId !== beforeDelivery.receiverId ||
+          (input.handoverTarget === 'second' &&
+            input.expectedSecondReceiverId !== beforeDelivery.secondReceiverId))
+      )
+        throw Conflict('The receiver changed. Reopen the parcel before processing payment.');
+      if (destinationBranch.requireReceiverOtp) {
+        if (
+          !input.receiverOtpVerificationToken ||
+          !input.receiverOtpTarget ||
+          (pendingSignature && input.receiverOtpTarget !== 'main')
+        ) {
+          throw BadRequest('Receiver OTP verification is required before handover');
+        }
+        const verifiedOtp = await assertReceiverOtpVerifiedSvc(
+          {
+            parcelId: input.parcelId,
+            targetReceiver: input.receiverOtpTarget,
+            verificationToken: input.receiverOtpVerificationToken,
+          },
+          tx,
+        );
+        await consumeReceiverOtpTokenSvc(verifiedOtp.id, tx);
       }
       const [activeQueue] = await tx
         .select({ id: pickupQueues.id })
         .from(pickupQueues)
-        .where(and(eq(pickupQueues.parcelId, input.parcelId), isNull(pickupQueues.endedAt)))
+        .where(
+          and(
+            eq(pickupQueues.parcelId, input.parcelId),
+            eq(pickupQueues.branchId, input.branchId),
+            isNull(pickupQueues.endedAt),
+          ),
+        )
         .limit(1);
+      if (pendingSignature && destinationBranch.usePickupQueue && !activeQueue) {
+        throw Conflict('Create a pickup queue ticket before processing receiver payment');
+      }
       await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);
-      let payment: PaymentCreateResponse | null = null;
-      let storagePayment: PaymentCreateResponse | null = null;
-      if (hasAmount) {
-        const created = await createPaymentCore(
-          {
-            companyId: input.companyId,
-            branchId: input.branchId,
-            parcelId: input.parcelId,
-            component: PaymentComponent.PRINCIPAL,
-            payer: Payer.RECIPIENT,
-            cashierType: CashierType.TOBEPAID,
-            method: input.method,
-            cashierUserId: input.cashierUserId,
-            amountCedis: input.amountCedis as number | string,
-            momoTransactionId: input.momoTransactionId ?? null,
-          },
-          tx,
-        );
-        payment = created.response;
-      }
-
-      const storageBefore = await getParcelStorageSettlementSvc(input.parcelId, tx);
-      const storageAmountPsw = hasStorageAmount
-        ? Number(toPesewas(input.storageAmountCedis as number | string))
-        : 0;
-      if (hasStorageAmount) {
-        assertValidStorageCollectionAmount({
-          outstandingPsw: storageBefore.outstandingPsw,
-          collectionPsw: storageAmountPsw,
-        });
-      }
-      if (hasStorageAmount) {
-        const storagePaymentResult = await createPaymentCore(
-          {
-            companyId: input.companyId,
-            branchId: input.branchId,
-            parcelId: input.parcelId,
-            component: PaymentComponent.OTHER,
-            payer: Payer.RECIPIENT,
-            cashierType: CashierType.TOBEPAID,
-            method: input.method,
-            cashierUserId: input.cashierUserId,
-            amountCedis: input.storageAmountCedis as number | string,
-            notes: `${STORAGE_PAYMENT_NOTE_PREFIX}: Receiver storage accrual payment`,
-          },
-          tx,
-        );
-        storagePayment = storagePaymentResult.response;
-      }
-
-      const storageAfter = await getParcelStorageSettlementSvc(input.parcelId, tx);
-      assertNoOutstandingStorageForHandover(storageAfter.outstandingPsw);
-
-      await assertParcelFullyPaid(input.parcelId, tx);
-      await updateParcelRepo(
-        input.parcelId,
-        {
-          status: ParcelStatus.DELIVERED_BY_OFFICE,
-          deliveryConfirmationSnapshot: {
-            parcelStatus: beforeDelivery.status,
-            confirmedAt: beforeDelivery.confirmedAt?.toISOString() ?? null,
-            confirmedBy: beforeDelivery.confirmedBy,
-            plannedToBePaidPsw: beforeDelivery.plannedToBePaidPsw,
-            paymentIds: [payment?.id, storagePayment?.id].filter(
-              (id): id is string => typeof id === 'string' && !id.startsWith('auto-processed:'),
-            ),
-            creditChargeIds: [],
-            pickupQueueId: activeQueue?.id ?? null,
-            handover: {
-              secondReceiverId: beforeDelivery.secondReceiverId,
-              secondReceiverNameSnapshot: beforeDelivery.secondReceiverNameSnapshot,
-              cardId: beforeDelivery.cardId,
-              cardNumber: beforeDelivery.cardNumber,
-              secondCardId: beforeDelivery.secondCardId,
-              secondCardNumber: beforeDelivery.secondCardNumber,
-            },
-            delivery: null,
-          },
-          confirmedBy: input.confirmedBy,
-          confirmedAt: new Date(),
-          secondReceiverId: input.secondReceiverId ?? null,
-          cardId: input.cardId ?? null,
-          cardNumber: input.cardNumber ?? null,
-          secondCardId: input.secondCardId ?? null,
-          secondCardNumber: input.secondCardNumber ?? null,
+      const { payment, storagePayment, storageAfter, receiptTaxBreakdown } =
+        await settleReceiverPayments(input, tx);
+      const snapshot: DeliveryConfirmationSnapshot = {
+        parcelStatus: beforeDelivery.status,
+        confirmedAt: null,
+        confirmedBy: beforeDelivery.confirmedBy,
+        plannedToBePaidPsw: beforeDelivery.plannedToBePaidPsw,
+        paymentIds: [payment?.id, storagePayment?.id].filter(
+          (id): id is string => typeof id === 'string' && !id.startsWith('auto-processed:'),
+        ),
+        creditChargeIds: [],
+        pickupQueueId: activeQueue?.id ?? null,
+        handover: {
+          secondReceiverId: beforeDelivery.secondReceiverId,
+          secondReceiverNameSnapshot: beforeDelivery.secondReceiverNameSnapshot,
+          cardId: beforeDelivery.cardId,
+          cardNumber: beforeDelivery.cardNumber,
+          secondCardId: beforeDelivery.secondCardId,
+          secondCardNumber: beforeDelivery.secondCardNumber,
         },
-        tx,
-      );
-      await endPickupQueueForParcelSvc(
-        { parcelId: input.parcelId, endedBy: input.cashierUserId },
-        tx,
-      );
-
-      const receiptTaxBreakdown = storagePayment
-        ? toPaymentAmounts(
-            await computeProfileTaxBreakdown({
+        delivery: null,
+        ...(pendingSignature && receiptTaxBreakdown
+          ? { receiverCashierReceiptTax: receiptTaxBreakdown }
+          : {}),
+      };
+      const handoverFields = {
+        secondReceiverId:
+          pendingSignature && input.handoverTarget === 'main'
+            ? beforeDelivery.secondReceiverId
+            : (input.secondReceiverId ?? null),
+        cardId: input.cardId ?? null,
+        cardNumber: input.cardNumber ?? null,
+        secondCardId:
+          pendingSignature && input.handoverTarget === 'main'
+            ? beforeDelivery.secondCardId
+            : (input.secondCardId ?? null),
+        secondCardNumber:
+          pendingSignature && input.handoverTarget === 'main'
+            ? beforeDelivery.secondCardNumber
+            : (input.secondCardNumber ?? null),
+      };
+      const pending = pendingSignature
+        ? await prepareReceiverHandover(
+            {
               companyId: input.companyId,
-              principalPsw: BigInt(
-                (payment?.amounts.grossPsw ?? 0) + storagePayment.amounts.grossPsw,
-              ),
-              executor: tx,
-            }),
+              branchId: input.branchId,
+              requestedBy: input.cashierUserId,
+              associateId: input.confirmedBy,
+              handoverTarget: input.handoverTarget ?? 'main',
+              receiverId: beforeDelivery.receiverId,
+              secondReceiverId: handoverFields.secondReceiverId,
+              storageAccruedPsw: storageAfter.accruedPsw,
+              otpVerified: destinationBranch.requireReceiverOtp,
+              snapshot,
+            },
+            tx,
           )
         : null;
-      return { payment, storagePayment, storageBefore, storageAfter, receiptTaxBreakdown };
+      await updateParcelRepo(
+        input.parcelId,
+        pending
+          ? {
+              ...handoverFields,
+              pendingReceiverHandover: pending,
+            }
+          : {
+              ...handoverFields,
+              status: ParcelStatus.DELIVERED_BY_OFFICE,
+              deliveryConfirmationSnapshot: snapshot,
+              confirmedBy: input.confirmedBy,
+              confirmedAt: new Date(),
+            },
+        tx,
+      );
+      if (!pending) {
+        await endPickupQueueForParcelSvc(
+          { parcelId: input.parcelId, endedBy: input.cashierUserId },
+          tx,
+        );
+      }
+
+      return { payment, storagePayment, storageAfter, receiptTaxBreakdown, pending };
     });
 
-    if (verifiedOtp) await consumeReceiverOtpTokenSvc(verifiedOtp.id);
-
+    if (result.pending) signalReceiverHandoverChange(input);
     if (result.payment && !result.payment.id.startsWith('auto-processed:')) {
       await auditPaymentCreated(
         {
@@ -243,17 +232,21 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
 
     return {
       parcelId: input.parcelId,
-      status: ParcelStatus.DELIVERED_BY_OFFICE,
+      status: result.pending ? ParcelStatus.AWAITING_PICKUP : ParcelStatus.DELIVERED_BY_OFFICE,
+      awaitingSignature: Boolean(result.pending),
+      handoverId: result.pending?.id,
       payment: result.payment,
       storagePayment: result.storagePayment,
       receiptTaxBreakdown: result.receiptTaxBreakdown,
       storageSettlement: result.storageAfter,
-      message: 'Receiver cashier flow completed.',
+      message: result.pending
+        ? 'Payment processed. Awaiting signature.'
+        : 'Receiver cashier flow completed.',
     };
   } catch (error) {
     debugPaymentServiceError(
       'collectReceiverPaymentAndDeliverSvc',
-      input as Record<string, unknown>,
+      { parcelId: input.parcelId, companyId: input.companyId, branchId: input.branchId },
       error,
     );
     throw error;

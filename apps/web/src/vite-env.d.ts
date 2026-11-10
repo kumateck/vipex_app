@@ -65,6 +65,10 @@ declare global {
         register: (email: string, password: string) => Promise<string | null>;
       };
       platform: () => Promise<NodeJS.Platform>;
+      captureReceiverSignature?: () => Promise<{
+        signatureImage: string;
+        sigString: string;
+      } | null>;
       ping: () => Promise<string>;
       getNetworkDiagnostics: () => Promise<DesktopNetworkDiagnostics>;
       printHtml: (request: {

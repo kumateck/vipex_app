@@ -11,6 +11,7 @@ export interface Branch {
   usePickupQueue: boolean;
   requirePickupOtp: boolean;
   requireReceiverOtp: boolean;
+  requireReceiverCashierSignature: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -30,6 +31,7 @@ export interface BranchMutationInput {
   usePickupQueue?: boolean;
   requirePickupOtp?: boolean;
   requireReceiverOtp?: boolean;
+  requireReceiverCashierSignature?: boolean;
 }
 
 export interface BranchCreatePayload extends BranchMutationInput {

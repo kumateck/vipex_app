@@ -17,6 +17,7 @@ export function sanitizeBranchMutationInput(input: BranchMutationInput): BranchM
     usePickupQueue: Boolean(input.usePickupQueue),
     requirePickupOtp: input.requirePickupOtp !== false,
     requireReceiverOtp: input.requireReceiverOtp !== false,
+    requireReceiverCashierSignature: input.requireReceiverCashierSignature === true,
   };
 }
 
@@ -45,6 +46,7 @@ export function toCreateBranchPayload(
     usePickupQueue: Boolean(input.usePickupQueue),
     requirePickupOtp: input.requirePickupOtp !== false,
     requireReceiverOtp: input.requireReceiverOtp !== false,
+    requireReceiverCashierSignature: input.requireReceiverCashierSignature === true,
     companyId: context.companyId,
     createdBy: context.createdBy,
   };

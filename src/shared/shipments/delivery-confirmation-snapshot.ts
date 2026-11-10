@@ -1,3 +1,5 @@
+import type { ReceiverCashierSignature } from './receiver-cashier-signature';
+
 export type DeliveryConfirmationSnapshot = {
   parcelStatus: number;
   confirmedAt: string | null;
@@ -6,6 +8,22 @@ export type DeliveryConfirmationSnapshot = {
   paymentIds: string[];
   creditChargeIds: string[];
   pickupQueueId: string | null;
+  receiverCashierReceiptTax?: {
+    vatPsw: number;
+    getfundPsw: number;
+    nhilPsw: number;
+    covidPsw: number;
+    taxTotalPsw: number;
+    taxComponentKeys: string[];
+  };
+  receiverCashierSignature?: ReceiverCashierSignature & {
+    handoverId: string;
+    collectorId: string;
+    collectorName: string;
+    handoverTarget: 'main' | 'second';
+    capturedBy: string;
+    capturedAt: string;
+  };
   officePickupSignature?: {
     signatureImage: string;
     handoverTarget: 'main' | 'second';

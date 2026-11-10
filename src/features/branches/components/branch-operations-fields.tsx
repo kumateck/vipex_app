@@ -26,6 +26,12 @@ const SETTINGS = [
     title: 'Require receiver OTP',
     description: 'Verify an OTP before receiver payment and handover at this branch.',
   },
+  {
+    name: 'requireReceiverCashierSignature' as const,
+    id: 'require-receiver-cashier-signature',
+    title: 'Require Receiver Cashier signature',
+    description: 'Capture the collector’s signature before completing a receiver cashier handover.',
+  },
 ];
 
 export function BranchOperationsFields({ control }: BranchOperationsFieldsProps) {

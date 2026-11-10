@@ -659,6 +659,13 @@
       "when": 1793577600000,
       "tag": "0093_whatsapp_billing_rates",
       "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1794268800000,
+      "tag": "0094_receiver_cashier_signature",
+      "breakpoints": true
     }
   ]
 }

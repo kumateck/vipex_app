@@ -10,7 +10,7 @@ type ReceiverTaxBreakdown = {
   taxComponentKeys?: string[];
 };
 
-type ReceiptParcelFields = Pick<
+export type ReceiverReceiptParcel = Pick<
   ParcelSearchRow,
   | 'chargeExemptCustomerType'
   | 'relatedStaffNameSnapshot'
@@ -29,7 +29,7 @@ type ReceiptParcelFields = Pick<
 >;
 
 type BuildReceiverReceiptDataArgs = {
-  parcel: ReceiptParcelFields;
+  parcel: ReceiverReceiptParcel;
   receivedByName: string;
   destinationBranchName: string;
   destinationLocationName: string;
