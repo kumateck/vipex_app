@@ -44,8 +44,8 @@ Current permission behavior and planned desktop-to-mobile capability work are ma
 - Parcel search and super search.
 - Consignment list, scan-based receiving session, completeness checklist, and exception closeout.
 - Waiting for Pickup: scan/search settled parcels, verify collection OTP by SMS or available
-  WhatsApp, record receiver cards and complete office handover. Receiver payment collection
-  is separate roadmap work; see [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md).
+  WhatsApp, record receiver cards and capture the collector’s handwritten signature. Receiver
+  payment collection is separate roadmap work. See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md).
 - Self-service draft claim and pay-now completion.
 - Call-center receiver follow-up and doorstep address/fee collection.
 - Receiving discrepancy capture with linked camera photo evidence.

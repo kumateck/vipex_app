@@ -2,13 +2,25 @@
 
 Base URL: `/v1`
 
-Mobile Waiting for Pickup reuses `POST /payments/receiver-otp/request`,
-`POST /payments/receiver-otp/verify` and `PATCH /shipments/parcels/:id` for settled office
-handover. The request targets the main receiver with a primary/secondary phone slot and
-SMS/available WhatsApp channel; verification returns the token used in the Delivered by
-Office PATCH. No mobile-specific endpoint or payment is created. Shared helper permissions,
-payloads, failure behavior and current limitations are documented in
-[Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md#api-and-permission-dependencies).
+`GET /shipments/parcels` accepts optional `parcelCode` for an exact, case-sensitive tracking
+or booking code match before pagination. It takes 1–255 characters, trims surrounding
+whitespace, and combines with the other filters. Mobile Waiting for Pickup uses it for
+sticker scans with its existing company, destination, status and collection filters. Manual
+`search` continues to match partial codes, names and stored phone numbers for both parties.
+
+Mobile Waiting for Pickup uses `POST /payments/receiver-otp/request` and
+`POST /payments/receiver-otp/verify` to verify the main receiver. It then sends
+`POST /shipments/parcels/:id/confirm-office-pickup` with `confirmedBy`, `handoverTarget`,
+`signatureImage`, `expectedMainReceiverId`, `expectedSecondReceiverId` (nullable), nullable
+second receiver and card fields, and `receiverOtpVerificationToken`
+when required. The signature must be a drawn data URL from the mobile pad, up to 250,000
+characters. The server requires `CanCompleteOfficePickup` and the authenticated company and
+destination branch. Success returns `{ id }` and saves delivery, signature, queue closure and
+OTP consumption in one transaction. The expected receiver IDs detect stale details. Invalid
+signature content or missing required OTP return 400. Missing or invalid request fields
+return 422. Invalid or expired OTP returns 401, missing or out-of-scope parcels return 404,
+and stale parcel, collector or queue state returns 409. Deploy the endpoint before the mobile build.
+See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md#api-and-permission-dependencies).
 
 System Admin maintenance endpoints:
 
@@ -245,8 +257,14 @@ parcel delivery status. The former `POST /:id/storage-waivers` route is no longe
 See [Parcel operations](PARCEL_OPERATIONS.md#storage-fee-clearance-reconciliation) for migration,
 client differences and QA scenarios.
 
-Shelf pickup reassignment is available under `/v1/shipments/parcels`:
+Shelf picker operations are available under `/v1/shipments/parcels`:
 
+- `GET /shelf-picker` requires `CanReadShelfPickerUpdate` and returns the paginated Awaiting
+  Pickup list for the authenticated company and destination branch. The response includes
+  `usePickupQueue` and each row’s `pickupQueueNumber` from its latest active ticket, or `null`.
+  With queues enabled and no search term, the list includes only parcels with active tickets.
+  Searches can also find parcels without one. An unavailable branch returns an empty list
+  with `usePickupQueue: false`.
 - `GET /shelf-picker-reassignments` requires `CanUpdateParcelShelfPicker`; accepts `search`,
   `page`, and `pageSize` (1–100). Returns the standard paginated parcel response, limited to
   assigned, undeleted Awaiting Pickup parcels at the actor's company and destination branch.

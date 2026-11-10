@@ -3,7 +3,7 @@ import { Elysia } from 'elysia';
 import { createId } from '@paralleldrive/cuid2';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { parcels, rolePermissions, roles, users } from '@/db/schemas';
+import { branches, parcels, rolePermissions, roles, users } from '@/db/schemas';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { errorHandler } from '@/server/middlewares/error-handler';
 import { parcelsRoutes } from '@/server/features/shipments/parcels.routes';
@@ -134,5 +134,39 @@ describe('dedicated shelf pickup reassignment API', () => {
         .status,
     ).toBe(403);
     expect((await request(readToken, '/shelf-picker-staff')).status).toBe(200);
+  });
+
+  test('Shelf Picker Update reports the branch setting and uses the latest active queue number', async () => {
+    await db.insert(rolePermissions).values({
+      roleId: other.roleId,
+      companyId: other.companyId,
+      permission: PermissionKeys.CanReadShelfPickerUpdate,
+    });
+    const parcel = await other.parcel();
+    const current = await other.ticket(parcel.id);
+    await other.ticket(parcel.id, { day: 1, ended: true });
+    const unqueued = await other.parcel();
+    await other.ticket(unqueued.id, { ended: true });
+
+    await db.update(branches).set({ usePickupQueue: true }).where(eq(branches.id, other.branchId));
+    const queued = await request(otherToken, '/shelf-picker');
+    expect(queued.status).toBe(200);
+    expect(await queued.json()).toMatchObject({
+      usePickupQueue: true,
+      data: [{ id: parcel.id, pickupQueueNumber: current.queueNumber }],
+      meta: { totalRecords: 1 },
+    });
+    const search = await request(otherToken, `/shelf-picker?search=${unqueued.bookingCode}`);
+    expect(await search.json()).toMatchObject({
+      usePickupQueue: true,
+      data: [{ id: unqueued.id, pickupQueueNumber: null }],
+    });
+
+    await db.update(branches).set({ usePickupQueue: false }).where(eq(branches.id, other.branchId));
+    const disabled = await request(otherToken, '/shelf-picker');
+    expect(await disabled.json()).toMatchObject({
+      usePickupQueue: false,
+      data: expect.arrayContaining([expect.objectContaining({ id: unqueued.id })]),
+    });
   });
 });

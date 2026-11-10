@@ -7,6 +7,7 @@ import type { PickupContext } from '../../types';
 import { PickupCardFields } from './pickup-card-fields';
 import { PickupCollectorFields } from './pickup-collector-fields';
 import { PickupOtpSection } from './pickup-otp-section';
+import { PickupSignatureSection } from './pickup-signature-section';
 import { PickupQueueNotice, PickupSummaryCard } from './pickup-summary-card';
 import { pickupStyles } from './office-pickup.styles';
 
@@ -28,7 +29,9 @@ export function PickupHandoverPanel(props: Props) {
     [resources?.staffOptions],
   );
   if (!parcel) return null;
-  const back = <AppButton title="Back to parcels" variant="plain" onPress={handover.close} />;
+  const back = (
+    <AppButton title="Back to parcels" variant="plain" onPress={handover.close} disabled={saving} />
+  );
 
   if (handover.loading) return <AppSkeletonCard lines={5} />;
   if (handover.loadError || !resources) {
@@ -49,6 +52,7 @@ export function PickupHandoverPanel(props: Props) {
     resources.details.parcel.shelfPickerStaffId || resources.details.pickupQueue?.pickerStaffId,
   );
   const muted = { color: theme.colors.textMuted };
+  const collector = form.handoverTarget === 'second' ? 'Second receiver' : 'Main receiver';
 
   return (
     <>
@@ -104,10 +108,16 @@ export function PickupHandoverPanel(props: Props) {
           </Text>
         </View>
       )}
+      <PickupSignatureSection
+        collector={collector}
+        signed={Boolean(form.signatureImage)}
+        disabled={saving}
+        onSign={form.setSignatureImage}
+      />
       <AppButton
         title={saving ? 'Processing…' : 'Confirm delivered'}
         loading={saving}
-        disabled={Boolean(handover.confirmBlocker)}
+        disabled={saving || Boolean(handover.confirmBlocker)}
         onPress={() => void handover.confirm()}
       />
       {handover.confirmBlocker ? (

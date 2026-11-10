@@ -6,6 +6,17 @@ import { useCallCenterAssignmentColumns } from '../components/parcel-call-center
 import { useParcelReceiverCashierColumns } from '../components/parcel-receiver-cashier/use-parcel-receiver-cashier-columns';
 import { useShelfPickerUpdateColumns } from '../components/parcel-shelf-picker-update/use-shelf-picker-update-columns';
 import { useWaitingPickupColumns } from '../components/parcel-waiting-pickup/use-waiting-pickup-columns';
+import type { ParcelRow } from '../components/parcel-shelf-picker-update/shelf-picker-update-types';
+
+const shelfPickerOptions = {
+  onOpenUpdateDialog: () => {},
+  onEdit: () => {},
+  onEditSecondReceiver: () => {},
+  canManageSecondReceiver: false,
+  onRequestDelivery: async () => {},
+  isRequestingDelivery: false,
+  canRequestDelivery: false,
+};
 
 test('all four parcel operation tables keep one combined date column', () => {
   const assignmentColumns = useCallCenterAssignmentColumns({
@@ -18,13 +29,8 @@ test('all four parcel operation tables keep one combined date column', () => {
     onToggleAll: () => {},
   });
   const shelfPickerColumns = useShelfPickerUpdateColumns({
-    onOpenUpdateDialog: () => {},
-    onEdit: () => {},
-    onEditSecondReceiver: () => {},
-    canManageSecondReceiver: false,
-    onRequestDelivery: async () => {},
-    isRequestingDelivery: false,
-    canRequestDelivery: false,
+    ...shelfPickerOptions,
+    isPickupQueueEnabled: false,
   });
 
   let waitingColumns: ColumnDef<ParcelSearchRow>[] = [];
@@ -64,4 +70,18 @@ test('all four parcel operation tables keep one combined date column', () => {
       columns.some((column) => 'accessorKey' in column && column.accessorKey === 'createdAt'),
     ).toBe(false);
   }
+});
+
+test('Shelf Picker Update shows a queue number column only with branch queues enabled', () => {
+  const getColumn = (isPickupQueueEnabled: boolean) =>
+    useShelfPickerUpdateColumns({ ...shelfPickerOptions, isPickupQueueEnabled }).find(
+      (column) => column.id === 'pickupQueueNumber',
+    );
+
+  expect(getColumn(false)).toBeUndefined();
+  const column = getColumn(true);
+  expect(column?.header).toBe('Queue Number');
+  if (!column || !('accessorFn' in column)) throw new Error('Missing queue number accessor');
+  expect(column.accessorFn({ pickupQueueNumber: 47 } as ParcelRow, 0)).toBe(47);
+  expect(column.accessorFn({ pickupQueueNumber: null } as ParcelRow, 0)).toBe('—');
 });

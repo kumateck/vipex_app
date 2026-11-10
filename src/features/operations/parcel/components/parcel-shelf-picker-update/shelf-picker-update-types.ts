@@ -20,6 +20,7 @@ export type ParcelRow = {
   status: number;
   pickerStaffId: string | null;
   pickerStaffName: string | null;
+  pickupQueueNumber?: number | null;
   createdAt: string;
   receivedAt: string | null;
   storageChargePsw?: number | null;

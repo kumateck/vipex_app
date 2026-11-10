@@ -53,7 +53,7 @@ The mobile access-control tests compare every mobile permission key with the des
 ## Office Pickup Helper Permissions
 
 Waiting for Pickup (`/(app)/office-pickup`, native `OfficePickup`) is implemented under
-`CanCompleteOfficePickup`, including its Operations card and destination guard. Required
+`CanCompleteOfficePickup`, including its sidebar item, Operations Hub card and destination guard. Required
 helper reads retain `CanReadParcels`, `CanReadCustomers` and `CanReadUsers`; saving new cards
 needs `CanUpdateCustomers` and resolving a new second receiver needs `CanCreateCustomers`.
 The entry permission alone does not grant those actions. See

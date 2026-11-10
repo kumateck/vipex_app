@@ -7,8 +7,45 @@ import { ParcelStatus } from '@/db/schemas/enums';
 import { reverseParcelDeliverySvc } from '../parcel-delivery-reversal.service';
 import { returnParcelToSourceSvc } from '../return-to-source.service';
 import { emptyParcelList } from './helpers';
+import { MAX_HANDOVER_SIGNATURE_LENGTH } from '@/shared/shipments/handover-signature';
+import { confirmOfficePickupSvc } from '../parcel-services/confirm-office-pickup';
 export const routes = new Elysia({ name: 'parcel-delivery-actions' })
   .use(authPlugin)
+  .post(
+    '/:id/confirm-office-pickup',
+    ({ params, body, user }) => {
+      const actor = user as AuthUser;
+      return confirmOfficePickupSvc({
+        ...body,
+        parcelId: params.id,
+        companyId: actor.companyId ?? '',
+        branchId: actor.branchId ?? '',
+        locationId: actor.locationId,
+        actorUserId: actor.sub,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        confirmedBy: UUID,
+        handoverTarget: t.Union([t.Literal('main'), t.Literal('second')]),
+        signatureImage: t.String({ minLength: 1, maxLength: MAX_HANDOVER_SIGNATURE_LENGTH }),
+        expectedMainReceiverId: UUID,
+        expectedSecondReceiverId: t.Union([UUID, t.Null()]),
+        secondReceiverId: t.Union([UUID, t.Null()]),
+        cardId: t.Union([UUID, t.Null()]),
+        cardNumber: t.Union([t.String({ maxLength: 255 }), t.Null()]),
+        secondCardId: t.Union([UUID, t.Null()]),
+        secondCardNumber: t.Union([t.String({ maxLength: 255 }), t.Null()]),
+        receiverOtpVerificationToken: t.Optional(t.String({ minLength: 1 })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCompleteOfficePickup)],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'Confirm signed office pickup without collecting payment',
+      },
+    },
+  )
   .get(
     '/delivery-reversal-candidates',
     async ({ query, user }) => {
