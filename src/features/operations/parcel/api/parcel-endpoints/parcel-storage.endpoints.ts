@@ -94,6 +94,8 @@ export const parcelApiPart2 = api.injectEndpoints({
       {
         parcelId: string;
         status: number;
+        awaitingSignature?: boolean;
+        handoverId?: string;
         message: string;
         storageSettlement?: ParcelStorageSettlement;
         storagePayment?: { id: string; amounts: { grossCedis: number } } | null;
@@ -132,6 +134,10 @@ export const parcelApiPart2 = api.injectEndpoints({
         amountCedis?: number | null;
         method: number;
         confirmedBy: string;
+        requestSignature?: boolean;
+        expectedReceiverId?: string;
+        expectedSecondReceiverId?: string | null;
+        handoverTarget?: 'main' | 'second';
         storageAmountCedis?: number | string | null;
         secondReceiverId?: string | null;
         cardId?: string | null;

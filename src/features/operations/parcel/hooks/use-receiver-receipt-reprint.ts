@@ -10,9 +10,15 @@ export function useReceiverReceiptReprint() {
   const [loadReceipt, { isFetching }] = useLazyGetReceiverReceiptReprintQuery();
   const [printData, setPrintData] = useState<ReceiptPrintData | null>(null);
   const print = useCallback(
-    async (parcel: ParcelSearchRow) => {
+    async (input: ParcelSearchRow | string) => {
       try {
-        const recorded = await loadReceipt(parcel.id).unwrap();
+        const id = typeof input === 'string' ? input : input.id;
+        const recorded = await loadReceipt({
+          id,
+          includeParcel: typeof input === 'string',
+        }).unwrap();
+        const parcel = typeof input === 'string' ? recorded.parcel : input;
+        if (!parcel) throw new Error('Receipt parcel details are unavailable');
         const receipt = buildReceiverReceiptData({
           parcel,
           receivedByName: recorded.receivedByName ?? '-',
@@ -32,10 +38,12 @@ export function useReceiverReceiptReprint() {
           },
         });
         setPrintData({ ...receipt, issuedAt: recorded.issuedAt });
+        return true;
       } catch (error) {
         toast.error(
           getErrorMessage(error, '') || 'Could not load receiver receipt; reprint cancelled',
         );
+        return false;
       }
     },
     [loadReceipt],

@@ -165,6 +165,9 @@ export function createParcelListContext(p: ListParcelsParams) {
     ${storageAccruedPsw} - ${paidStoragePsw} - ${waivedStoragePsw},
     0
   )`;
+  if (typeof p.cashierCollectionRequired === 'boolean') {
+    whereParts.push(isNull(parcels.pendingReceiverHandover));
+  }
   if (p.cashierCollectionRequired === true) {
     whereParts.push(sql`(${outstandingPrincipalPsw} > 0 or ${outstandingStoragePsw} > 0)`);
   }

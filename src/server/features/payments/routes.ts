@@ -16,10 +16,12 @@ import {
   requireAuth,
   requirePermissions,
 } from '@/server/plugins/auth';
+import { receiverHandoverRoutes } from './receiver-handover.routes';
 import { PermissionKeys } from '@/shared/permissions/constants';
 
 export const paymentsRoutes = new Elysia({ name: 'payments' })
   .use(authPlugin)
+  .use(receiverHandoverRoutes)
   .post(
     '/',
     async ({ body, set, user }) => {
@@ -123,6 +125,10 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
           storageAmountCedis?: number | string | null;
           receiverOtpVerificationToken?: string;
           receiverOtpTarget?: 'main' | 'second';
+          requestSignature?: boolean;
+          expectedReceiverId?: string;
+          expectedSecondReceiverId?: string | null;
+          handoverTarget?: 'main' | 'second';
           momoTransactionId?: string | null;
         }),
         companyId: authUser.companyId ?? '',
@@ -142,6 +148,10 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         secondCardNumber: t.Optional(t.Union([t.String(), t.Null()])),
         amountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         storageAmountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
+        requestSignature: t.Optional(t.Boolean()),
+        expectedReceiverId: t.Optional(UUID),
+        expectedSecondReceiverId: t.Optional(t.Union([UUID, t.Null()])),
+        handoverTarget: t.Optional(t.Union([t.Literal('main'), t.Literal('second')])),
         receiverOtpVerificationToken: t.Optional(t.String({ minLength: 1 })),
         receiverOtpTarget: t.Optional(t.Union([t.Literal('main'), t.Literal('second')])),
         momoTransactionId: t.Optional(t.Union([UUID, t.Null()])),

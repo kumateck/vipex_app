@@ -52,6 +52,8 @@ export async function confirmOfficePickupSvc(input: {
       )
       .for('update');
     if (!parcel) throw NotFound('Parcel not found at this branch');
+    if (parcel.pendingReceiverHandover)
+      throw Conflict('This parcel is awaiting a Receiver Cashier signature');
     if (parcel.status !== ParcelStatus.AWAITING_PICKUP || parcel.confirmedAt) {
       throw Conflict('Parcel is no longer awaiting pickup');
     }

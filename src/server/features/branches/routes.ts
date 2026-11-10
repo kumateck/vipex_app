@@ -72,6 +72,7 @@ export const branchesRoutes = new Elysia({ name: 'branches' })
         usePickupQueue: branch.usePickupQueue,
         requirePickupOtp: branch.requirePickupOtp,
         requireReceiverOtp: branch.requireReceiverOtp,
+        requireReceiverCashierSignature: branch.requireReceiverCashierSignature,
       };
     },
     {
@@ -105,6 +106,7 @@ export const branchesRoutes = new Elysia({ name: 'branches' })
           usePickupQueue?: boolean;
           requirePickupOtp?: boolean;
           requireReceiverOtp?: boolean;
+          requireReceiverCashierSignature?: boolean;
         }),
         companyId: authUser.companyId,
         createdBy: authUser.sub,
@@ -122,6 +124,7 @@ export const branchesRoutes = new Elysia({ name: 'branches' })
         usePickupQueue: t.Optional(t.Boolean()),
         requirePickupOtp: t.Optional(t.Boolean()),
         requireReceiverOtp: t.Optional(t.Boolean()),
+        requireReceiverCashierSignature: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateBranches)],
       detail: { tags: ['Branches'], summary: 'Create branch', operationId: 'createBranch' },
@@ -141,6 +144,7 @@ export const branchesRoutes = new Elysia({ name: 'branches' })
         usePickupQueue: t.Optional(t.Boolean()),
         requirePickupOtp: t.Optional(t.Boolean()),
         requireReceiverOtp: t.Optional(t.Boolean()),
+        requireReceiverCashierSignature: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateBranches)],
       detail: { tags: ['Branches'], summary: 'Update branch', operationId: 'updateBranch' },

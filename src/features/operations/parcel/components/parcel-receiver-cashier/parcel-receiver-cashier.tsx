@@ -14,6 +14,7 @@ import { DataTable } from '@/components/datatable';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { ParcelReceiptActions } from '../parcel-receipt-actions';
 import { ParcelSessionGuard } from '../parcel-session-guard';
+import { ReceiverHandoverList } from './receiver-handover-list';
 import { PAYMENT_TYPE_LEGEND } from './receiver-cashier-constants';
 import { ReceiverPaymentDeliveryDialog } from './receiver-payment-delivery-dialog';
 import { EMPTY_META } from './receiver-cashier-types';
@@ -65,6 +66,13 @@ export function ParcelReceiverCashier() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {context.branchId && !table.isDelivered ? (
+                <ReceiverHandoverList
+                  key={context.branchId}
+                  enabled={context.requireSignature}
+                  onOpen={dialog.openPendingHandover}
+                />
+              ) : null}
               <Select
                 value={String(table.status)}
                 onValueChange={(value) => table.setStatus(Number(value))}

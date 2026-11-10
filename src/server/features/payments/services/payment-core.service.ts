@@ -1,5 +1,5 @@
 import { assertParcelCanAccrueCharge } from '../../shipments/charge-exemption';
-import { BadRequest, Forbidden } from '../../../utils/http-error';
+import { BadRequest, Conflict, Forbidden } from '../../../utils/http-error';
 import { PaymentComponent, Payer, CashierType } from '@/db/schemas';
 import { createPaymentRepo } from '../repository';
 import { toPesewas } from '@/server/utils/gh-money';
@@ -28,6 +28,8 @@ export async function createPaymentCore(input: PaymentCreateInput, executor: DbE
   if (parcel.isDeleted) {
     throw BadRequest('Cannot collect payment for deleted parcel');
   }
+  if (parcel.hasPendingReceiverHandover)
+    throw Conflict('Payment is already processed for this handover');
   assertParcelCanAccrueCharge(parcel, 1);
   assertCreditPrincipalNotCollected(parcel.method, input.component);
   if (input.cashierType === CashierType.SENDING && parcel.sourceId !== input.branchId) {

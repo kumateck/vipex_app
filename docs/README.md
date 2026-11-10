@@ -21,6 +21,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 - [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md)
 - [Parcel printing](PARCEL_PRINTING.md)
 - [Cashier, payments, and shifts](CASHIER_PAYMENTS_AND_SHIFTS.md)
+- [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md)
 - [Parcel internal transfers](PARCEL_INTERNAL_TRANSFERS.md)
 - [Self-service booking](SELF_SERVICE_BOOKING.md)
 - [Reconciliation](RECONCILIATION_MODULE.md)

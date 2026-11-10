@@ -51,6 +51,8 @@ export async function updateParcelSvc(
   }
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
+  if (cur.hasPendingReceiverHandover)
+    throw Conflict('This parcel is awaiting a Receiver Cashier signature');
   if (patch.chargeCedis !== undefined) assertParcelCanAccrueCharge(cur, Number(patch.chargeCedis));
   if (
     patch.status === ParcelStatus.RETURN_TO_SOURCE &&
