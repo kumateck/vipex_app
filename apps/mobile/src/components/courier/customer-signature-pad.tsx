@@ -1,5 +1,9 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import {
+  encodeHandoverSignature,
+  type SignaturePoint,
+} from '@/shared/shipments/handover-signature';
+import {
   LayoutChangeEvent,
   PanResponder,
   Pressable,
@@ -12,26 +16,13 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
-type Point = { x: number; y: number };
+type Point = SignaturePoint;
 type Stroke = Point[];
 
 type Props = {
   disabled?: boolean;
   onChange: (signatureImage: string) => void;
 };
-
-function toSignatureDataUrl(strokes: Stroke[], width: number, height: number) {
-  const pathParts: string[] = [];
-  for (const stroke of strokes) {
-    if (stroke.length > 1) {
-      pathParts.push(`M ${stroke.map((point) => `${point.x} ${point.y}`).join(' L ')}`);
-    }
-  }
-  const paths = pathParts.join(' ');
-  if (!paths) return '';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="white"/><path d="${paths}" fill="none" stroke="#111827" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
 
 function SignatureLine({ from, to }: { from: Point; to: Point }) {
   const dx = to.x - from.x;
@@ -69,7 +60,7 @@ export const CustomerSignaturePad = memo(function CustomerSignaturePad(props: Pr
 
   const publish = useCallback(() => {
     const { width, height } = sizeRef.current;
-    props.onChange(toSignatureDataUrl(strokesRef.current, width, height));
+    props.onChange(encodeHandoverSignature(strokesRef.current, width, height));
   }, [props.onChange]);
   const panResponder = useMemo(
     () =>

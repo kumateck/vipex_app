@@ -1,7 +1,16 @@
 import { ParcelStatus } from '@mobile/constants/parcel-status';
-import type { PickupContext, PickupListQuery } from '../types';
+import type { PickupContext, PickupListQuery, PickupParcel } from '../types';
 
 export const PICKUP_PAGE_SIZE = 20;
+
+export function getPickupQueueBadgeNumber(
+  isPickupQueueEnabled: boolean,
+  parcel: Pick<PickupParcel, 'pickupQueueNumber' | 'pickupQueueEndedAt'>,
+) {
+  return isPickupQueueEnabled && !parcel.pickupQueueEndedAt
+    ? (parcel.pickupQueueNumber ?? null)
+    : null;
+}
 
 /**
  * Same queue rule as the web Waiting for Pickup page: with pickup queues on,
@@ -23,6 +32,7 @@ export function buildPickupListQuery(
   context: PickupContext,
   isPickupQueueEnabled: boolean,
   search: string,
+  exactCode = false,
 ): PickupListQuery | null {
   if (!context.companyId || !context.branchId) return null;
   const term = search.trim();
@@ -36,7 +46,10 @@ export function buildPickupListQuery(
     status: ParcelStatus.AWAITING_PICKUP,
     cashierCollectionRequired: false,
   };
-  if (term) query.search = term;
+  if (term) {
+    if (exactCode) query.parcelCode = term;
+    else query.search = term;
+  }
   const hasPickupQueue = getQueueFilterBySearch(isPickupQueueEnabled, term);
   if (hasPickupQueue !== undefined) query.hasPickupQueue = hasPickupQueue;
   return query;

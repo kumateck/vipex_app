@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -31,6 +31,7 @@ export function useOfficePickupHandover(input: {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [completed, setCompleted] = useState<CompletedPickup | null>(null);
   const [phoneSlot, setPhoneSlotState] = useState<PhoneSlot>('primary');
   const otp = usePickupOtp({
@@ -40,7 +41,7 @@ export function useOfficePickupHandover(input: {
   });
   const form = usePickupHandoverForm(otp.reset);
   const { reset: resetOtp } = otp;
-  const { resetFor, setPickerStaffId } = form;
+  const { resetFor, setPickerStaffId, setSignatureImage } = form;
 
   const setPhoneSlot = useCallback(
     (slot: PhoneSlot) => {
@@ -79,10 +80,11 @@ export function useOfficePickupHandover(input: {
 
   const close = useCallback(() => {
     resetOtp();
+    setSignatureImage('');
     setParcel(null);
     setResources(null);
     setCompleted(null);
-  }, [resetOtp]);
+  }, [resetOtp, setSignatureImage]);
 
   const hasPickupQueue = Boolean(resources?.details.pickupQueue);
   const confirmBlocker = getConfirmBlocker({
@@ -92,10 +94,12 @@ export function useOfficePickupHandover(input: {
     verificationToken: otp.verificationToken,
     isPickupQueueEnabled,
     hasPickupQueue,
+    signatureImage: form.signatureImage,
   });
 
   const confirm = useCallback(async () => {
-    if (!parcel || !resources) return;
+    if (!parcel || !resources || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       await withAuth((token) =>
@@ -115,6 +119,7 @@ export function useOfficePickupHandover(input: {
             verificationToken: otp.verificationToken,
             isPickupQueueEnabled,
             hasPickupQueue,
+            signatureImage: form.signatureImage,
           },
           {
             addCustomerCard: (card) => addPickupCustomerCard(token, card),
@@ -124,6 +129,7 @@ export function useOfficePickupHandover(input: {
         ),
       );
       resetOtp();
+      setSignatureImage('');
       setCompleted({
         parcel,
         collectedBy: form.handoverTarget === 'second' ? 'Second receiver' : 'Main receiver',
@@ -136,6 +142,7 @@ export function useOfficePickupHandover(input: {
         getMobileErrorMessage(error, '') || 'Failed to confirm delivery',
       );
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }, [
@@ -147,12 +154,14 @@ export function useOfficePickupHandover(input: {
     otp,
     parcel,
     resetOtp,
+    setSignatureImage,
     resources,
     withAuth,
   ]);
 
   const requestHomeDelivery = useCallback(async () => {
-    if (!parcel) return;
+    if (!parcel || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       await withAuth((token) => requestParcelHomeDelivery(token, parcel.id));
@@ -165,6 +174,7 @@ export function useOfficePickupHandover(input: {
         getMobileErrorMessage(error, '') || 'Failed to move parcel to home delivery',
       );
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }, [close, onFinished, parcel, withAuth]);

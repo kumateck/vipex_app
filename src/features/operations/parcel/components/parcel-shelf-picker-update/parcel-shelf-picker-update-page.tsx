@@ -24,6 +24,7 @@ export function ParcelShelfPickerUpdatePage() {
   const secondReceiver = useParcelSecondReceiver(refreshList);
 
   const columns = useShelfPickerUpdateColumns({
+    isPickupQueueEnabled: context.isPickupQueueEnabled,
     onOpenUpdateDialog: table.openUpdateDialog,
     onEdit: table.openEditDialog,
     onEditSecondReceiver: secondReceiver.open,

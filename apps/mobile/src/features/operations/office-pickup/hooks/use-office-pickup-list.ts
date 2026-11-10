@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { notifyError } from '@mobile/lib/notify';
 import { extractScannedCode } from '@mobile/lib/scan-code';
@@ -16,10 +16,11 @@ export function useOfficePickupList(context: PickupContext, enabled: boolean) {
   const [settings, setSettings] = useState<BranchPickupSettings | null>(null);
   const [settingsError, setSettingsError] = useState(false);
   const [search, setSearch] = useState('');
-  const [submittedSearch, setSubmittedSearch] = useState('');
+  const [lookup, setLookup] = useState({ term: '', exactCode: false });
   const [rows, setRows] = useState<PickupParcel[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const requestId = useRef(0);
   const { branchId } = context;
 
   const loadSettings = useCallback(async () => {
@@ -41,50 +42,77 @@ export function useOfficePickupList(context: PickupContext, enabled: boolean) {
   const isPickupQueueEnabled = settings?.usePickupQueue ?? false;
 
   const load = useCallback(async () => {
-    if (!settings) return;
-    const query = buildPickupListQuery(context, isPickupQueueEnabled, submittedSearch);
-    if (!query) {
-      setRows([]);
-      setSearched(false);
-      return;
-    }
-    setLoading(true);
+    if (!enabled || !settings) return;
+    const id = ++requestId.current;
+    const query = buildPickupListQuery(
+      context,
+      isPickupQueueEnabled,
+      lookup.term,
+      lookup.exactCode,
+    );
     try {
+      if (!query) {
+        setRows([]);
+        setSearched(false);
+        return;
+      }
+      setLoading(true);
       const result = await withAuth((token) => listPickupParcels(token, query));
-      setRows(Array.isArray(result?.data) ? result.data : []);
+      if (id !== requestId.current) return;
+      const matches = Array.isArray(result?.data) ? result.data : [];
+      const { parcelCode } = query;
+      setRows(
+        parcelCode
+          ? matches.filter(
+              (row) => row.trackingCode === parcelCode || row.bookingCode === parcelCode,
+            )
+          : matches,
+      );
       setSearched(true);
     } catch (error) {
+      if (id !== requestId.current) return;
+      setRows([]);
       notifyError('Search failed', getMobileErrorMessage(error, '') || 'Unable to load parcels.');
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
-  }, [context, isPickupQueueEnabled, settings, submittedSearch, withAuth]);
+  }, [context, enabled, isPickupQueueEnabled, lookup, settings, withAuth]);
 
   useEffect(() => void load(), [load]);
 
-  const submitSearch = useCallback(
-    (term?: string) => {
-      const next = (term ?? search).trim();
-      if (next === submittedSearch) void load();
-      else setSubmittedSearch(next);
+  const submitLookup = useCallback(
+    (term: string, exactCode: boolean) => {
+      if (term === lookup.term && exactCode === lookup.exactCode) {
+        void load();
+        return;
+      }
+      requestId.current += 1;
+      setRows([]);
+      setSearched(false);
+      setLookup({ term, exactCode });
     },
-    [load, search, submittedSearch],
+    [load, lookup],
+  );
+  const submitSearch = useCallback(
+    () => submitLookup(search.trim(), false),
+    [search, submitLookup],
   );
 
   const searchByScan = useCallback(
     (raw: string) => {
       const code = extractScannedCode(raw);
-      if (!code) return;
+      if (!code || code.length > 255) {
+        notifyError(
+          'Sticker not recognized',
+          'Scan the parcel sticker or enter its code manually.',
+        );
+        return;
+      }
       setSearch(code);
-      submitSearch(code);
+      submitLookup(code, true);
     },
-    [submitSearch],
+    [submitLookup],
   );
-
-  const refresh = useCallback(async () => {
-    await loadSettings();
-    await load();
-  }, [load, loadSettings]);
 
   return {
     settings,
@@ -93,13 +121,12 @@ export function useOfficePickupList(context: PickupContext, enabled: boolean) {
     isPickupOtpRequired: settings?.requirePickupOtp ?? true,
     search,
     setSearch,
-    submittedSearch,
     rows,
     loading,
     searched,
     submitSearch,
     searchByScan,
-    refresh,
+    refresh: loadSettings,
     reload: load,
   };
 }

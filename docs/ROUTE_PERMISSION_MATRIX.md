@@ -24,10 +24,11 @@ authenticated user. Internal ticket permissions grant no inbox access. See
 
 Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`).
 
-Mobile `/(app)/office-pickup` (native screen `OfficePickup`) and its Operations card require
+Mobile `/(app)/office-pickup` (native screen `OfficePickup`), its sidebar item and Operations Hub card require
 `CanCompleteOfficePickup`, matching web/desktop `/parcels/waiting-pickup`. Helper API reads
 still require parcel/customer/user permissions; new cards and new second receivers require
-customer-update and customer-create grants respectively. No new permission is introduced.
+customer-update and customer-create grants respectively. The signed confirmation endpoint
+requires `CanCompleteOfficePickup` and checks authenticated company and destination branch.
 See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md#api-and-permission-dependencies).
 
 Saved call outcome notification resends use

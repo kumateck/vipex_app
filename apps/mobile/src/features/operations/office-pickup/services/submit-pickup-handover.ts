@@ -1,12 +1,13 @@
+import { isHandoverSignature } from '@/shared/shipments/handover-signature';
 import type {
   CardSelection,
-  DeliveredPatch,
+  SignedPickupConfirmation,
   HandoverTarget,
   PickupCustomerCard,
   PickupParcel,
 } from '../types';
 import {
-  buildDeliveredPatch,
+  buildSignedPickupConfirmation,
   getConfirmBlocker,
   resolveCardSelection,
   validateSecondReceiverInput,
@@ -35,7 +36,7 @@ export type PickupHandoverApi = {
     fullname: string;
     telephone: string;
   }) => Promise<{ id: string }>;
-  markDelivered: (parcelId: string, patch: DeliveredPatch) => Promise<{ id: string }>;
+  markDelivered: (parcelId: string, patch: SignedPickupConfirmation) => Promise<{ id: string }>;
 };
 
 async function saveCard(
@@ -60,6 +61,8 @@ async function saveCard(
 export async function submitPickupHandover(input: PickupHandoverInput, api: PickupHandoverApi) {
   const blocker = getConfirmBlocker(input);
   if (blocker) throw new Error(blocker);
+  if (!isHandoverSignature(input.signatureImage))
+    throw new Error('Capture a valid collector signature');
   const { parcel } = input;
   if (!parcel.receiverId) throw new Error('Parcel has no main receiver on file');
 
@@ -81,7 +84,7 @@ export async function submitPickupHandover(input: PickupHandoverInput, api: Pick
     secondCard = await saveCard(api, secondReceiverId, input.secondCard, input.secondReceiverCards);
   }
 
-  const patch = buildDeliveredPatch({
+  const patch = buildSignedPickupConfirmation({
     pickerStaffId: input.pickerStaffId,
     mainCard,
     handoverTarget: input.handoverTarget,
@@ -89,6 +92,9 @@ export async function submitPickupHandover(input: PickupHandoverInput, api: Pick
     secondCard,
     isPickupOtpRequired: input.isPickupOtpRequired,
     verificationToken: input.verificationToken,
+    signatureImage: input.signatureImage,
+    expectedMainReceiverId: parcel.receiverId,
+    expectedSecondReceiverId: parcel.secondReceiverId ?? null,
   });
   return api.markDelivered(parcel.id, patch);
 }

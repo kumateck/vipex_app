@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { ParcelStatus } from '@mobile/constants/parcel-status';
 import type { PickupParcelDetails } from '../types';
 import {
-  buildDeliveredPatch,
+  buildSignedPickupConfirmation,
   EMPTY_CARD_SELECTION,
   getConfirmBlocker,
   resolveCardSelection,
@@ -27,6 +26,7 @@ const ready = {
   verificationToken: 'token',
   isPickupQueueEnabled: false,
   hasPickupQueue: false,
+  signatureImage: 'captured signature',
 };
 
 describe('office pickup handover rules', () => {
@@ -41,7 +41,7 @@ describe('office pickup handover rules', () => {
     expect(resolveShelfPickerStaffId(details(null, null))).toBe('');
   });
 
-  test('blocks confirmation until every web gate is met', () => {
+  test('blocks confirmation until all pickup checks are met', () => {
     expect(getConfirmBlocker(ready)).toBeNull();
     expect(getConfirmBlocker({ ...ready, pickerStaffId: '' })).toBe('Select shelf picker staff');
     expect(getConfirmBlocker({ ...ready, otpVerified: false })).toBe(
@@ -49,6 +49,7 @@ describe('office pickup handover rules', () => {
     );
     expect(getConfirmBlocker({ ...ready, verificationToken: '' })).not.toBeNull();
     expect(getConfirmBlocker({ ...ready, isPickupQueueEnabled: true })).toContain('queue ticket');
+    expect(getConfirmBlocker({ ...ready, signatureImage: '' })).toContain('signature');
   });
 
   test('lets a branch with pickup OTP disabled confirm without a code', () => {
@@ -87,9 +88,9 @@ describe('office pickup handover rules', () => {
     expect(() => validateSecondReceiverInput('Ama', '02412')).toThrow('exactly 10 digits');
   });
 
-  test('builds the Delivered by Office patch with the main-receiver OTP token', () => {
+  test('sends the signature, collector and main receiver OTP token together', () => {
     expect(
-      buildDeliveredPatch({
+      buildSignedPickupConfirmation({
         pickerStaffId: 'staff',
         mainCard: { cardId: 'ghana-card', cardNumber: 'GHA-1' },
         handoverTarget: 'main',
@@ -97,9 +98,15 @@ describe('office pickup handover rules', () => {
         secondCard: null,
         isPickupOtpRequired: true,
         verificationToken: 'token',
+        signatureImage: ready.signatureImage,
+        expectedMainReceiverId: 'main-1',
+        expectedSecondReceiverId: null,
       }),
     ).toEqual({
-      status: ParcelStatus.DELIVERED_BY_OFFICE,
+      handoverTarget: 'main',
+      signatureImage: ready.signatureImage,
+      expectedMainReceiverId: 'main-1',
+      expectedSecondReceiverId: null,
       confirmedBy: 'staff',
       cardId: 'ghana-card',
       cardNumber: 'GHA-1',
@@ -107,12 +114,11 @@ describe('office pickup handover rules', () => {
       secondCardId: null,
       secondCardNumber: null,
       receiverOtpVerificationToken: 'token',
-      receiverOtpTarget: 'main',
     });
   });
 
   test('omits OTP fields when the branch does not require pickup OTP', () => {
-    const patch = buildDeliveredPatch({
+    const patch = buildSignedPickupConfirmation({
       pickerStaffId: 'staff',
       mainCard: null,
       handoverTarget: 'second',
@@ -120,6 +126,9 @@ describe('office pickup handover rules', () => {
       secondCard: { cardId: 'passport', cardNumber: 'P1' },
       isPickupOtpRequired: false,
       verificationToken: '',
+      signatureImage: ready.signatureImage,
+      expectedMainReceiverId: 'main-1',
+      expectedSecondReceiverId: 'second',
     });
     expect('receiverOtpVerificationToken' in patch).toBe(false);
     expect(patch.secondCardId).toBe('passport');

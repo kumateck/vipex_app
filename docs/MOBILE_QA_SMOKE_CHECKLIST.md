@@ -8,15 +8,24 @@ Run on Android and iOS, in light/dark mode. These device scenarios are pending e
 automated logic tests do not establish device or live provider success. See
 [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md) for current behavior and API dependencies.
 
-- Verify the Operations card and direct destination require `CanCompleteOfficePickup`;
-  parcel-read permission alone grants neither. Check missing company/branch context.
+- With `CanCompleteOfficePickup`, tap **Waiting for Pickup** in the sidebar's **Operations**
+  section and on the Operations Hub. Both must open the pickup screen. With parcel-read or
+  queue permissions alone, both entries must be hidden and direct navigation must show the
+  no-access screen. Check missing company/branch context.
 - Load branch settings, then fail/retry the lookup. Do not allow handover using guessed
   disabled OTP settings. Verify helper-read denial reports details unavailable.
 - With queues enabled, verify initial queued results, then search an unqueued parcel and
   confirm handover is blocked until a ticket exists. With queues disabled, require search.
+  Confirm the active ticket number appears when enabled. Disable queues and refresh, then
+  search for the same parcel and verify its queue number stays hidden.
   Confirm status/company/destination scope and no principal/storage collection due.
-- Search tracking/booking codes, receiver name and telephone; scan bare codes, current
-  tracking URLs and legacy QR payloads. Deny camera permission and use manual search.
+- Search separately by booking code, tracking code, sender name/phone and receiver name/phone.
+  Include secondary phone numbers and partial names, then verify the result shows both parties.
+  Scan an actual parcel sticker with a current tracking URL, a bare code or a legacy `QR-`
+  payload. Verify exact matching when another parcel has a similar code. Check unknown,
+  ineligible and wrong-branch stickers, plus a booking with multiple parcels. Start a new
+  search before an earlier one returns and verify the earlier result cannot replace it.
+  Deny camera permission and use manual search.
   With more than 20 matches, narrow the search (there is no load-more control).
 - Verify details-load failure/retry, existing parcel/queue picker assignment, active location
   staff choices and missing assigned location. Missing picker must block confirmation.
@@ -30,8 +39,15 @@ automated logic tests do not establish device or live provider success. See
   consumed/expired verification token. No failed verification may complete delivery. OTP
   still targets the main receiver when the second receiver collects. Reopen with an active
   code and record the known first-send conflict/recovery limitation.
-- With branch pickup OTP disabled, verify the warning and absence of token fields in the
-  PATCH. With OTP enabled, verify the token and `receiverOtpTarget: 'main'` are sent.
+- With branch pickup OTP disabled, verify the warning and confirm that the collector must
+  still sign. With OTP enabled, confirm that the main receiver’s verified token is required.
+- On Android and iOS, capture a finger signature for each collector. Try tapping without a
+  stroke, clearing, cancelling and signing again. Change the collector or edit the new second
+  receiver’s details after signing and verify confirmation is blocked until they sign again.
+  Verify successful confirmation saves the signature under the correct receiver and records it
+  in parcel history. An invalid signature or duplicate confirmation must leave the parcel,
+  signature, queue and OTP in a consistent state. Change or remove a linked receiver from a
+  second session after signing and confirm the original session must reopen and capture again.
 - Fail new-card save, second-receiver resolution and final delivery independently. Later
   calls must stop; earlier saved cards/contacts may persist. After an ambiguous network
   failure, refresh/reopen before retrying to avoid duplicate writes. Check missing customer

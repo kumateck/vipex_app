@@ -39,6 +39,7 @@ export const routes = new Elysia({ name: 'parcel-queries' })
           companyId: query.companyId ?? null,
           sourceId: query.sourceId ?? null,
           destinationId: query.destinationId ?? null,
+          parcelCode: query.parcelCode ?? null,
           locationId: query.locationId ?? null,
           status: query.status ?? null,
           statuses: parseStatuses(query.statuses),
@@ -63,6 +64,7 @@ export const routes = new Elysia({ name: 'parcel-queries' })
         page: t.Optional(t.Number({ minimum: 1 })),
         pageSize: t.Optional(t.Number({ minimum: 1, maximum: 200 })),
         search: t.Optional(t.String()),
+        parcelCode: t.Optional(t.String({ minLength: 1, maxLength: 255, pattern: '\\S' })),
         sort: t.Optional(
           t.Array(
             t.Object({
