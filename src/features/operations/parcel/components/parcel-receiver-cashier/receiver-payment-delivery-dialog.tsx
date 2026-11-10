@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select-searchable';
 import { PaymentMethod } from '@/db/schemas/enums';
+import { ReceiverHandoverDialogContent } from './dialogs';
 import { ReceiverOtpSection } from './receiver-otp-section';
 import { ReceiptDeliveryPicker } from '@/features/digital-receipts';
 import { ReceiverPaymentSecondarySections } from './receiver-payment-secondary-sections';
@@ -38,154 +39,194 @@ export function ReceiverPaymentDeliveryDialog({
   dialog,
 }: ReceiverPaymentDeliveryDialogProps) {
   const parcel = dialog.selectedParcel;
+  const pending = dialog.pendingHandover;
 
   return (
     <Dialog
-      open={Boolean(parcel)}
-      onOpenChange={(open) => (!open ? dialog.setSelectedParcel(null) : null)}
+      open={Boolean(parcel || pending)}
+      onOpenChange={(open) => {
+        if (!open && !pending && !dialog.isSaving) dialog.setSelectedParcel(null);
+      }}
     >
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-7xl sm:max-w-7xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Receiver Payment + Pickup Verification</DialogTitle>
-        </DialogHeader>
-        {parcel && dialog.isLoading ? <ReceiverPaymentDialogSkeleton /> : null}
-        {parcel && dialog.hasLoadError ? (
-          <div
-            className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm"
-            role="alert"
-          >
-            <p className="font-medium">Unable to load receiver payment details</p>
-            <p className="text-muted-foreground">Close this dialog and try opening it again.</p>
-          </div>
-        ) : null}
-        {parcel && !dialog.isLoading && !dialog.hasLoadError ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-4">
-              <ReceiverPaymentPrimarySections context={context} dialog={dialog} parcel={parcel} />
-            </div>
+      <DialogContent
+        className={
+          pending
+            ? undefined
+            : 'w-[calc(100vw-2rem)] max-w-7xl sm:max-w-7xl max-h-[90vh] overflow-y-auto'
+        }
+        showCloseButton={!pending}
+        onEscapeKeyDown={pending ? (event) => event.preventDefault() : undefined}
+        onPointerDownOutside={pending ? (event) => event.preventDefault() : undefined}
+      >
+        {pending ? (
+          <ReceiverHandoverDialogContent
+            key={pending.handoverId ?? pending.parcelId}
+            pending={pending}
+            onClose={dialog.closePendingHandover}
+          />
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Receiver Payment + Pickup Verification</DialogTitle>
+            </DialogHeader>
+            {parcel && dialog.isLoading ? <ReceiverPaymentDialogSkeleton /> : null}
+            {parcel && dialog.hasLoadError ? (
+              <div
+                className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm"
+                role="alert"
+              >
+                <p className="font-medium">Unable to load receiver payment details</p>
+                <p className="text-muted-foreground">Close this dialog and try opening it again.</p>
+              </div>
+            ) : null}
+            {parcel && !dialog.isLoading && !dialog.hasLoadError ? (
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <ReceiverPaymentPrimarySections
+                    context={context}
+                    dialog={dialog}
+                    parcel={parcel}
+                  />
+                </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2 rounded-md border p-3">
-                <Label>Main Receiver ID Card (optional)</Label>
-                <Select
-                  value={dialog.mainCardMode}
-                  onValueChange={(value) =>
-                    dialog.setMainCardMode(value as 'none' | 'existing' | 'new')
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No card</SelectItem>
-                    <SelectItem value="existing" disabled={dialog.mainReceiverCards.length === 0}>
-                      Use existing card
-                    </SelectItem>
-                    <SelectItem value="new">Add new card</SelectItem>
-                  </SelectContent>
-                </Select>
-                {dialog.mainCardMode === 'existing' ? (
-                  <Select
-                    value={dialog.mainExistingCardRecordId}
-                    onValueChange={dialog.setMainExistingCardRecordId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select existing card" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dialog.mainReceiverCards.map((card) => (
-                        <SelectItem key={card.id} value={card.id}>
-                          {card.cardName} - {card.cardNumber}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : dialog.mainCardMode === 'new' ? (
-                  <div className="grid gap-2">
+                <div className="space-y-4">
+                  <div className="space-y-2 rounded-md border p-3">
+                    <Label>Main Receiver ID Card (optional)</Label>
                     <Select
-                      value={dialog.mainNewCardTypeId}
-                      onValueChange={dialog.setMainNewCardTypeId}
+                      value={dialog.mainCardMode}
+                      onValueChange={(value) =>
+                        dialog.setMainCardMode(value as 'none' | 'existing' | 'new')
+                      }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select card type" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {dialog.cardOptions.map((option) => (
-                          <SelectItem key={option.id} value={option.id}>
-                            {option.name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="none">No card</SelectItem>
+                        <SelectItem
+                          value="existing"
+                          disabled={dialog.mainReceiverCards.length === 0}
+                        >
+                          Use existing card
+                        </SelectItem>
+                        <SelectItem value="new">Add new card</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Input
-                      value={dialog.mainNewCardNumber}
-                      onChange={(event) => dialog.setMainNewCardNumber(event.target.value)}
-                      placeholder="Card number"
-                    />
+                    {dialog.mainCardMode === 'existing' ? (
+                      <Select
+                        value={dialog.mainExistingCardRecordId}
+                        onValueChange={dialog.setMainExistingCardRecordId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select existing card" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {dialog.mainReceiverCards.map((card) => (
+                            <SelectItem key={card.id} value={card.id}>
+                              {card.cardName} - {card.cardNumber}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : dialog.mainCardMode === 'new' ? (
+                      <div className="grid gap-2">
+                        <Select
+                          value={dialog.mainNewCardTypeId}
+                          onValueChange={dialog.setMainNewCardTypeId}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select card type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {dialog.cardOptions.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          value={dialog.mainNewCardNumber}
+                          onChange={(event) => dialog.setMainNewCardNumber(event.target.value)}
+                          placeholder="Card number"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No ID card will be recorded for this handover.
+                      </p>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No ID card will be recorded for this handover.
-                  </p>
-                )}
-              </div>
 
-              <ReceiverPaymentSecondarySections context={context} dialog={dialog} />
+                  <ReceiverPaymentSecondarySections context={context} dialog={dialog} />
 
-              {context.isReceiverOtpRequired ? (
-                <ReceiverOtpSection dialog={dialog} />
-              ) : (
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                  <p className="font-medium">Receiver OTP is disabled for this branch</p>
-                  <p className="text-muted-foreground">
-                    Continue without OTP only when processing an approved legacy record.
-                  </p>
+                  {context.isReceiverOtpRequired ? (
+                    <ReceiverOtpSection dialog={dialog} />
+                  ) : (
+                    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                      <p className="font-medium">Receiver OTP is disabled for this branch</p>
+                      <p className="text-muted-foreground">
+                        Continue without OTP only when processing an approved legacy record.
+                      </p>
+                    </div>
+                  )}
+
+                  {!context.requireSignature &&
+                  (dialog.receiverDuePsw > 0 || dialog.storageOutstandingPsw > 0) ? (
+                    <ReceiptDeliveryPicker
+                      delivery={dialog.receiptDelivery}
+                      disabled={dialog.isSaving}
+                    />
+                  ) : null}
                 </div>
-              )}
-
-              {dialog.receiverDuePsw > 0 || dialog.storageOutstandingPsw > 0 ? (
-                <ReceiptDeliveryPicker
-                  delivery={dialog.receiptDelivery}
-                  disabled={dialog.isSaving}
-                />
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-        <DialogFooter>
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() => dialog.setSelectedParcel(null)}
-            disabled={dialog.isSaving}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={async () => {
-              try {
-                await dialog.handleConfirmDelivered();
-                toast.success('Payment received and parcel marked as DELIVERED_BY_OFFICE');
-              } catch (error) {
-                toast.error(getApplicationErrorMessage(error, '') || 'Failed to confirm delivery');
-              }
-            }}
-            disabled={
-              dialog.isLoading ||
-              dialog.hasLoadError ||
-              dialog.isSaving ||
-              (context.isReceiverOtpRequired && !dialog.otpVerified) ||
-              (dialog.paymentMethod === String(PaymentMethod.MTN) && !dialog.momoTransactionId) ||
-              (context.isPickupQueueEnabled && !dialog.hasPickupQueue)
-            }
-          >
-            {dialog.isLoading
-              ? 'Loading...'
-              : dialog.isSaving
-                ? 'Processing...'
-                : 'Receive Payment + Deliver'}
-          </Button>
-        </DialogFooter>
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => dialog.setSelectedParcel(null)}
+                disabled={dialog.isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    const awaitingSignature = await dialog.handleConfirmDelivered();
+                    if (awaitingSignature === undefined) return;
+                    toast.success(
+                      awaitingSignature
+                        ? 'Payment recorded. The parcel is awaiting signature.'
+                        : 'Payment received and parcel marked as delivered.',
+                    );
+                  } catch (error) {
+                    toast.error(
+                      getApplicationErrorMessage(error, '') || 'Failed to confirm delivery',
+                    );
+                  }
+                }}
+                disabled={
+                  dialog.isLoading ||
+                  dialog.hasLoadError ||
+                  dialog.isSaving ||
+                  (context.isReceiverOtpRequired && !dialog.otpVerified) ||
+                  (dialog.paymentMethod === String(PaymentMethod.MTN) &&
+                    !dialog.momoTransactionId) ||
+                  (context.isPickupQueueEnabled && !dialog.hasPickupQueue)
+                }
+              >
+                {dialog.isLoading
+                  ? 'Loading...'
+                  : dialog.isSaving
+                    ? 'Processing...'
+                    : context.requireSignature
+                      ? 'Receive Payment + Request Signature'
+                      : 'Receive Payment + Deliver'}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

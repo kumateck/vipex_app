@@ -32,6 +32,7 @@ type ConfirmReceiverDeliveryArgs = {
   destinationLocationName: string;
   isReceiverOtpRequired: boolean;
   receiverOtpVerificationToken: string;
+  requestSignature?: boolean;
   momoTransactionId?: string | null;
   addCustomerCard: (args: {
     customerId: string;
@@ -45,6 +46,10 @@ type ConfirmReceiverDeliveryArgs = {
     storageAmountCedis: number | null;
     method: number;
     confirmedBy: string;
+    requestSignature?: boolean;
+    expectedReceiverId?: string;
+    expectedSecondReceiverId?: string | null;
+    handoverTarget?: HandoverTarget;
     cardId: string | null;
     cardNumber: string | null;
     secondReceiverId: string | null;
@@ -54,6 +59,8 @@ type ConfirmReceiverDeliveryArgs = {
     receiverOtpTarget?: HandoverTarget;
     momoTransactionId?: string | null;
   }) => Promise<{
+    awaitingSignature?: boolean;
+    handoverId?: string;
     payment: {
       amounts: {
         vatCedis: number;
@@ -104,6 +111,7 @@ export async function confirmReceiverDelivery({
   destinationLocationName,
   isReceiverOtpRequired,
   receiverOtpVerificationToken,
+  requestSignature,
   momoTransactionId,
   addCustomerCard,
   createCustomer,
@@ -175,6 +183,10 @@ export async function confirmReceiverDelivery({
     storageAmountCedis: storageOutstandingPsw > 0 ? storageAmount : null,
     method: Number(paymentMethod),
     confirmedBy: pickerStaffId,
+    requestSignature,
+    expectedReceiverId: selectedParcel.receiverId,
+    expectedSecondReceiverId: selectedParcel.secondReceiverId ?? null,
+    handoverTarget,
     cardId: mainCard?.cardId ?? null,
     cardNumber: mainCard?.cardNumber ?? null,
     secondReceiverId: secondReceiverId ?? null,
@@ -187,6 +199,10 @@ export async function confirmReceiverDelivery({
     receiverOtpTarget: isReceiverOtpRequired ? 'main' : undefined,
     momoTransactionId: momoTransactionId ?? null,
   });
+
+  if (result.awaitingSignature) {
+    return { awaitingSignature: true as const, handoverId: result.handoverId };
+  }
 
   if (receiverDuePsw > 0 && !result.payment) {
     throw new Error('Payment completed without a tax breakdown; receipt was not generated');
@@ -210,6 +226,7 @@ export async function confirmReceiverDelivery({
   const senderPaidCedis = Math.max(totalChargeCedis - receiverPaidCedis, 0);
 
   return {
+    awaitingSignature: false as const,
     receipt: buildReceiverReceiptData({
       parcel: selectedParcel,
       receivedByName,

@@ -9,6 +9,7 @@ import {
   shell,
 } from 'electron';
 import { lookup } from 'node:dns/promises';
+import { registerTopazCaptureHandler } from './signature/topaz-signature';
 import { getPrintOptions } from './printing/print-options';
 import { prepareReceiptPaper } from './printing/receipt-paper';
 import { preparePrintAssets } from './printing/print-assets';
@@ -27,6 +28,7 @@ declare const __DESKTOP_UPDATE_FEED_URL__: string;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 let mainWindow: BrowserWindow | null = null;
 const PACKAGED_WEB_BASE_URL = 'https://app.vipexparcels.com/';
 const DEV_WEB_BASE_URL = 'http://localhost:5173/';
@@ -711,6 +713,10 @@ async function validateRequestedPrinter(request: PrintHtmlRequest) {
 }
 
 function registerIpcHandlers() {
+  registerTopazCaptureHandler(
+    () => mainWindow,
+    () => activeDesktopBaseUrl ?? (!app.isPackaged ? DEV_WEB_BASE_URL : null),
+  );
   ipcMain.handle('device:status', () =>
     getDesktopDeviceStatus(activeDesktopBaseUrl ?? getWebBaseUrl()),
   );

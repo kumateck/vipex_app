@@ -21,6 +21,7 @@ function toBranchDto(b: {
   usePickupQueue: boolean;
   requirePickupOtp: boolean;
   requireReceiverOtp: boolean;
+  requireReceiverCashierSignature: boolean;
   isDeleted: boolean;
   createdBy: string;
   createdAt: Date | string | null;
@@ -37,6 +38,7 @@ function toBranchDto(b: {
     usePickupQueue: !!b.usePickupQueue,
     requirePickupOtp: b.requirePickupOtp,
     requireReceiverOtp: b.requireReceiverOtp,
+    requireReceiverCashierSignature: b.requireReceiverCashierSignature,
     isDeleted: !!b.isDeleted,
     createdBy: b.createdBy,
     createdAt:
@@ -100,6 +102,7 @@ export async function createBranchCtrl(input: {
   usePickupQueue?: boolean;
   requirePickupOtp?: boolean;
   requireReceiverOtp?: boolean;
+  requireReceiverCashierSignature?: boolean;
   createdBy: string;
 }) {
   return createBranchSvc(input);
@@ -116,6 +119,7 @@ export async function updateBranchCtrl(
     usePickupQueue?: boolean;
     requirePickupOtp?: boolean;
     requireReceiverOtp?: boolean;
+    requireReceiverCashierSignature?: boolean;
   },
 ) {
   return updateBranchSvc(id, patch);

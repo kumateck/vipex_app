@@ -729,6 +729,13 @@ Unticking Physical in the Sender/Receiver cashier dialogs skips the automatic pr
 happen after the transaction succeeds and never roll it back. See [Digital receipts](DIGITAL_RECEIPTS.md).
 Automated coverage: `otp-sms-delivery.test.ts`, `sms-provider-payloads.test.ts`.
 
+### Receiver Cashier signatures
+
+A destination branch can require a customer signature after Receiver Cashier processing.
+The cashier records payment and requests the signature, the customer signs on mobile or a
+Windows Topaz pad, and Vipex Desktop confirms delivery and handles printing. See
+[Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md) for setup and failure handling.
+
 ## Pickup and Last-Mile Delivery
 
 Mobile Operations → Waiting for Pickup implements settled-parcel office handover with

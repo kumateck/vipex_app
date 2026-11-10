@@ -46,6 +46,9 @@ export const branches = pgTable(
     usePickupQueue: boolean('use_pickup_queue').notNull().default(false),
     requirePickupOtp: boolean('require_pickup_otp').notNull().default(true),
     requireReceiverOtp: boolean('require_receiver_otp').notNull().default(true),
+    requireReceiverCashierSignature: boolean('require_receiver_cashier_signature')
+      .notNull()
+      .default(false),
     latitude: doublePrecision('latitude'),
     longitude: doublePrecision('longitude'),
     isDeleted: boolean('is_deleted').notNull().default(false),

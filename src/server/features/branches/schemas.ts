@@ -22,6 +22,7 @@ export const CreateBranchBody = t.Object({
   telephone: t.Optional(t.String({ maxLength: 30 })),
   requirePickupOtp: t.Optional(t.Boolean()),
   requireReceiverOtp: t.Optional(t.Boolean()),
+  requireReceiverCashierSignature: t.Optional(t.Boolean()),
 });
 
 export const UpdateBranchBody = t.Object({
@@ -30,6 +31,7 @@ export const UpdateBranchBody = t.Object({
   telephone: t.Optional(t.String({ maxLength: 30 })),
   requirePickupOtp: t.Optional(t.Boolean()),
   requireReceiverOtp: t.Optional(t.Boolean()),
+  requireReceiverCashierSignature: t.Optional(t.Boolean()),
 });
 
 export const BranchDto = t.Object({
@@ -40,6 +42,7 @@ export const BranchDto = t.Object({
   telephone: t.Optional(t.String({ maxLength: 30 })),
   requirePickupOtp: t.Boolean(),
   requireReceiverOtp: t.Boolean(),
+  requireReceiverCashierSignature: t.Boolean(),
   createdAt: t.Union([t.String({ format: 'date-time' }), t.Null()]),
 });
 

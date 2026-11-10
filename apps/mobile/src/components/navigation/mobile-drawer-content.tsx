@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import {
+  canCaptureReceiverSignature,
   canChangeOwnPassword,
   canCompleteOfficePickup,
   canCreateParcelBooking,
@@ -143,6 +144,17 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
                 <Ionicons name="hand-left-outline" size={size} color={color} />
               )}
               onPress={() => props.navigation.navigate('OfficePickup')}
+              inactiveTintColor={theme.colors.text}
+            />
+          ) : null}
+          {canCaptureReceiverSignature(permissions) ? (
+            <DrawerItem
+              label="Receiver Signatures"
+              labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+              icon={({ size, color }) => (
+                <Ionicons name="create-outline" size={size} color={color} />
+              )}
+              onPress={() => props.navigation.navigate('ReceiverSignatures')}
               inactiveTintColor={theme.colors.text}
             />
           ) : null}

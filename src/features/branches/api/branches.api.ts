@@ -27,6 +27,7 @@ export type BranchOperationsSettings = {
   usePickupQueue: boolean;
   requirePickupOtp: boolean;
   requireReceiverOtp: boolean;
+  requireReceiverCashierSignature: boolean;
 };
 
 export const branchesApi = api.injectEndpoints({

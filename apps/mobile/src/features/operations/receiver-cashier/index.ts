@@ -1,0 +1,1 @@
+export { ReceiverSignaturesScreen } from './components';
