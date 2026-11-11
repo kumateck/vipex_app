@@ -1,8 +1,16 @@
 import { api } from '@/services/api';
+import type { ReceiverOtpSession } from '@/shared/shipments/receiver-otp-session';
 
 import type { ParcelStorageSettlement } from '../parcel.api';
 export const parcelApiPart2 = api.injectEndpoints({
   endpoints: (builder) => ({
+    getReceiverOtpSession: builder.query<
+      ReceiverOtpSession | null,
+      { parcelId: string; targetReceiver: 'main' | 'second' }
+    >({
+      query: (params) => ({ url: '/payments/receiver-otp/session', params }),
+      keepUnusedDataFor: 0,
+    }),
     collectSenderPayment: builder.mutation<
       {
         id: string;

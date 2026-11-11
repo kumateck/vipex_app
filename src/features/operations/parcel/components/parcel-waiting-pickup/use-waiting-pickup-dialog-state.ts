@@ -34,10 +34,11 @@ export function useWaitingPickupDialogState() {
     parcelId: selectedParcel?.id ?? null,
     targetReceiver: 'main',
     phoneSlot,
+    onPhoneSlotRestored: setPhoneSlotState,
   });
 
   const openParcelDialog = (parcel: ParcelSearchRow) => {
-    otp.reset();
+    void otp.restore(parcel.id);
     setSelectedParcel(parcel);
     setHandoverTargetState(parcel.secondReceiverId ? 'second' : 'main');
     setPickerStaffId('');
@@ -60,12 +61,10 @@ export function useWaitingPickupDialogState() {
   };
 
   const setHandoverTarget = (target: HandoverTarget) => {
-    otp.reset();
     setHandoverTargetState(target);
   };
 
   const setPhoneSlot = (slot: PhoneSlot) => {
-    otp.reset();
     setPhoneSlotState(slot);
   };
 

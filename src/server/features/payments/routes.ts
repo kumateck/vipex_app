@@ -18,10 +18,12 @@ import {
 } from '@/server/plugins/auth';
 import { receiverHandoverRoutes } from './receiver-handover.routes';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { receiverOtpSessionRoutes } from '../parcel-receiver-otp';
 
 export const paymentsRoutes = new Elysia({ name: 'payments' })
   .use(authPlugin)
   .use(receiverHandoverRoutes)
+  .use(receiverOtpSessionRoutes)
   .post(
     '/',
     async ({ body, set, user }) => {
@@ -190,7 +192,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
       }),
       detail: {
         tags: ['Payments'],
-        summary: 'Send a receiver pickup verification OTP by SMS or WhatsApp (5-minute expiry)',
+        summary: 'Send a receiver pickup verification OTP by SMS or WhatsApp (10-minute expiry)',
       },
       beforeHandle: [
         requireAuth(),

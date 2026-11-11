@@ -39,23 +39,20 @@ export function useOfficePickupHandover(input: {
     parcelId: parcel?.id ?? null,
     phoneSlot,
     isWhatsAppAvailable: input.isWhatsAppAvailable,
+    onPhoneSlotRestored: setPhoneSlotState,
   });
-  const form = usePickupHandoverForm(otp.reset);
-  const { reset: resetOtp } = otp;
+  const form = usePickupHandoverForm();
+  const { reset: resetOtp, restore: restoreOtp } = otp;
   const { resetFor, setPickerStaffId, setSignatureImage } = form;
 
-  const setPhoneSlot = useCallback(
-    (slot: PhoneSlot) => {
-      resetOtp();
-      setPhoneSlotState(slot);
-    },
-    [resetOtp],
-  );
+  const setPhoneSlot = useCallback((slot: PhoneSlot) => {
+    setPhoneSlotState(slot);
+  }, []);
 
   const open = useCallback(
     async (next: PickupParcel) => {
       const id = ++loadRequest.current;
-      resetOtp();
+      void restoreOtp(next.id);
       resetFor(next);
       setPhoneSlotState('primary');
       setCompleted(null);
@@ -81,7 +78,7 @@ export function useOfficePickupHandover(input: {
         if (id === loadRequest.current) setLoading(false);
       }
     },
-    [context, isPickupQueueEnabled, resetFor, resetOtp, setPickerStaffId, withAuth],
+    [context, isPickupQueueEnabled, resetFor, restoreOtp, setPickerStaffId, withAuth],
   );
 
   const close = useCallback(() => {

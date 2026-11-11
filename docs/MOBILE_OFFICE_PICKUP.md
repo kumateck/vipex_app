@@ -60,16 +60,15 @@ existing card requires a current saved-card record; a new card requires both fie
 When `requirePickupOtp=true`, send a six-digit collection OTP to the **main receiver**, even
 when the second receiver collects. Choose their primary or stored secondary telephone.
 SMS is the default; WhatsApp is offered only when availability reports it enabled/configured.
-An availability lookup failure leaves SMS available. Choosing another channel affects the
-next send and preserves an already sent code. Changing collector or phone slot clears local
-OTP state; reopening a parcel clears the form and verification state.
+An availability lookup failure leaves SMS available. The chosen phone slot and channel apply
+to the next send. The OTP verifies the main receiver regardless of who collects the parcel.
 
-The code countdown uses the request's five-minute expiry. Successful resend uses `force=true`
-and clears local code/verification. Verification returns an opaque token; the server gives
-that token a ten-minute lifetime and rejects expired/consumed tokens at completion. The
-mobile verified badge does not track this token expiry; request and verify another code if
-the server rejects it. An existing active code after reopening can produce a conflict on the
-first send; there is no dedicated force-resend recovery control for that conflict yet.
+New codes expire after 10 minutes. Staff can close the panel, work on another parcel, and reopen
+the first parcel to enter the code already sent. Reopening restores the countdown, channel and
+phone slot from the server. The code entry starts empty. An expired code requires a new request.
+Successful resend uses `force=true` and clears local code and verification. The server can restore
+the requesting staff member's unconsumed verification token for up to 10 minutes after verification.
+If OTP recovery fails, use **Retry OTP recovery**. Capture the collector's signature after reopening.
 When branch pickup OTP is disabled, the screen shows a warning and omits OTP fields.
 
 Tap **Capture signature** and ask the selected collector to sign with a finger. The dialog
@@ -99,6 +98,7 @@ All paths below have the `/v1` prefix. Signed pickup uses the existing office pi
 | `GET /customers/cards/options`, `GET /customers/:id/cards` | `CanReadCustomers`; required handover resources.                                                                                                                                                                                            |
 | `GET /whatsapp/availability`                               | Authentication; returns company availability, SMS fallback on failure.                                                                                                                                                                      |
 | `POST /payments/receiver-otp/request`                      | Receiver-payment or office-pickup permission. Sends `{ parcelId, targetReceiver: 'main', phoneSlot, channel, force }`; returns `{ expiresAt, channel }`.                                                                                    |
+| `GET /payments/receiver-otp/session`                       | Same permissions and destination branch. Returns active OTP session metadata or `null` for `{ parcelId, targetReceiver: 'main' }`.                                                                                                          |
 | `POST /payments/receiver-otp/verify`                       | Same permission alternatives; sends `{ parcelId, targetReceiver: 'main', otp }`; returns `{ verificationToken, expiresAt }`.                                                                                                                |
 | `POST /customers/:id/cards`                                | `CanUpdateCustomers`; saves a new card before final handover.                                                                                                                                                                               |
 | `POST /customers/resolve-second-receiver`                  | `CanCreateCustomers`; sends `{ fullname, telephone }` and uses returned `id`.                                                                                                                                                               |

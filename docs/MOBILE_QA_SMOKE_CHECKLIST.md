@@ -47,6 +47,9 @@ automated logic tests do not establish device or live provider success. See
   code and record the known first-send conflict/recovery limitation.
 - With branch pickup OTP disabled, verify the warning and confirm that the collector must
   still sign. With OTP enabled, confirm that the main receiver’s verified token is required.
+- Send a pickup OTP, close the parcel and open a different one. Return to the first parcel,
+  check the phone/channel and countdown, and verify the original code without resending.
+  Verify a newly sent code expires after 10 minutes and the expired code cannot confirm pickup.
 - On Android and iOS, capture a finger signature for each collector. Try tapping without a
   stroke, clearing, cancelling and signing again. Change the collector or edit the new second
   receiver’s details after signing and verify confirmation is blocked until they sign again.

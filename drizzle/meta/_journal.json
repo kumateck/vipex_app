@@ -666,6 +666,13 @@
       "when": 1794268800000,
       "tag": "0094_receiver_cashier_signature",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1794398400000,
+      "tag": "0095_parcel_customer_corrections",
+      "breakpoints": true
     }
   ]
 }

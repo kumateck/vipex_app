@@ -25,6 +25,7 @@ export const {
   useCollectSenderAndProcessMutation,
   useCollectReceiverAndDeliverMutation,
   useRequestReceiverOtpMutation,
+  useLazyGetReceiverOtpSessionQuery,
   useVerifyReceiverOtpMutation,
   useCreateConsignmentMutation,
   useAddConsignmentItemsMutation,
