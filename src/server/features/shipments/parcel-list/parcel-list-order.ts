@@ -1,13 +1,16 @@
 import { effectiveParcelReceivedAt } from '../parcel-repositories/parcel-repository.types';
-import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 
 import { parcels, pickupQueues } from '@/db/schemas';
+import { ParcelStatus } from '@/db/schemas/enums';
 
 import type { ListParcelsParams } from '../parcels.repository';
 import type { createParcelListContext } from './parcel-list-context';
+import { getPickupQueueDate } from '@/server/features/pickup-queues/queue-date';
 export function createParcelListOrder(
   p: ListParcelsParams,
   context: ReturnType<typeof createParcelListContext>,
+  now = new Date(),
 ) {
   const { whereParts, s, r, senderName, receiverName, secondReceiverName } = context;
   const sort = p.sort ?? [];
@@ -50,16 +53,20 @@ export function createParcelListOrder(
             })
             .filter((value): value is ReturnType<typeof asc> => value !== null)
         : [asc(parcels.createdAt), asc(parcels.id)];
-  const pickupQueueJoin = and(
-    eq(pickupQueues.parcelId, parcels.id),
-    p.shelfPickerAssigned || p.shelfPickerAssignmentOrder
-      ? sql`${pickupQueues.id} = (
+  const currentQueueOnly =
+    p.pickupQueueTodayOnly || (p.status === ParcelStatus.AWAITING_PICKUP && !p.shelfPickerAssigned);
+  const pickupQueueJoin = currentQueueOnly
+    ? and(
+        eq(pickupQueues.parcelId, parcels.id),
+        eq(pickupQueues.queueDate, getPickupQueueDate(now)),
+        isNull(pickupQueues.endedAt),
+      )
+    : sql`${pickupQueues.id} = (
         select pq_latest.id from pickup_queues pq_latest
-        where pq_latest.parcel_id = ${parcels.id} and pq_latest.ended_at is null
-        order by pq_latest.queued_at desc, pq_latest.id desc limit 1
-      )`
-      : undefined,
-  );
+        where pq_latest.parcel_id = ${parcels.id}
+        ${p.shelfPickerAssigned || p.shelfPickerAssignmentOrder ? sql`and pq_latest.ended_at is null` : sql``}
+        order by pq_latest.queue_date desc, pq_latest.queued_at desc, pq_latest.id desc limit 1
+      )`;
   const whereClause =
     whereParts.length || p.search
       ? and(

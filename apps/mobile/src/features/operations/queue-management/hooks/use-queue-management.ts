@@ -1,5 +1,5 @@
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Alert, Share } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@mobile/providers/auth-provider';
 import type { ParcelSearchRow, PickupQueueCard } from '@mobile/types/parcels';
 import { showQueueTicketDialog } from '../dialogs/queue-ticket-dialog';
+import { usePickupQueueRefresh } from '@mobile/lib/use-pickup-queue-refresh';
 import {
   issueQueueTicket,
   loadQueueBoards,
@@ -24,7 +25,7 @@ import {
 import {
   buildQueueShareMessages,
   queueCardShareContext,
-  toLocalDateKey,
+  isQueueDateToday,
 } from '../utils/queue-management-utils';
 
 export function useQueueManagement() {
@@ -53,6 +54,9 @@ export function useQueueManagement() {
   const [loading, setLoading] = useState(false);
   const [loadingBoards, setLoadingBoards] = useState(false);
   const [queueingParcelId, setQueueingParcelId] = useState<string | null>(null);
+  const boardDay = useRef<string | null>(null);
+  const boardRequest = useRef(0);
+  const detailsRequest = useRef(0);
 
   const access = {
     canView: canViewQueueScreen(permissions),
@@ -68,6 +72,14 @@ export function useQueueManagement() {
 
   const refreshBoards = useCallback(async () => {
     if (!branchId || (!canReadReceiverBoard && !canReadSenderBoard)) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const requestId = ++boardRequest.current;
+    if (boardDay.current === null) boardDay.current = today;
+    if (boardDay.current !== today) {
+      boardDay.current = today;
+      setReceiverQueueCards([]);
+      setWaitingPickupQueueCards([]);
+    }
     setLoadingBoards(true);
     try {
       const [receiver, waiting] = await withAuth((token) =>
@@ -76,22 +88,24 @@ export function useQueueManagement() {
           sender: canReadSenderBoard,
         }),
       );
+      if (requestId !== boardRequest.current || today !== new Date().toISOString().slice(0, 10)) {
+        return;
+      }
       setReceiverQueueCards(receiver);
       setWaitingPickupQueueCards(waiting);
     } catch (error) {
+      if (requestId !== boardRequest.current) return;
       notifyError(
         'Queue board failed',
         getMobileErrorMessage(error, '') || 'Unable to load queue boards',
       );
       void hapticError();
     } finally {
-      setLoadingBoards(false);
+      if (requestId === boardRequest.current) setLoadingBoards(false);
     }
   }, [branchId, canReadReceiverBoard, canReadSenderBoard, withAuth]);
 
-  useEffect(() => {
-    void refreshBoards();
-  }, [refreshBoards]);
+  usePickupQueueRefresh(refreshBoards);
 
   const runSearch = useCallback(async () => {
     const term = search.trim();
@@ -126,11 +140,14 @@ export function useQueueManagement() {
         notifyError('Permission denied', 'You do not have permission to view parcel records.');
         return;
       }
+      const id = ++detailsRequest.current;
       setSelectedParcel(parcel);
+      setSelectedDetails(null);
       try {
-        setSelectedDetails(await withAuth((token) => loadQueueParcelDetails(token, parcel.id)));
+        const details = await withAuth((token) => loadQueueParcelDetails(token, parcel.id));
+        if (id === detailsRequest.current) setSelectedDetails(details);
       } catch (error) {
-        setSelectedDetails(null);
+        if (id !== detailsRequest.current) return;
         notifyError(
           'Parcel details failed',
           getMobileErrorMessage(error, '') || 'Unable to load parcel details',
@@ -141,15 +158,14 @@ export function useQueueManagement() {
     [canReadParcels, withAuth],
   );
 
-  const canIssueSelectedQueue = useMemo(() => {
-    if (!selectedParcel) return false;
-    const queuedAt =
-      selectedDetails?.pickupQueue?.queuedAt ?? selectedParcel.pickupQueuedAt ?? null;
-    return (
-      selectedParcel.status === ParcelStatus.AWAITING_PICKUP &&
-      toLocalDateKey(queuedAt) !== toLocalDateKey(new Date().toISOString())
-    );
-  }, [selectedDetails?.pickupQueue?.queuedAt, selectedParcel]);
+  const canIssueSelectedQueue =
+    selectedParcel?.status === ParcelStatus.AWAITING_PICKUP &&
+    !(selectedDetails
+      ? isQueueDateToday(
+          selectedDetails.pickupQueue?.queueDate,
+          selectedDetails.pickupQueue?.queuedAt,
+        )
+      : isQueueDateToday(selectedParcel.pickupQueueDate, selectedParcel.pickupQueuedAt));
 
   const issueSelectedTicket = useCallback(async () => {
     if (!selectedParcel) return;
@@ -158,6 +174,7 @@ export function useQueueManagement() {
       return;
     }
     const parcelId = selectedParcel.id;
+    const detailsId = detailsRequest.current;
     setQueueingParcelId(parcelId);
     try {
       const response = await withAuth((token) => issueQueueTicket(token, parcelId));
@@ -183,7 +200,7 @@ export function useQueueManagement() {
       }
       void hapticSuccess();
       await Promise.all([runSearch(), refreshBoards()]);
-      setSelectedDetails(await withAuth((token) => loadQueueParcelDetails(token, parcelId)));
+      if (detailsId === detailsRequest.current) await selectParcel(selectedParcel);
     } catch (error) {
       notifyError('Queue failed', getMobileErrorMessage(error, '') || 'Unable to queue parcel');
       void hapticError();
@@ -198,6 +215,7 @@ export function useQueueManagement() {
     companyName,
     refreshBoards,
     runSearch,
+    selectParcel,
     selectedParcel,
     withAuth,
   ]);
@@ -252,7 +270,11 @@ export function useQueueManagement() {
     refreshBoards,
     selectParcel,
     issueSelectedTicket,
-    closeDetails: () => setSelectedParcel(null),
+    closeDetails: () => {
+      detailsRequest.current += 1;
+      setSelectedParcel(null);
+      setSelectedDetails(null);
+    },
     copyQueueCode,
     shareQueueCard,
   };

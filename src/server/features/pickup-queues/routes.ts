@@ -26,11 +26,13 @@ export const pickupQueuesRoutes = new Elysia({ name: 'pickup-queues' })
       listActivePickupQueueCardsForBranchCtrl({
         branchId: params.branchId,
         paymentBucket: (query.paymentBucket as 'SP' | 'TP' | undefined) ?? null,
+        todayOnly: query.todayOnly,
       }),
     {
       params: t.Object({ branchId: UUID }),
       query: t.Object({
         paymentBucket: t.Optional(t.Union([t.Literal('SP'), t.Literal('TP')])),
+        todayOnly: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
       detail: { tags: ['Pickup Queues'], summary: 'List active pickup queue cards for a branch' },

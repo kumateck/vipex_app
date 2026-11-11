@@ -46,6 +46,7 @@ export const routes = new Elysia({ name: 'parcel-queries' })
           senderPaid: query.senderPaid ?? null,
           paymentType: query.paymentType ?? null,
           hasPickupQueue: query.hasPickupQueue ?? null,
+          pickupQueueTodayOnly: query.pickupQueueTodayOnly ?? false,
           agedOnly: query.agedOnly ?? null,
           storageChargeAccruing: query.storageChargeAccruing ?? null,
           cashierCollectionRequired: query.cashierCollectionRequired ?? null,
@@ -88,6 +89,7 @@ export const routes = new Elysia({ name: 'parcel-queries' })
           t.Union([t.Literal('paid'), t.Literal('to_be_paid'), t.Literal('partial')]),
         ),
         hasPickupQueue: t.Optional(t.Boolean()),
+        pickupQueueTodayOnly: t.Optional(t.Boolean()),
         agedOnly: t.Optional(t.Boolean()),
         storageChargeAccruing: t.Optional(t.Boolean()),
         cashierCollectionRequired: t.Optional(t.Boolean()),
@@ -157,10 +159,14 @@ export const routes = new Elysia({ name: 'parcel-queries' })
   })
   .get(
     '/:id/details',
-    async ({ params, user }) =>
-      getParcelDetailsCtrl(params.id, { companyId: (user as AuthUser).companyId ?? null }),
+    async ({ params, user, query }) =>
+      getParcelDetailsCtrl(params.id, {
+        companyId: (user as AuthUser).companyId ?? null,
+        pickupQueueTodayOnly: query.pickupQueueTodayOnly,
+      }),
     {
       params: t.Object({ id: UUID }),
+      query: t.Object({ pickupQueueTodayOnly: t.Optional(t.Boolean()) }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
       detail: {
         tags: ['Shipments'],

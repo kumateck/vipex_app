@@ -463,6 +463,7 @@ export async function searchParcels(
     status?: number;
     senderPaid?: boolean;
     includeDeleted?: boolean;
+    pickupQueueTodayOnly?: boolean;
     page?: number;
     pageSize?: number;
   },
@@ -482,6 +483,7 @@ export async function searchParcels(
       status: input.status,
       senderPaid: input.senderPaid,
       includeDeleted: input.includeDeleted,
+      pickupQueueTodayOnly: input.pickupQueueTodayOnly,
     },
   });
 }
@@ -489,10 +491,12 @@ export async function searchParcels(
 export async function getParcelDetails(
   accessToken: string,
   parcelId: string,
+  input: { pickupQueueTodayOnly?: boolean } = {},
 ): Promise<ParcelFullDetails> {
   const payload = await request<unknown>({
     path: `/shipments/parcels/${parcelId}/details`,
     token: accessToken,
+    query: { pickupQueueTodayOnly: input.pickupQueueTodayOnly },
   });
   const candidate =
     typeof payload === 'object' && payload !== null && 'data' in payload
@@ -804,12 +808,15 @@ export async function createPickupQueue(
 
 export async function listPickupQueueCards(
   accessToken: string,
-  input: { branchId: string; paymentBucket?: 'SP' | 'TP' },
+  input: { branchId: string; paymentBucket?: 'SP' | 'TP'; todayOnly?: boolean },
 ): Promise<PickupQueueCard[]> {
   return request<PickupQueueCard[]>({
     path: `/pickup-queues/branch/${input.branchId}/cards`,
     token: accessToken,
-    query: input.paymentBucket ? { paymentBucket: input.paymentBucket } : undefined,
+    query: {
+      ...(input.paymentBucket ? { paymentBucket: input.paymentBucket } : {}),
+      ...(input.todayOnly ? { todayOnly: true } : {}),
+    },
   });
 }
 

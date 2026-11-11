@@ -180,25 +180,29 @@ export async function confirmSignedReceiverHandover(input: Action) {
     if (!collector) throw Conflict('The collector is no longer available');
     await assertNoOpenParcelReconciliationCaseForDelivery(parcel.id, tx);
     await assertParcelFullyPaid(parcel.id, tx);
+    const pickupQueueId = pending.snapshot.pickupQueueId;
     const [payments, storage, [queue]] = await Promise.all([
       listPaymentsForParcelRepo(parcel.id, tx),
       getParcelStorageSettlementSvc(parcel.id, tx),
-      tx
-        .select({ id: pickupQueues.id })
-        .from(pickupQueues)
-        .where(
-          and(
-            eq(pickupQueues.parcelId, parcel.id),
-            eq(pickupQueues.branchId, input.branchId),
-            sql`${pickupQueues.endedAt} is null`,
-          ),
-        )
-        .limit(1),
+      pickupQueueId
+        ? tx
+            .select({ id: pickupQueues.id })
+            .from(pickupQueues)
+            .where(
+              and(
+                eq(pickupQueues.id, pickupQueueId),
+                eq(pickupQueues.parcelId, parcel.id),
+                eq(pickupQueues.branchId, input.branchId),
+                sql`${pickupQueues.endedAt} is null`,
+              ),
+            )
+            .limit(1)
+        : [],
     ]);
     if (
       pending.snapshot.paymentIds.some((id) => !payments.some((payment) => payment.id === id)) ||
       storage.paidPsw + storage.waivedPsw < pending.storageAccruedPsw ||
-      (queue?.id ?? null) !== pending.snapshot.pickupQueueId
+      (queue?.id ?? null) !== pickupQueueId
     ) {
       throw Conflict('Payment, storage or the pickup ticket changed. Ask a supervisor to review.');
     }

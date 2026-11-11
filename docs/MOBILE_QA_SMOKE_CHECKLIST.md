@@ -4,7 +4,7 @@ Last updated: 2026-11-08
 
 ## Waiting for Pickup
 
-Run on Android and iOS, in light/dark mode. These device scenarios are pending execution;
+Run on Android in light/dark mode. These device scenarios are pending execution;
 automated logic tests do not establish device or live provider success. See
 [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md) for current behavior and API dependencies.
 
@@ -18,6 +18,12 @@ automated logic tests do not establish device or live provider success. See
   confirm handover is blocked until a ticket exists. With queues disabled, require search.
   Confirm the active ticket number appears when enabled. Disable queues and refresh, then
   search for the same parcel and verify its queue number stays hidden.
+  Leave an unserved ticket dated yesterday, then load Queue Management and Waiting for Pickup on
+  the next day: yesterday's ticket must not appear or satisfy handover. Search the parcel, issue
+  a new ticket, and verify the current-day number appears and handover requires that ticket.
+  Leave Queue Management and Waiting for Pickup open through midnight Ghana time and verify old
+  tickets clear and refresh to today's queue. Background and resume Android and verify both
+  screens refresh. Open a prior-day parcel and verify its old code is hidden.
   Confirm status/company/destination scope and no principal/storage collection due.
 - Search separately by booking code, tracking code, sender name/phone and receiver name/phone.
   Include secondary phone numbers and partial names, then verify the result shows both parties.

@@ -597,6 +597,21 @@ retry behavior, permissions and deployment requirements.
 - `POST /v1/payments/receiver-otp/request` accepts optional `channel: 'sms' | 'whatsapp'` and
   returns `{ expiresAt, channel }`.
 
+### Daily pickup queues
+
+`GET /v1/pickup-queues/branch/:branchId/cards?paymentBucket=TP|SP&todayOnly=true` returns active
+queue cards for the Ghana calendar day (midnight UTC). Both queue boards default to today;
+`todayOnly=false` includes earlier open tickets for eligible parcels on the cards endpoint.
+Parcel lists for Awaiting Pickup and details for awaiting parcels default to today's open ticket.
+Other list/search requests can set `pickupQueueTodayOnly=true` to restrict queue fields while
+retaining unqueued search results. General parcel lists return at most one queue row per parcel;
+the dedicated reassignment list can still find a picker recorded on a legacy active ticket.
+
+Issue a new ticket if the parcel was unserved on a prior day. Repeat requests for an eligible
+parcel return the existing ticket for today. Queue-enabled office pickup and receiver payment
+require today's open ticket and return HTTP 409 if it is missing. A receiver payment already
+awaiting signature retains its original ticket for confirmation, even across midnight.
+
 ## Receiver OTP Send Failures
 
 `POST /v1/payments/receiver-otp/request` still returns `{ expiresAt }` after successful SMS

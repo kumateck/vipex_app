@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { createCallCenterMigrationFixture } from '../utils/call-center-migration-fixture';
+import { createMigrationJournalFixture } from '../utils/migration-journal-fixture';
 
 const databaseUrl = process.env.MIGRATION_TEST_DATABASE_URL;
 
@@ -18,22 +19,22 @@ describe.skipIf(!databaseUrl)('call-center assignment migration safety', () => {
   afterAll(() => fixture?.close());
 
   test('the standard migrator applies the registered repair after the previous journal entry', async () => {
-    const journal = await Bun.file('drizzle/meta/_journal.json').json();
-    const previous = journal.entries.find(
-      (entry: { tag: string }) => entry.tag === '0077_parcel_storage_clearance',
-    );
-    await sql.unsafe(`CREATE SCHEMA drizzle;
+    const journal = await createMigrationJournalFixture('0078_parcel_call_center_assignment');
+    try {
+      await sql.unsafe(`CREATE SCHEMA drizzle;
       CREATE TABLE drizzle.__drizzle_migrations (id serial PRIMARY KEY, hash text NOT NULL, created_at bigint);`);
-    await sql`INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('fixture-baseline', ${previous.when})`;
-    await migrate(drizzle(sql), { migrationsFolder: './drizzle' });
-    const ledger =
-      await sql`SELECT created_at FROM drizzle.__drizzle_migrations ORDER BY created_at`;
-    expect(ledger).toHaveLength(
-      journal.entries.filter((entry: { when: number }) => entry.when >= previous.when).length,
-    );
-    expect(Number(ledger.at(-1)?.created_at)).toBe(journal.entries.at(-1).when);
-    const [parcel] = await sql`SELECT call_center_assigned_to_user_id FROM public.parcels`;
-    expect(parcel?.call_center_assigned_to_user_id).toBeNull();
+      await sql`INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('fixture-baseline', ${journal.previous.when})`;
+      await migrate(drizzle(sql), { migrationsFolder: journal.folder });
+      const ledger =
+        await sql`SELECT created_at FROM drizzle.__drizzle_migrations ORDER BY created_at`;
+      expect(ledger.map((row) => Number(row.created_at))).toEqual(
+        [journal.previous, ...journal.entries].map(({ when }) => when),
+      );
+      const [parcel] = await sql`SELECT call_center_assigned_to_user_id FROM public.parcels`;
+      expect(parcel?.call_center_assigned_to_user_id).toBeNull();
+    } finally {
+      await journal.cleanup();
+    }
   });
 
   test('adds a nullable column without changing parcels or payment amounts', async () => {

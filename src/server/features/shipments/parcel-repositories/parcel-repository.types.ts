@@ -84,6 +84,7 @@ export type ListParcelsParams = {
   senderPaid?: boolean | null;
   paymentType?: 'paid' | 'to_be_paid' | 'partial' | null;
   hasPickupQueue?: boolean | null;
+  pickupQueueTodayOnly?: boolean;
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;
   cashierCollectionRequired?: boolean | null;

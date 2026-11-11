@@ -184,6 +184,13 @@ describe('Receiver Cashier signature handover', () => {
     const [before] = await db.select().from(parcels).where(eq(parcels.id, parcel.id));
     expect(before?.status).toBe(ParcelStatus.AWAITING_PICKUP);
     expect(before?.confirmedAt).toBeNull();
+    const yesterday = new Date();
+    yesterday.setUTCHours(0, 0, 0, 0);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    await db
+      .update(pickupQueues)
+      .set({ queueDate: yesterday })
+      .where(eq(pickupQueues.id, ticket.id));
     const results = await Promise.all([
       confirmSignedReceiverHandover(action),
       confirmSignedReceiverHandover(action),
