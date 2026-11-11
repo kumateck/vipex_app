@@ -1,4 +1,5 @@
 import { requireOtpSmsDelivery, type OtpDeliveryChannel } from './otp-sms-delivery';
+import { RECEIVER_OTP_EXPIRY_MINUTES } from '@/shared/shipments/receiver-otp-session';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { BadRequest, Conflict, NotFound, Unauthorized } from '@/server/utils/http-error';
 import { generateOpaqueToken, generateOtpCode, hashOtp } from '@/server/utils/otp';
@@ -18,7 +19,6 @@ import {
   type TargetReceiver,
 } from './repository';
 
-const OTP_TTL_MS = 5 * 60 * 1000;
 const VERIFICATION_TOKEN_TTL_MS = 10 * 60 * 1000;
 
 async function assertOfficePickupParcel(parcelId: string) {
@@ -104,7 +104,7 @@ export async function requestReceiverOtpSvc(input: {
 
   const otp = generateOtpCode();
   const otpHash = await hashOtp(input.parcelId, otp);
-  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+  const expiresAt = new Date(Date.now() + RECEIVER_OTP_EXPIRY_MINUTES * 60_000);
 
   const created = await createParcelReceiverOtpRepo({
     companyId: input.companyId,
@@ -125,7 +125,14 @@ export async function requestReceiverOtpSvc(input: {
     phone,
     recipientType: input.targetReceiver === 'second' ? 'second_receiver' : 'receiver',
     recipientName: name,
-    variables: { receiverName: name, otp, expiresInMinutes: 5, branch, location, locationPhone },
+    variables: {
+      receiverName: name,
+      otp,
+      expiresInMinutes: RECEIVER_OTP_EXPIRY_MINUTES,
+      branch,
+      location,
+      locationPhone,
+    },
     metadataJson: {
       parcelId: input.parcelId,
       targetReceiver: input.targetReceiver,

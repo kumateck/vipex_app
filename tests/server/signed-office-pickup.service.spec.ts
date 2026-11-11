@@ -22,6 +22,7 @@ const signatureImage = encodeHandoverSignature(
   300,
   240,
 );
+const receiverTelephone = '0240000000';
 
 describe('signed office pickup', () => {
   let fixture: Awaited<ReturnType<typeof createShelfPickupFixture>>;
@@ -41,6 +42,10 @@ describe('signed office pickup', () => {
   async function setup(day = 0) {
     const parcel = await fixture.parcel();
     await db
+      .update(customers)
+      .set({ telephone: receiverTelephone })
+      .where(eq(customers.id, parcel.receiverId));
+    await db
       .update(parcels)
       .set({ chargePsw: 0, plannedToBePaidPsw: 0, receivedAt: new Date() })
       .where(eq(parcels.id, parcel.id));
@@ -52,7 +57,7 @@ describe('signed office pickup', () => {
         branchId: fixture.branchId,
         parcelId: parcel.id,
         targetReceiver: 'main',
-        phone: '0240000000',
+        phone: receiverTelephone,
         otpHash: 'fixture',
         createdBy: fixture.actor,
         expiresAt: new Date(Date.now() + 60_000),
@@ -131,6 +136,11 @@ describe('signed office pickup', () => {
     await expect(
       confirmOfficePickupSvc({ ...input, receiverOtpVerificationToken: 'invalid' }),
     ).rejects.toThrow('verification');
+    await db
+      .update(parcelReceiverOtps)
+      .set({ phone: '0240000001' })
+      .where(eq(parcelReceiverOtps.id, otp.id));
+    await expect(confirmOfficePickupSvc(input)).rejects.toMatchObject({ status: 401 });
     const [saved] = await db.select().from(parcels).where(eq(parcels.id, parcel.id));
     const [queue] = await db.select().from(pickupQueues).where(eq(pickupQueues.id, ticket.id));
     const [verified] = await db

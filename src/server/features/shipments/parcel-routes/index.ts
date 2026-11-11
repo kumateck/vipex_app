@@ -7,7 +7,9 @@ import { routes as routes4 } from './call-outcomes';
 import { routes as routes5 } from './delivery-actions';
 import { routes as routes6 } from './receiving';
 import { routes as routes7 } from './payments-and-shelf';
+import { customerCorrectionRoutes } from '../customer-corrections';
 export const parcelsRoutes = new Elysia({ name: 'parcels' })
+  .use(customerCorrectionRoutes)
   .use(routes0)
   .use(routes1)
   .use(routes2)

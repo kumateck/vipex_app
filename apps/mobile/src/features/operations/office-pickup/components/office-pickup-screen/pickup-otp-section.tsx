@@ -29,7 +29,8 @@ export function PickupOtpSection(props: Props) {
   const remaining = useOtpCountdown(otp.verified ? null : otp.expiresAt);
   const isExpired = Boolean(otp.sentAt) && remaining <= 0;
   const activePhone = phoneSlot === 'secondary' ? receiverPhone2 : receiverPhone;
-  const busy = props.disabled || otp.requestPending || otp.verifyPending;
+  const busy =
+    props.disabled || otp.requestPending || otp.verifyPending || Boolean(otp.restoreError);
   const muted = { color: theme.colors.textMuted };
 
   return (
@@ -40,6 +41,18 @@ export function PickupOtpSection(props: Props) {
         </Text>
         {otp.verified ? <AppStatusChip label="Verified" /> : null}
       </View>
+      {otp.restoreError ? (
+        <View accessibilityRole="alert">
+          <Text style={[pickupStyles.hint, { color: theme.colors.danger }]}>
+            {otp.restoreError}
+          </Text>
+          <AppButton
+            title="Retry OTP recovery"
+            onPress={() => void otp.retryRestore()}
+            disabled={otp.restoring}
+          />
+        </View>
+      ) : null}
       {otp.verified ? (
         <Text style={[pickupStyles.text, muted]}>
           Customer presence confirmed with the one-time collection code.
@@ -71,7 +84,11 @@ export function PickupOtpSection(props: Props) {
             />
           ) : null}
           <AppButton
-            title={getOtpSendLabel({ pending: otp.requestPending, sent: Boolean(otp.sentAt) })}
+            title={
+              otp.restoring
+                ? 'Restoring OTP…'
+                : getOtpSendLabel({ pending: otp.requestPending, sent: Boolean(otp.sentAt) })
+            }
             variant={otp.sentAt ? 'secondary' : 'primary'}
             loading={otp.requestPending}
             disabled={busy}

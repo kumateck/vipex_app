@@ -195,15 +195,15 @@ A pickup OTP request only succeeds after SMS dispatch reports provider acceptanc
 configuration, no default provider, provider rejection or a dispatch exception returns HTTP 503
 and expires the newly generated undelivered OTP, so a fresh attempt is possible. The failed
 notification dispatch remains visible with its error for diagnosis. A failed forced resend does
-not invalidate a previous successfully sent OTP. Existing code expiry/verification rules and
-parcel/payment state remain unchanged. Provider acceptance is not proof of handset delivery;
+not invalidate a previous successfully sent OTP. Newly issued pickup codes expire after 10 minutes,
+and the default SMS body uses this expiry. Provider acceptance is not proof of handset delivery;
 use BMS delivery reports to investigate messages accepted but not received. `log_only` remains
 a simulation provider and does not send a real SMS.
 
 Previously, the pickup OTP endpoint discarded the SMS dispatch result and could return success
 for a failed send. This is corrected in the application source; production delivery and current
 wallet/provider settings must be checked separately. Codes created by the previous behavior
-retain their five-minute expiry or can be replaced through the existing forced-resend action.
+retain their stored expiry or can be replaced through the existing forced-resend action.
 
 QA: mock missing/default-provider/configuration errors, provider rejection and thrown transport
 errors; expect HTTP 503, failed-code expiry and no parcel/payment changes. Retry after fixing

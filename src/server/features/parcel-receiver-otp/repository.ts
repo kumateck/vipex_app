@@ -7,6 +7,22 @@ type DbExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0
 export type TargetReceiver = 'main' | 'second';
 export type PhoneSlot = 'primary' | 'secondary';
 
+// A code or token issued before a customer correction must still belong to a
+// telephone on the parcel's current linked receiver, including after a racing resend.
+export const currentReceiverPhone = sql`exists (
+  select 1 from parcels p
+  join customers c on c.id = case
+    when ${parcelReceiverOtps.targetReceiver} = 'main' then p.receiver_id
+    when ${parcelReceiverOtps.targetReceiver} = 'second' then p.second_receiver_id
+  end
+  where p.id = ${parcelReceiverOtps.parcelId}
+    and p.company_id = ${parcelReceiverOtps.companyId}
+    and c.company_id = p.company_id and not p.is_deleted and not c.is_deleted
+    and (${parcelReceiverOtps.phone} = c.telephone or (
+      ${parcelReceiverOtps.targetReceiver} = 'main' and ${parcelReceiverOtps.phone} = c.telephone2
+    ))
+)`;
+
 export async function createParcelReceiverOtpRepo(values: typeof parcelReceiverOtps.$inferInsert) {
   const [row] = await db.insert(parcelReceiverOtps).values(values).returning();
   return row ?? null;
@@ -25,6 +41,7 @@ export async function getActiveParcelReceiverOtpRepo(
         eq(parcelReceiverOtps.targetReceiver, targetReceiver),
         isNull(parcelReceiverOtps.verifiedAt),
         gt(parcelReceiverOtps.expiresAt, new Date()),
+        currentReceiverPhone,
       ),
     )
     .orderBy(desc(parcelReceiverOtps.createdAt))
@@ -75,6 +92,7 @@ export async function getVerifiedOtpByTokenRepo(
         eq(parcelReceiverOtps.targetReceiver, targetReceiver),
         eq(parcelReceiverOtps.verificationToken, token),
         gt(parcelReceiverOtps.verificationTokenExpiresAt, new Date()),
+        currentReceiverPhone,
       ),
     )
     .orderBy(desc(parcelReceiverOtps.createdAt))

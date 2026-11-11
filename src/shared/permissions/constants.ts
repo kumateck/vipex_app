@@ -65,6 +65,16 @@ const catalog = [
   ['CanRepairParcelFinancialState', 'Preview and repair parcel financial state', 'Shipments'],
   ['CanCreateParcels', 'Create parcels', 'Shipments'],
   ['CanUpdateParcels', 'Update parcels', 'Shipments'],
+  [
+    'CanCorrectParcelCustomers',
+    'Relink parcel customers by booking code across company branches before delivery',
+    'Shipments',
+  ],
+  [
+    'CanOverrideParcelCustomerDetails',
+    'Correct parcel and customer names and telephones across company branches before delivery',
+    'Shipments',
+  ],
   ['CanUpdateParcelCharge', 'Request correction of a zero parcel charge to credit', 'Shipments'],
   ['CanApproveParcelCharge', 'Approve and apply zero parcel charge corrections', 'Shipments'],
   ['CanDeleteParcels', 'Delete parcels', 'Shipments'],
@@ -813,6 +823,7 @@ export const AccountingSetupPermissionKeys = Object.freeze({
 });
 
 export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> = Object.freeze({
+  '/parcels/customer-corrections': PermissionKeys.CanCorrectParcelCustomers,
   '/customer-messages': PermissionKeys.CanReadCustomerMessages,
   '/users/password-management': PermissionKeys.CanSetUserPassword,
   '/parcels/sender-payments': PermissionKeys.CanCreateSenderPayments,
