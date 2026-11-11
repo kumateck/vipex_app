@@ -183,12 +183,13 @@ field to custom webhook providers). Ordinary queue, parcel-status, template, and
 not include `sms_type`. Account setup and password-reset OTP delivery is currently email-only.
 
 Pickup OTP delivery uses the BMS/mNotify quick-SMS endpoint with `recipient` as an array,
-`sms_type: "otp"` and the JSON boolean `is_schedule: false`, matching
-[BMS OTP documentation](https://bms.africa/otp). The OTP flag uses the provider's main wallet,
+`sms_type: "otp"` and the JSON boolean `is_schedule: false`, matching the
+[BMS quick-SMS documentation](https://readthedocs.mnotify.com/sms/quick). The OTP flag uses the provider's main wallet,
 which is billed separately from SMS credit bundles. The app's SMS-balance lookup does not
 verify that main-wallet balance. Enabling a branch's OTP requirement does not select or
-configure an SMS provider: the company still needs an active default SMS provider, an enabled
-API key and an approved sender ID.
+configure an SMS provider: the company still needs an active default SMS provider and an enabled
+API key. The sender ID must be approved for OTP and registered with the correct application/site
+URL; a regular approved SMS sender ID is not sufficient for OTP traffic.
 
 A pickup OTP request only succeeds after SMS dispatch reports provider acceptance. Missing
 configuration, no default provider, provider rejection or a dispatch exception returns HTTP 503
@@ -264,16 +265,21 @@ existing count-based feedback; the API fields are additive.
 
 ### mNotify HTTP errors
 
-Quick SMS requests use the [BMS documented endpoint and JSON format](https://developer.bms.africa/),
+Quick SMS requests use the [mNotify BMS API v2 endpoint and JSON format](https://readthedocs.mnotify.com/),
 with `Accept: application/json`. HTTP 5xx responses, including HTML error pages containing
 monitoring scripts, are recorded as readable mNotify service errors. A 5xx response does not
 confirm whether the provider accepted the SMS. Check mNotify delivery reports before manually
 retrying; if service errors persist, contact mNotify support with the failure time and endpoint.
 The app makes one request and does not automatically retry billable sends. Non-5xx JSON errors
-retain their provider message with the API key redacted; non-JSON errors use a readable fallback.
-This transport behavior applies to all mNotify SMS callers, including pickup OTPs. It does not
-resolve an outage or account problem at the provider, and local tests do not establish live
-delivery or deployment status.
+retain their provider message with API credentials redacted; safe plain-text provider reasons are
+also retained. HTML response bodies are suppressed, with their content type included in the mNotify
+fallback diagnostic. WhatsApp Graph errors use the same parser. A 403 containing no JSON or plain
+text detail confirms provider rejection but does not identify the exact account setting; check the
+active API key and approved OTP sender ID configuration in BMS before contacting support. The
+mobile/web/desktop request shape follows BMS quick-SMS documentation, but cannot override a disabled
+key or unapproved sender. This transport behavior applies to all mNotify SMS callers, including
+pickup OTPs. It does not resolve an outage or account problem at the provider, and local tests do
+not establish live delivery or deployment status.
 
 ### Resending saved call outcomes
 

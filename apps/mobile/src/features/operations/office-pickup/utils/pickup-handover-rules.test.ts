@@ -4,6 +4,8 @@ import {
   buildSignedPickupConfirmation,
   EMPTY_CARD_SELECTION,
   getConfirmBlocker,
+  getCurrentDayPickupQueue,
+  isPickupQueueForCurrentDay,
   resolveCardSelection,
   resolveShelfPickerStaffId,
   validateSecondReceiverInput,
@@ -30,15 +32,33 @@ const ready = {
 };
 
 describe('office pickup handover rules', () => {
-  test('uses the parcel shelf picker, then the queue ticket picker', () => {
+  test('uses the parcel shelf picker, then only a current-day queue ticket picker', () => {
+    const today = new Date(2026, 10, 10, 12);
     const details = (parcel: string | null, queue: string | null) =>
       ({
         parcel: { shelfPickerStaffId: parcel },
-        pickupQueue: queue ? { pickerStaffId: queue } : null,
+        pickupQueue: queue
+          ? {
+              pickerStaffId: queue,
+              queueDate: '2026-11-10T00:00:00.000Z',
+              queuedAt: '2026-11-10T10:00:00.000Z',
+            }
+          : null,
       }) as unknown as PickupParcelDetails;
     expect(resolveShelfPickerStaffId(details('p', 'q'))).toBe('p');
-    expect(resolveShelfPickerStaffId(details(null, 'q'))).toBe('q');
-    expect(resolveShelfPickerStaffId(details(null, null))).toBe('');
+    expect(resolveShelfPickerStaffId(details(null, 'q'), today)).toBe('q');
+    const yesterday = {
+      ...details(null, 'old'),
+      pickupQueue: {
+        pickerStaffId: 'old',
+        queueDate: '2026-11-09T00:00:00.000Z',
+        queuedAt: '2026-11-09T10:00:00.000Z',
+      },
+    } as unknown as PickupParcelDetails;
+    expect(resolveShelfPickerStaffId(yesterday, today)).toBe('');
+    expect(getCurrentDayPickupQueue(yesterday, today)).toBeNull();
+    expect(isPickupQueueForCurrentDay(yesterday.pickupQueue, today)).toBe(false);
+    expect(resolveShelfPickerStaffId(details(null, null), today)).toBe('');
   });
 
   test('blocks confirmation until all pickup checks are met', () => {

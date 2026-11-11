@@ -1,5 +1,6 @@
 import { toMsisdn } from '@/server/utils/phone-msisdn';
 import type { DeliveryResult } from '../types';
+import { readProviderHttpError } from '../utils/provider-http-error';
 import {
   buildWhatsAppTemplatePayload,
   resolveWhatsAppConfig,
@@ -50,6 +51,19 @@ export async function sendWhatsAppTemplate(
       },
     );
 
+    if (!response.ok) {
+      const providerError = await readProviderHttpError(response, (value) =>
+        value.replaceAll(config.accessToken, '[REDACTED]'),
+      );
+      return {
+        status: 'failed',
+        errorMessage: safeError(
+          `WhatsApp API returned ${response.status} (code ${providerError.code ?? 'n/a'}): ${providerError.detail || 'No error detail returned'}`,
+          config.accessToken,
+        ),
+      };
+    }
+
     let payload: {
       messages?: Array<{ id?: unknown }>;
       error?: { message?: unknown; code?: unknown };
@@ -60,15 +74,11 @@ export async function sendWhatsAppTemplate(
       payload = null;
     }
 
-    if (!response.ok || payload?.error) {
-      const detail =
-        typeof payload?.error?.message === 'string'
-          ? payload.error.message
-          : 'No error detail returned';
+    if (payload?.error) {
       return {
         status: 'failed',
         errorMessage: safeError(
-          `WhatsApp API returned ${response.status} (code ${String(payload?.error?.code ?? 'n/a')}): ${detail}`,
+          `WhatsApp API returned ${response.status} (code ${String(payload.error.code ?? 'n/a')}): ${typeof payload.error.message === 'string' ? payload.error.message : 'No error detail returned'}`,
           config.accessToken,
         ),
       };

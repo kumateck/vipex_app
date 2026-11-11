@@ -25,14 +25,20 @@ printing and the full web cashier table are not implemented by this feature.
   Tap a matching parcel to open its details. Multiple parcels can share a booking code.
   An unknown or ineligible code returns no results. Manual search remains available if
   camera access is denied. Deploy the server's `parcelCode` filter before shipping this app build.
-- The query fixes company and destination branch, `status=AWAITING_PICKUP` and
-  `cashierCollectionRequired=false`. No payment-method filter is sent: eligibility depends on
-  the remaining balance, even though the UI calls these sender-paid parcels.
-- With `usePickupQueue=true`, the initial list is restricted to queued parcels. A search drops
-  that queue filter so staff can also find a parcel without a ticket. Handover still requires
-  a ticket when queues are enabled; create it through the separate Queue workflow.
-- Awaiting Pickup results show an active ticket’s queue number only when pickup queues are
-  enabled for the branch. Turning queues off hides numbers even on parcels with older tickets.
+- The query fixes company and destination branch, `status=AWAITING_PICKUP`,
+  `cashierCollectionRequired=false`, and `pickupQueueTodayOnly=true` when queues are enabled. No
+  payment-method filter is sent: eligibility depends on the remaining balance, even though the
+  UI calls these sender-paid parcels.
+- With `usePickupQueue=true`, the initial list is restricted to parcels with a ticket dated today.
+  A search drops that queue-presence filter so staff can find unqueued parcels, while retaining
+  the current-day queue-date filter. Handover still requires a ticket dated today; issue it through
+  Queue Management.
+- Queue Management boards and mobile Awaiting Pickup show current-day tickets only. A ticket left
+  unserved from yesterday remains historical and does not count for today's handover. Staff can
+  issue a fresh queue code for today's date. Queue numbers are hidden when the branch disables
+  pickup queues, including numbers on older tickets. Queue details requests also ask the server
+  to omit previous-day active tickets. Queue Management and Waiting for Pickup reload when the
+  screen is reopened, when Android resumes it, and at midnight Ghana time (UTC).
 - With queues disabled, staff must search or scan before results load. Results are limited to
   the first 20 matches; there is currently no paging/load-more control. Narrow a search when
   needed. Mobile does not send an explicit sort.
@@ -41,7 +47,7 @@ printing and the full web cashier table are not implemented by this feature.
 
 Opening a result loads parcel details, active location staff, card types and existing main/
 second receiver cards in parallel. Required-resource failure shows retry/back controls and
-blocks completion. The shelf picker is initialized from the parcel, then its queue ticket;
+blocks completion. The shelf picker is initialized from the parcel, then today's queue ticket;
 an existing assignment is read-only. Otherwise select active staff at the signed-in location.
 An account without a location cannot load staff choices.
 
@@ -71,7 +77,7 @@ uses the rider delivery drawing pad. **Clear** starts the drawing again and **Sa
 keeps the drawing on the form. A tap without a stroke cannot be saved. Changing collector,
 editing a new second receiver’s details or reopening the parcel requires a fresh signature.
 
-Confirmation requires a shelf picker, any required queue ticket, OTP when enabled, and the
+Confirmation requires a shelf picker, today's queue ticket when the branch uses queues, OTP when enabled, and the
 collector’s signature. Local validation happens before writes. Submission saves new cards,
 resolves a new second receiver when needed and sends the signed confirmation. Collecting as the
 main receiver retains a linked second receiver and clears second-card handover fields.
@@ -87,6 +93,7 @@ All paths below have the `/v1` prefix. Signed pickup uses the existing office pi
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /branches/:id/operations-settings`                    | Authentication; own branch, or branch-read access within company. Reads `usePickupQueue` and `requirePickupOtp`.                                                                                                                            |
 | `GET /shipments/parcels`                                   | Parcel read (the endpoint also accepts call-center assignment read); client narrows to company/destination branch and eligible balance/status.                                                                                              |
+| `GET /pickup-queues/branch/:id/cards?todayOnly=true`       | `CanReadParcels`; mobile queue boards request current-day active cards only.                                                                                                                                                                |
 | `GET /shipments/parcels/:id/details`                       | `CanReadParcels`; required handover resource.                                                                                                                                                                                               |
 | `GET /users/options`                                       | `CanReadUsers`; active company/branch/location staff.                                                                                                                                                                                       |
 | `GET /customers/cards/options`, `GET /customers/:id/cards` | `CanReadCustomers`; required handover resources.                                                                                                                                                                                            |

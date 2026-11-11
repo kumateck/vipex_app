@@ -5,19 +5,17 @@ import {
   listPickupQueueCards,
   searchParcels,
 } from '@mobile/lib/api';
+import { buildQueueBoardQueries } from './queue-management-queries';
 
 export function loadQueueBoards(
   token: string,
   branchId: string,
   access: { receiver: boolean; sender: boolean },
 ) {
+  const [receiverQuery, senderQuery] = buildQueueBoardQueries(branchId, access);
   return Promise.all([
-    access.receiver
-      ? listPickupQueueCards(token, { branchId, paymentBucket: 'TP' })
-      : Promise.resolve([]),
-    access.sender
-      ? listPickupQueueCards(token, { branchId, paymentBucket: 'SP' })
-      : Promise.resolve([]),
+    receiverQuery ? listPickupQueueCards(token, receiverQuery) : Promise.resolve([]),
+    senderQuery ? listPickupQueueCards(token, senderQuery) : Promise.resolve([]),
   ]);
 }
 
@@ -30,13 +28,14 @@ export function searchQueueParcels(
     companyId: input.companyId,
     destinationId: input.branchId,
     status: ParcelStatus.AWAITING_PICKUP,
+    pickupQueueTodayOnly: true,
     page: 1,
     pageSize: 20,
   });
 }
 
 export function loadQueueParcelDetails(token: string, parcelId: string) {
-  return getParcelDetails(token, parcelId);
+  return getParcelDetails(token, parcelId, { pickupQueueTodayOnly: true });
 }
 
 export function issueQueueTicket(token: string, parcelId: string) {

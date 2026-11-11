@@ -80,12 +80,12 @@ separate step; review pre-existing orphan values if validation fails. Applicatio
 leave the additive column/FK in place without changing parcel data. This change does not run a
 production migration automatically.
 
-Read-only preflight on 2026-10-12 confirmed the configured production database has migrations
-through `0078` applied and lacks `charge_agent_user_id`. Both
-`0079_pickup_queue_legacy_uniqueness` and `0080_parcel_charge_agent` are pending. Production
-still has the legacy parcel-only pickup queue unique index alongside the valid daily indexes;
-review that earlier repair before invoking the migration runner. No production writes were
-performed for this check.
+Historical read-only preflight on 2026-10-12 found the configured production database at migration
+`0078`, with `0079_pickup_queue_legacy_uniqueness` and `0080_parcel_charge_agent` pending and the
+legacy parcel-only queue index still present. This is not a current schema check: verify the target
+server's migration ledger and indexes before deployment. If the legacy index remains, `0079` must
+be applied before a parcel with an unserved ticket can receive a ticket on a later date. No
+production writes were performed for that preflight.
 
 QA covers multi-parcel selections, independent creator/cashier attribution, inactive/wrong-branch/
 wrong-company rejection, unchanged payments and amounts, empty selection, failed lookup/retry,
@@ -246,6 +246,22 @@ Run `bun run migrate:test`, then `bun run test:prepush`; do not skip the hook or
 from tests to hide the failure. Production repair requires verifying that environment's current
 indexes; applying this migration to the local test database does not update production.
 
+Queue boards and **Waiting for Pickup** use the current Ghana calendar day (midnight UTC) on
+web, desktop and Android. Search still finds parcels without a current ticket. Issue a fresh
+ticket for a parcel that went unserved on a previous day. Both ticket rows remain in history,
+and leaving the pickup workflow closes all open tickets for the parcel. Concurrent requests
+for the same parcel return today's ticket; numbers are reserved in sequence for each branch,
+location and date, including the branch's fallback queue with no location. General parcel lists
+show one queue row per parcel. The dedicated reassignment screen still recognises a picker
+stored on an older active ticket.
+
+Office pickup and new receiver payment require today's ticket where the branch uses queues.
+An already processed receiver payment keeps its original ticket for signature and confirmation
+across midnight. Staff open that parcel in **Awaiting Signature**. QA: keep a ticket open from
+yesterday, search for the parcel today and issue a new ticket twice. Verify both requests return
+today's code, the parcel appears once, and successful handover closes the open tickets while
+preserving their records. Repeat with an already processed receiver payment awaiting signature.
+
 **Pickup & Collection → Reassign Shelf Pickup** opens the separate page at
 `/parcels/shelf-pickup-reassignment`. It requires the existing
 `CanUpdateParcelShelfPicker` permission; `CanReadShelfPickerUpdate` alone does not allow
@@ -310,7 +326,7 @@ Verify both date lines for a newly received parcel and the `-` fallback for a le
 receipt timestamp.
 
 Web and Electron **Shelf Picker Update** show a **Queue Number** column when the signed-in
-branch uses pickup queues. It shows the latest active ticket number, or `—` for search results
+branch uses pickup queues. It shows today's active ticket number, or `—` for search results
 without an active ticket. Ended tickets do not supply a number or duplicate rows. The column
 is hidden when queues are disabled. Mobile shows the queue number on **Awaiting Pickup**
 results for active tickets only when the branch uses pickup queues. QA: compare a branch
@@ -1409,10 +1425,8 @@ behavior:
   the backend to establish connections with this setting; a frontend/mobile update alone does
   not apply it. No migration is needed.
 - The row query and the count query run in parallel.
-- The count query joins only the tables its filters reference: customers only when a search
-  term is present, consignment tables only for sent-date or consignment-number filters.
-  Deliveries and pickup queues are always joined because they are not unique per parcel and the
-  row query joins them, so the total stays equal to the rows returned.
+- The count query joins customers for search, consignment tables for consignment filters, and
+  pickup queues for queue and picker filters. The queue join returns at most one row per parcel.
 - When a filter needs the company's storage policy, the list loads it once and reuses it for the
   storage snapshot.
 - Migration `0083_parcel_search_indexes` adds `parcels (company_id, destination_id, status)`

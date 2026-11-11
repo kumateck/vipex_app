@@ -1,24 +1,23 @@
 import { ParcelStatus } from '@/db/schemas/enums';
 import { db } from '@/db/config';
+import type { pickupQueues } from '@/db/schemas';
 import { Conflict, NotFound } from '@/server/utils/http-error';
 import { getBranchSvc } from '../branches/service';
 import { getLocationSvc } from '../locations/service';
 import { getParcelSvc } from '../shipments/parcels.service';
 import { sendPickupQueueNotificationSvc } from '../notification-hub/service';
+import { getPickupQueueDate } from './queue-date';
 import {
   createPickupQueueRepo,
   getNextPickupQueueNumberRepo,
   getPickupQueueByParcelAndDateRepo,
-  getPickupQueueByParcelRepo,
-  updatePickupQueueRepo,
+  endOpenPickupQueuesRepo,
+  lockPickupQueueNumberRepo,
+  lockPickupQueueParcelRepo,
   listActivePickupQueuesForBranchRepo,
 } from './repository';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
-
-function toQueueDate(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
 
 const CROCKFORD_BASE32_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const DATE_CODE_EPOCH_UTC = Date.UTC(2025, 10, 14); // 2025-11-14
@@ -67,8 +66,7 @@ function encodeCrockfordBase32(value: number) {
 }
 
 function toDateCode(queueDate: Date) {
-  const dayUtc = Date.UTC(queueDate.getFullYear(), queueDate.getMonth(), queueDate.getDate());
-  const daysSinceEpoch = Math.floor((dayUtc - DATE_CODE_EPOCH_UTC) / 86_400_000);
+  const daysSinceEpoch = Math.floor((queueDate.getTime() - DATE_CODE_EPOCH_UTC) / 86_400_000);
   if (daysSinceEpoch < 0 || daysSinceEpoch > 1023) {
     throw Conflict('Queue date is outside supported date-code range');
   }
@@ -84,8 +82,7 @@ function formatQueueCode(input: {
   return `${toTypeCode(input.paymentBucket)}${toLocationCode(input.locationName)}-${toDateCode(input.queueDate)}${String(input.queueNumber).padStart(3, '0')}`;
 }
 
-function mapPickupQueue(queue: Awaited<ReturnType<typeof getPickupQueueByParcelRepo>>) {
-  if (!queue) return null;
+function mapPickupQueue(queue: typeof pickupQueues.$inferSelect) {
   return {
     ...queue,
     queueDate: queue.queueDate.toISOString(),
@@ -108,19 +105,14 @@ export async function createPickupQueueSvc(input: {
   if (parcel.status !== ParcelStatus.AWAITING_PICKUP) {
     throw Conflict('Queue tickets can only be created for parcels awaiting pickup');
   }
+  if (parcel.hasPendingReceiverHandover) {
+    throw Conflict('Payment is already processed. Open the parcel in Awaiting Signature.');
+  }
 
   const branch = await getBranchSvc(parcel.destinationId);
   if (!branch.usePickupQueue) {
     throw Conflict('This branch is not using pickup queue');
   }
-
-  const queueDate = toQueueDate(new Date());
-
-  const existing = await getPickupQueueByParcelAndDateRepo({
-    parcelId: input.parcelId,
-    queueDate,
-  });
-  if (existing) return { ...mapPickupQueue(existing), smsSent: false };
 
   const paymentBucket = Number(parcel.plannedToBePaidPsw ?? 0) > 0 ? 'TP' : 'SP';
   const queueLocationId = parcel.pickupLocationId ?? null;
@@ -136,12 +128,35 @@ export async function createPickupQueueSvc(input: {
     );
   const queueLocationName = queueLocation?.name ?? branch.name;
 
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const queueNumber = await getNextPickupQueueNumberRepo({
-      branchId: parcel.destinationId,
-      locationId: queueLocationId,
-      queueDate,
-    });
+  const { ticket, created } = await db.transaction(async (tx) => {
+    const current = await lockPickupQueueParcelRepo(parcel.id, tx);
+    if (
+      !current ||
+      current.status !== ParcelStatus.AWAITING_PICKUP ||
+      current.hasPendingReceiverHandover
+    ) {
+      throw Conflict('The parcel is no longer eligible for a pickup queue ticket');
+    }
+    if (
+      current.destinationId !== parcel.destinationId ||
+      current.pickupLocationId !== queueLocationId
+    ) {
+      throw Conflict('The pickup location changed. Refresh the parcel and try again.');
+    }
+    const queueDate = getPickupQueueDate();
+    const lookup = { parcelId: parcel.id, queueDate };
+    const existing = await getPickupQueueByParcelAndDateRepo(lookup, tx);
+    if (existing) return { ticket: existing, created: false };
+
+    await lockPickupQueueNumberRepo(parcel.destinationId, queueLocationId, queueDate, tx);
+    const queueNumber = await getNextPickupQueueNumberRepo(
+      {
+        branchId: parcel.destinationId,
+        locationId: queueLocationId,
+        queueDate,
+      },
+      tx,
+    );
 
     const queueCode = formatQueueCode({
       paymentBucket,
@@ -150,82 +165,69 @@ export async function createPickupQueueSvc(input: {
       queueNumber,
     });
 
-    const created = await createPickupQueueRepo({
-      companyId: parcel.companyId,
-      branchId: parcel.destinationId,
-      locationId: queueLocationId,
-      parcelId: parcel.id,
-      paymentBucket,
-      queueDate,
-      queueNumber,
-      queueCode,
-      pickerStaffId: input.pickerStaffId ?? null,
-      idCardTypeId: input.idCardTypeId ?? null,
-      idCardNumber: input.idCardNumber?.trim() || null,
-      queuedBy: input.queuedBy,
-    });
+    const ticket = await createPickupQueueRepo(
+      {
+        companyId: parcel.companyId,
+        branchId: parcel.destinationId,
+        locationId: queueLocationId,
+        parcelId: parcel.id,
+        paymentBucket,
+        queueDate,
+        queueNumber,
+        queueCode,
+        pickerStaffId: input.pickerStaffId ?? null,
+        idCardTypeId: input.idCardTypeId ?? null,
+        idCardNumber: input.idCardNumber?.trim() || null,
+        queuedBy: input.queuedBy,
+      },
+      tx,
+    );
+    if (!ticket) throw Conflict('Unable to create pickup queue ticket right now. Please retry.');
+    return { ticket, created: true };
+  });
 
-    if (created) {
-      let smsSent = false;
-      if (input.sendSms !== false) {
-        const result = await sendPickupQueueNotificationSvc({
-          companyId: parcel.companyId,
-          parcelId: parcel.id,
-          queueCode,
-          queueNumber,
-          branchName: branch.name,
-          locationName: queueLocationName,
-          locationPhone: queueLocation?.telephone ?? null,
-        });
-        smsSent = result.sent;
-      }
-      return { ...mapPickupQueue(created), smsSent };
-    }
-
-    const existingByParcel = await getPickupQueueByParcelAndDateRepo({
-      parcelId: input.parcelId,
-      queueDate,
-    });
-    if (existingByParcel) {
-      return { ...mapPickupQueue(existingByParcel), smsSent: false };
-    }
-  }
-
-  throw Conflict('Unable to create pickup queue ticket right now. Please retry.');
+  const smsSent =
+    created && input.sendSms !== false
+      ? (
+          await sendPickupQueueNotificationSvc({
+            companyId: parcel.companyId,
+            parcelId: parcel.id,
+            queueCode: ticket.queueCode,
+            queueNumber: ticket.queueNumber,
+            branchName: branch.name,
+            locationName: queueLocationName,
+            locationPhone: queueLocation?.telephone ?? null,
+          })
+        ).sent
+      : false;
+  return { ...mapPickupQueue(ticket), smsSent };
 }
 
 export async function endPickupQueueForParcelSvc(
   input: { parcelId: string; endedBy?: string | null },
   executor?: DbExecutor,
 ) {
-  const queue = await getPickupQueueByParcelRepo(input.parcelId, executor);
-  if (!queue || queue.endedAt) return null;
-
-  const updated = await updatePickupQueueRepo(
-    queue.id,
-    {
-      endedAt: new Date(),
-      endedBy: input.endedBy ?? null,
-    },
-    executor,
-  );
-
-  return updated ? mapPickupQueue(updated) : null;
+  await endOpenPickupQueuesRepo(input, executor);
 }
 
 export async function listActivePickupQueuesForBranchSvc(branchId: string) {
-  const rows = await listActivePickupQueuesForBranchRepo(branchId);
-  return rows.map((row) => mapPickupQueue(row)).filter((row) => row !== null);
+  const rows = await listActivePickupQueuesForBranchRepo({
+    branchId,
+    queueDate: getPickupQueueDate(),
+  });
+  return rows.map(mapPickupQueue);
 }
 
 export async function listActivePickupQueueCardsForBranchSvc(input: {
   branchId: string;
   paymentBucket?: 'SP' | 'TP' | null;
+  todayOnly?: boolean;
 }) {
-  const rows = await listActivePickupQueuesForBranchRepo(
-    input.branchId,
-    input.paymentBucket ?? null,
-  );
+  const rows = await listActivePickupQueuesForBranchRepo({
+    branchId: input.branchId,
+    paymentBucket: input.paymentBucket ?? null,
+    queueDate: input.todayOnly !== false ? getPickupQueueDate() : undefined,
+  });
 
   return rows.map((row) => ({
     ...mapPickupQueue(row),
@@ -240,7 +242,10 @@ export async function listActivePickupQueueCardsForBranchSvc(input: {
 }
 
 export async function getPickupQueueByParcelSvc(parcelId: string) {
-  const queue = await getPickupQueueByParcelRepo(parcelId);
+  const queue = await getPickupQueueByParcelAndDateRepo({
+    parcelId,
+    queueDate: getPickupQueueDate(),
+  });
   if (!queue) throw NotFound('Pickup queue not found');
   return mapPickupQueue(queue);
 }

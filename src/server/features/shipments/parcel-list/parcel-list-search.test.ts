@@ -11,6 +11,15 @@ function buildWhereClause(filters: Partial<ListParcelsParams>) {
   return new PgDialect().sqlToQuery(whereClause!);
 }
 
+function buildQueueJoin(
+  filters: Partial<ListParcelsParams>,
+  now = new Date('2026-11-10T12:00:00Z'),
+) {
+  const params = { limit: 20, offset: 0, ...filters };
+  const { pickupQueueJoin } = createParcelListOrder(params, createParcelListContext(params), now);
+  return new PgDialect().sqlToQuery(pickupQueueJoin!);
+}
+
 describe('parcel list search', () => {
   test('matches both codes, sender and receiver names, and their two phone slots', () => {
     const query = buildWhereClause({ search: 'Find me' });
@@ -47,5 +56,16 @@ describe('parcel list search', () => {
     expect(query.sql).toContain('parcel_storage_waivers');
     expect(query.sql).not.toContain(' ilike ');
     expect(query.params.filter((param) => param === 'TRK-1')).toHaveLength(2);
+  });
+
+  test('limits pickup queue joins to the current server day when requested', () => {
+    const dated = buildQueueJoin({ pickupQueueTodayOnly: true, shelfPickerAssignmentOrder: true });
+    const awaiting = buildQueueJoin({ status: ParcelStatus.AWAITING_PICKUP });
+    const unfiltered = buildQueueJoin({});
+    expect(dated.sql).toContain('"pickup_queues"."queue_date" =');
+    expect(dated.params).toContain('2026-11-10T00:00:00.000Z');
+    expect(awaiting.params).toEqual(dated.params);
+    expect(unfiltered.sql).toContain('limit 1');
+    expect(unfiltered.sql).not.toContain('"pickup_queues"."queue_date" =');
   });
 });

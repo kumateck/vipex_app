@@ -63,10 +63,11 @@ export async function loadPickupResources(
   token: string,
   parcel: PickupParcel,
   context: PickupContext,
+  pickupQueueTodayOnly: boolean,
 ): Promise<PickupResources> {
   const [details, staffOptions, cardOptions, mainReceiverCards, secondReceiverCards] =
     await Promise.all([
-      getParcelDetails(token, parcel.id),
+      getParcelDetails(token, parcel.id, { pickupQueueTodayOnly }),
       listLocationStaff(token, context),
       mobileApiGet<PickupCardOption[]>({ path: '/customers/cards/options', token }),
       listCustomerCards(token, parcel.receiverId),
