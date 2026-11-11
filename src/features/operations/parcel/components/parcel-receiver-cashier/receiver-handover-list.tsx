@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,6 +63,11 @@ export function ReceiverHandoverList({
               <p className="text-sm" aria-live="polite">
                 {row.signedAt ? 'Ready to confirm' : 'Awaiting signature'}
               </p>
+              <ParcelHandoverNoteAction
+                parcelId={row.id}
+                hasHandoverNote={row.hasHandoverNote}
+                handoverNoteCritical={row.handoverNoteCritical}
+              />
             </div>
             <Button
               variant={row.signedAt ? 'default' : 'secondary'}

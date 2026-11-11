@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { ScannerView } from '@mobile/components/courier/ScannerView';
@@ -22,8 +23,8 @@ function ParcelRow({
   const { theme } = useAppearance();
   const queueNumber = getPickupQueueBadgeNumber(showQueueNumber, parcel);
   return (
-    <Pressable onPress={onOpen} accessibilityRole="button">
-      <AppCard>
+    <AppCard>
+      <Pressable onPress={onOpen} accessibilityRole="button" style={{ gap: 4 }}>
         <View style={pickupStyles.row}>
           <Text style={[pickupStyles.title, pickupStyles.flex, { color: theme.colors.text }]}>
             {parcel.trackingCode}
@@ -43,8 +44,13 @@ function ParcelRow({
         <Text style={[pickupStyles.hint, { color: theme.colors.textSubtle }]} numberOfLines={1}>
           {parcel.bookingCode} · {parcel.parcelDetails}
         </Text>
-      </AppCard>
-    </Pressable>
+      </Pressable>
+      <ParcelHandoverNoteAction
+        parcelId={parcel.id}
+        hasHandoverNote={parcel.hasHandoverNote}
+        handoverNoteCritical={parcel.handoverNoteCritical}
+      />
+    </AppCard>
   );
 }
 

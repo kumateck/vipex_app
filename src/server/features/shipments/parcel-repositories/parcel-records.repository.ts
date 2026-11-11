@@ -1,6 +1,7 @@
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
+import { handoverNoteEditable, handoverNoteProjection } from '../handover-note/projection';
 import {
   parcels,
   customers,
@@ -45,6 +46,8 @@ export async function getParcelRepo(
       hasPendingReceiverHandover: sql<boolean>`${parcels.pendingReceiverHandover} is not null`,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
+      ...handoverNoteProjection,
+      handoverNoteEditable,
       parcelValuePsw: parcels.parcelValuePsw,
       chargeExemptCustomerType: parcels.chargeExemptCustomerType,
       relatedStaffId: parcels.relatedStaffId,

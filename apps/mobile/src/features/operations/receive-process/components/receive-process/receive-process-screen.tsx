@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import { useAppearance } from '@mobile/providers/appearance-provider';
@@ -80,6 +81,11 @@ export function ReceiveProcessScreen() {
           </View>
           <View style={styles.detailList}>
             <DetailRow first label="Booking" value={parcel.bookingCode} />
+            <ParcelHandoverNoteAction
+              parcelId={parcel.id}
+              hasHandoverNote={parcel.hasHandoverNote}
+              handoverNoteCritical={parcel.handoverNoteCritical}
+            />
             <DetailRow
               label="Sender"
               value={`${parcel.senderName ?? '-'} (${parcel.senderPhone ?? '-'})`}

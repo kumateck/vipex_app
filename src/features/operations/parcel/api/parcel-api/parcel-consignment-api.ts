@@ -1,3 +1,4 @@
+import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
 import { parcelApiPart1 } from '../parcel-endpoints/parcel-booking.endpoints';
 import { parcelApiPart2 } from '../parcel-endpoints/parcel-storage.endpoints';
 import { parcelApiPart3 } from '../parcel-endpoints/parcel-cashier.endpoints';
@@ -104,7 +105,7 @@ export type ConsignmentDetail = Omit<IncomingConsignmentRow, 'sourceName' | 'arr
   total: number;
 };
 
-export type ConsignmentItemRow = {
+export type ConsignmentItemRow = ParcelHandoverNoteIndicator & {
   parcelId: string;
   trackingCode: string;
   bookingCode: string;

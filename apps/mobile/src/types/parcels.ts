@@ -1,4 +1,5 @@
-export type ParcelSearchRow = {
+import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
+export type ParcelSearchRow = ParcelHandoverNoteIndicator & {
   id: string;
   companyId?: string;
   sourceId?: string;
@@ -48,7 +49,7 @@ export type ParcelSearchRow = {
   storageChargeStartAt?: string | null;
 };
 
-export type PickupQueueCard = {
+export type PickupQueueCard = ParcelHandoverNoteIndicator & {
   id: string;
   branchId: string;
   parcelId: string;
@@ -68,7 +69,7 @@ export type PickupQueueCard = {
 };
 
 export type ParcelFullDetails = {
-  parcel: {
+  parcel: ParcelHandoverNoteIndicator & {
     id: string;
     trackingCode: string;
     bookingCode: string;
@@ -87,6 +88,7 @@ export type ParcelFullDetails = {
     createdAt: string;
     receivedAt: string | null;
     confirmedAt: string | null;
+    handoverNoteEditable?: boolean;
     createdBy?: string | null;
     processedBy?: string | null;
     receivedBy?: string | null;

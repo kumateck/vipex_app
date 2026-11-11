@@ -13,6 +13,8 @@ function buildDetailsFallback(inputRow: ParcelSearchRow | null): ParcelFullDetai
   return {
     parcel: {
       id: inputRow.id,
+      hasHandoverNote: inputRow.hasHandoverNote,
+      handoverNoteCritical: inputRow.handoverNoteCritical,
       trackingCode: inputRow.trackingCode ?? '',
       bookingCode: inputRow.bookingCode ?? '',
       status: inputRow.status ?? 0,

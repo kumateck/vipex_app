@@ -24,6 +24,8 @@ export const MobilePermissionKeys = {
   CanReadSelfServiceBookings: 'CanReadSelfServiceBookings',
   CanCompleteSelfServiceBookings: 'CanCompleteSelfServiceBookings',
   CanReadCallCenterParcelStatus: 'CanReadCallCenterParcelStatus',
+  CanReadCallCenterAssignment: 'CanReadCallCenterAssignment',
+  CanReadShelfPickerUpdate: 'CanReadShelfPickerUpdate',
   CanMarkDoorstepCalled: 'CanMarkDoorstepCalled',
   CanReadCustomers: 'CanReadCustomers',
   CanUpdateCustomers: 'CanUpdateCustomers',
@@ -159,6 +161,8 @@ export function canViewOperationsHub(permissions: MobilePermissions): boolean {
     canViewReceiveScreen(permissions) ||
     canViewSelfServiceBookings(permissions) ||
     canViewCallCenterFollowUp(permissions) ||
+    hasPermission(permissions, MobilePermissionKeys.CanReadCallCenterAssignment) ||
+    hasPermission(permissions, MobilePermissionKeys.CanReadShelfPickerUpdate) ||
     canReviewDeliveryChanges(permissions) ||
     canViewCustomers(permissions)
   );

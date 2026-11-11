@@ -1,4 +1,5 @@
 import type { OtpChannel } from '../types';
+export { getReceiverOtpRemainingSeconds as getRemainingSeconds } from '@/shared/shipments/receiver-otp-session';
 
 export const OTP_LENGTH = 6;
 
@@ -14,13 +15,6 @@ export function isCompleteOtp(code: string) {
 /** WhatsApp is only sent when the company has it available; otherwise SMS. */
 export function resolveOtpChannel(selected: OtpChannel, isWhatsAppAvailable: boolean): OtpChannel {
   return isWhatsAppAvailable && selected === 'whatsapp' ? 'whatsapp' : 'sms';
-}
-
-export function getRemainingSeconds(expiresAt: string | null, now: number) {
-  if (!expiresAt) return 0;
-  const target = new Date(expiresAt).getTime();
-  if (Number.isNaN(target)) return 0;
-  return Math.max(0, Math.round((target - now) / 1000));
 }
 
 export function formatCountdown(remainingSeconds: number) {

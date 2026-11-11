@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -234,6 +235,11 @@ export function ConsignmentReceivingSessionPage() {
                       <div className="leading-tight">
                         <div className="flex items-center justify-between gap-2">
                           <p className="font-medium">{item.bookingCode}</p>
+                          <ParcelHandoverNoteAction
+                            parcelId={item.parcelId}
+                            hasHandoverNote={item.hasHandoverNote}
+                            handoverNoteCritical={item.handoverNoteCritical}
+                          />
                           <ViewParcelDetailsButton parcelId={item.parcelId} />
                         </div>
                         <p className="text-muted-foreground text-xs">{item.receiverName}</p>

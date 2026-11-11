@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from '@mobile/navigation/router-compat';
@@ -16,6 +17,7 @@ export function ParcelRecordDetailsScreen() {
   const { theme } = useAppearance();
   const { session, withAuth } = useAuth();
   const companyId = session.user?.company?.id ?? session.user?.companyId;
+  const branchId = session.user?.branch?.id ?? session.user?.branchId;
   const canView = canViewParcelSearch(session.user?.permissions);
   const { parcelId, bookingCode } = useLocalSearchParams<{
     parcelId: string;
@@ -81,6 +83,21 @@ export function ParcelRecordDetailsScreen() {
       }}
     >
       <ParcelDetailsHeader bookingCode={bookingCode ?? row?.bookingCode} />
+      {!details.parcel.isDeleted ? (
+        <ParcelHandoverNoteAction
+          parcelId={details.parcel.id}
+          hasHandoverNote={details.parcel.hasHandoverNote}
+          handoverNoteCritical={details.parcel.handoverNoteCritical}
+          allowEdit={
+            details.parcel.handoverNoteEditable &&
+            (branchId === details.parcel.sourceId || branchId === details.parcel.destinationId)
+          }
+          onSaved={() => {
+            void load();
+            void history.reload();
+          }}
+        />
+      ) : null}
       <ParcelDetailTabs value={tab} onChange={setTab} historyCount={history.events.length} />
       <ParcelTabContent
         tab={tab}

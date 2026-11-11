@@ -2,7 +2,7 @@ import { ParcelStatus } from '@/db/schemas/enums';
 import { BadRequest } from '@/server/utils/http-error';
 import type { CustomerCorrectionInput } from '@/shared/shipments/parcel-customer-correction';
 
-const editableStatuses = new Set<number>([
+export const editableParcelStatuses: ReadonlySet<number> = new Set([
   ParcelStatus.CREATED,
   ParcelStatus.PROCESSED,
   ParcelStatus.IN_TRANSIT,
@@ -26,7 +26,7 @@ export function correctionRestriction(parcel: {
   if (
     parcel.confirmedAt ||
     parcel.deliveryConfirmationSnapshot ||
-    !editableStatuses.has(parcel.status)
+    !editableParcelStatuses.has(parcel.status)
   ) {
     return 'Customer corrections are available only before handover or delivery confirmation on an active parcel.';
   }
