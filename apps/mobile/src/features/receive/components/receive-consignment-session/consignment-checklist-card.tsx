@@ -1,10 +1,15 @@
+import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { StyleSheet, Text, View } from 'react-native';
 import type { ConsignmentItem } from '@mobile/lib/api';
 import { AppCard } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
-type ConsignmentChecklistCardProps = { items: ConsignmentItem[]; loading: boolean };
+type ConsignmentChecklistCardProps = {
+  items: (ConsignmentItem & ParcelHandoverNoteIndicator)[];
+  loading: boolean;
+};
 
 export function ConsignmentChecklistCard({ items, loading }: ConsignmentChecklistCardProps) {
   const { theme } = useAppearance();
@@ -28,6 +33,11 @@ export function ConsignmentChecklistCard({ items, loading }: ConsignmentChecklis
             >
               <View style={styles.itemText}>
                 <Text style={[styles.code, { color: theme.colors.text }]}>{item.bookingCode}</Text>
+                <ParcelHandoverNoteAction
+                  parcelId={item.parcelId}
+                  hasHandoverNote={item.hasHandoverNote}
+                  handoverNoteCritical={item.handoverNoteCritical}
+                />
                 <Text style={[styles.meta, { color: theme.colors.textSubtle }]}>
                   {item.receiverName}
                 </Text>

@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { memo } from 'react';
 import { Text, View } from 'react-native';
 import { AppCard } from '@mobile/components/ui/mobile';
@@ -27,6 +28,11 @@ export const PickupSummaryCard = memo(function PickupSummaryCard({
     <AppCard>
       <Text style={[pickupStyles.title, { color: theme.colors.text }]}>{parcel.trackingCode}</Text>
       <Line label="Booking" value={parcel.bookingCode} />
+      <ParcelHandoverNoteAction
+        parcelId={parcel.id}
+        hasHandoverNote={parcel.hasHandoverNote}
+        handoverNoteCritical={parcel.handoverNoteCritical}
+      />
       <Line
         label="Receiver"
         value={`${parcel.receiverName ?? '-'}${phones ? ` (${phones})` : ''}`}

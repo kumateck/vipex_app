@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { ParcelSearchRow } from '../api/parcel.api';
@@ -84,6 +85,11 @@ export function useParcelStatusColumns({
         cell: ({ row }) => (
           <div className="leading-tight">
             <p className="font-medium">{row.original.bookingCode}</p>
+            <ParcelHandoverNoteAction
+              parcelId={row.original.id}
+              hasHandoverNote={row.original.hasHandoverNote}
+              handoverNoteCritical={row.original.handoverNoteCritical}
+            />
             <p className="text-muted-foreground text-xs">
               Received {formatReceivedAt(row.original.receivedAt)}
             </p>

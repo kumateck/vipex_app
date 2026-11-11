@@ -65,6 +65,7 @@ const catalog = [
   ['CanRepairParcelFinancialState', 'Preview and repair parcel financial state', 'Shipments'],
   ['CanCreateParcels', 'Create parcels', 'Shipments'],
   ['CanUpdateParcels', 'Update parcels', 'Shipments'],
+  ['CanUpdateParcelHandoverNote', 'Add or edit critical parcel handover notes', 'Shipments'],
   [
     'CanCorrectParcelCustomers',
     'Relink parcel customers by booking code across company branches before delivery',

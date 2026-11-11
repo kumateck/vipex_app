@@ -1,5 +1,13 @@
 # Route Permission Matrix
 
+`PATCH /v1/shipments/parcels/:id/handover-note` requires `CanUpdateParcelHandoverNote` and
+the parcel’s source or destination branch. The matching `GET` accepts existing parcel workflow
+grants within company and branch scope. The mobile Assignment and Shelf Picker note views use
+`CanReadCallCenterAssignment` and `CanReadShelfPickerUpdate`. See
+[Parcel handover notes](PARCEL_HANDOVER_NOTES.md).
+`GET /v1/shipments/parcels/receiver-cashier-queue` requires `CanCreateReceiverPayments` and uses
+the authenticated company and destination branch.
+
 `/parcels/customer-corrections` and its booking/customer lookup endpoints accept either
 `CanCorrectParcelCustomers` or `CanOverrideParcelCustomerDetails`. Saves require the former for
 relinking and the latter for profile/name/telephone edits. These grants authorize all branches

@@ -1,5 +1,6 @@
 import { createParcelListContext } from '../parcel-list/parcel-list-context';
 import { createParcelListOrder } from '../parcel-list/parcel-list-order';
+import { handoverNoteProjection } from '../handover-note/projection';
 import { and, count, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { parcels, bookings, deliveries, parcelInternalHolders, pickupQueues } from '@/db/schemas';
@@ -129,6 +130,7 @@ export async function listParcelsRepo(
       status: parcels.status,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
+      ...handoverNoteProjection,
       parcelValuePsw: parcels.parcelValuePsw,
       chargeExemptCustomerType: parcels.chargeExemptCustomerType,
       relatedStaffId: parcels.relatedStaffId,

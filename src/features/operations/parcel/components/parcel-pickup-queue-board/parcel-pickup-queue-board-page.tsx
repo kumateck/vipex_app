@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -119,6 +120,11 @@ export function ParcelPickupQueueBoardPage({
                   </p>
                   <p className="flex flex-wrap items-center gap-2">
                     <strong>Booking:</strong> {card.bookingCode}
+                    <ParcelHandoverNoteAction
+                      parcelId={card.parcelId}
+                      hasHandoverNote={card.hasHandoverNote}
+                      handoverNoteCritical={card.handoverNoteCritical}
+                    />
                     <ViewParcelDetailsButton parcelId={card.parcelId} />
                   </p>
                   <p>

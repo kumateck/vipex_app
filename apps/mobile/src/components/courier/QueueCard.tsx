@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppCard } from '@mobile/components/ui';
 import { useAppearance } from '@mobile/providers/appearance-provider';
@@ -22,6 +23,11 @@ export function QueueCard({ card, onCopy, onShare }: QueueCardProps) {
       <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
         Booking: {card.bookingCode}
       </Text>
+      <ParcelHandoverNoteAction
+        parcelId={card.parcelId}
+        hasHandoverNote={card.hasHandoverNote}
+        handoverNoteCritical={card.handoverNoteCritical}
+      />
       <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
         Receiver: {card.receiverName ?? '-'} ({card.receiverPhone ?? '-'})
       </Text>

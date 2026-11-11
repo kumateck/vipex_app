@@ -1,5 +1,11 @@
 # API Documentation Index
 
+Internal parcel responses expose handover note indicators. The scoped
+`GET/PATCH /v1/shipments/parcels/:id/handover-note` endpoints return or update the note itself.
+`GET /v1/shipments/parcels/receiver-cashier-queue` lists parcels requiring collection at the
+authenticated cashier's branch, with optional search and pagination.
+See [Parcel handover notes](PARCEL_HANDOVER_NOTES.md#api-and-rollout).
+
 The company-wide booking-code correction API under `/v1/shipments/parcels/customer-corrections`
 has separate relink and profile-edit grants, preview versions, atomic audit/OTP invalidation,
 and a handover/delivery cutoff. Its lookup/save contracts and failure cases are documented in

@@ -707,6 +707,12 @@ Both controls default to enabled for branches unless explicitly changed. OTP enf
 
 Mobile discrepancy capture supports an expected system parcel that is physically missing and a physical parcel without a system record. Mobile requires notes and a camera photo. The photo is uploaded with model type `parcel-discrepancy-evidence` and the created discrepancy ID. If photo upload fails after record creation, the client reports partial success and must not create a duplicate discrepancy.
 
+## Parcel handover notes
+
+Staff can attach a [critical handover note](PARCEL_HANDOVER_NOTES.md) to an in-transit parcel from All Parcels Super Search on web or Super Search on mobile.
+Receiving, call center, pickup and cashier staff can open it from their parcel views. Delivery
+clears the alert permanently and keeps the instruction on the record.
+
 ## Receiver OTP
 
 - A newly issued receiver OTP is six digits and expires 10 minutes after it is requested.
@@ -714,6 +720,7 @@ Mobile discrepancy capture supports an expected system parcel that is physically
 - Staff can close the confirmation, work on another parcel, and return to enter the original
   code. Web and desktop Waiting for Pickup and Receiver Cashier, and mobile Waiting for Pickup,
   reload the code's remaining time, channel, and phone selection for the reopened parcel.
+  The code input stays available through the final second of the active session.
   Reopening does not send a new code. If the same staff member requested and already verified
   the code, the screen can also restore the unconsumed verification token during its validity.
 - Staff can select the main or alternate recipient and the primary or secondary stored phone where available.

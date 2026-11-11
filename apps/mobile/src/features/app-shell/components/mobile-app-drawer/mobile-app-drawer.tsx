@@ -26,12 +26,15 @@ import ReceiveConsignmentsScreen from '../../../../../app/(app)/receive-consignm
 import ReceiveConsignmentSessionScreen from '../../../../../app/(app)/receive-consignment/[consignmentId]';
 import SelfServiceAgentScreen from '../../../../../app/(app)/self-service';
 import CallCenterFollowUpScreen from '../../../../../app/(app)/call-center-follow-up';
+import CallCenterAssignmentNotesScreen from '../../../../../app/(app)/call-center-assignment';
+import ShelfPickerNotesScreen from '../../../../../app/(app)/shelf-picker-update';
 import ReceiveDiscrepanciesScreen from '../../../../../app/(app)/receive-discrepancies';
 import DeliveryChangeReviewScreen from '../../../../../app/(app)/delivery-change-reviews';
 import MobileCustomerDirectoryScreen from '../../../../../app/(app)/customers';
 import OfficePickupScreen from '../../../../../app/(app)/office-pickup';
 
 import ReceiverSignaturesScreen from '../../../../../app/(app)/receiver-signatures';
+import ReceiverCashierNotesScreen from '../../../../../app/(app)/receiver-cashier';
 
 const Drawer = createDrawerNavigator();
 const Tabs = createBottomTabNavigator();
@@ -191,6 +194,16 @@ export function MobileAppDrawer() {
         options={{ title: 'Call Center Follow-up', drawerItemStyle: hidden }}
       />
       <Drawer.Screen
+        name="CallCenterAssignmentNotes"
+        component={CallCenterAssignmentNotesScreen}
+        options={{ title: 'Call Center Assignment', drawerItemStyle: hidden }}
+      />
+      <Drawer.Screen
+        name="ShelfPickerNotes"
+        component={ShelfPickerNotesScreen}
+        options={{ title: 'Shelf Picker Update', drawerItemStyle: hidden }}
+      />
+      <Drawer.Screen
         name="ReceiveDiscrepancies"
         component={ReceiveDiscrepanciesScreen}
         options={{ title: 'Receiving Discrepancies', drawerItemStyle: hidden }}
@@ -204,6 +217,11 @@ export function MobileAppDrawer() {
         name="Customers"
         component={MobileCustomerDirectoryScreen}
         options={{ title: 'Customers', drawerItemStyle: hidden }}
+      />
+      <Drawer.Screen
+        name="ReceiverCashierNotes"
+        component={ReceiverCashierNotesScreen}
+        options={{ title: 'Receiver Cashier', drawerItemStyle: hidden }}
       />
       <Drawer.Screen
         name="ReceiverSignatures"

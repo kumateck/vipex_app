@@ -31,7 +31,11 @@ export function ParcelSuperSearchPage() {
 
   const shouldSearch = submittedSearch.trim().length > 0;
 
-  const { data, isLoading } = useSearchParcelsQuery(
+  const {
+    currentData: data,
+    isFetching,
+    refetch,
+  } = useSearchParcelsQuery(
     {
       ...query,
       search: shouldSearch ? submittedSearch.trim() : undefined,
@@ -39,6 +43,7 @@ export function ParcelSuperSearchPage() {
     },
     {
       skip: !companyId || !shouldSearch,
+      refetchOnMountOrArgChange: true,
     },
   );
 
@@ -58,7 +63,12 @@ export function ParcelSuperSearchPage() {
     : undefined;
 
   const submitSearch = () => {
-    setSubmittedSearch(searchInput.trim());
+    const term = searchInput.trim();
+    if (companyId && term && term === submittedSearch && query.page === 1) {
+      void refetch();
+      return;
+    }
+    setSubmittedSearch(term);
     setQuery((prev) => ({ ...prev, page: 1, filters: { companyId, includeDeleted: true } }));
   };
 
@@ -72,7 +82,7 @@ export function ParcelSuperSearchPage() {
         onSearchSubmit={submitSearch}
         rows={rows}
         meta={data?.meta}
-        loading={isLoading}
+        loading={isFetching && !data}
         branchNameById={branchNameById}
         onRequestChange={setQuery}
         onViewDetails={setSelectedParcelId}

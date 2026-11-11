@@ -231,6 +231,8 @@ export async function listActivePickupQueueCardsForBranchSvc(input: {
 
   return rows.map((row) => ({
     ...mapPickupQueue(row),
+    hasHandoverNote: row.hasHandoverNote,
+    handoverNoteCritical: row.handoverNoteCritical,
     trackingCode: row.trackingCode,
     bookingCode: row.bookingCode,
     parcelDetails: row.parcelDetails,

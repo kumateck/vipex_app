@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { ParcelDeletedNotice } from './parcel-deleted-notice';
 export type ParcelDetailsDialogProps = {
   parcelId: string | null;
   onClose: () => void;
+  handoverNoteEditorBranchId?: string | null;
   /** Page-specific controls shown above the tabs (e.g. Return to Source). */
   renderBanner?: (details: ParcelFullDetails) => ReactNode;
   /** Page-specific actions shown in an extra "Actions" tab. */
@@ -27,6 +29,7 @@ export type ParcelDetailsDialogProps = {
 export function ParcelDetailsDialog({
   parcelId,
   onClose,
+  handoverNoteEditorBranchId,
   renderBanner,
   renderActions,
 }: ParcelDetailsDialogProps) {
@@ -62,6 +65,18 @@ export function ParcelDetailsDialog({
         {details ? (
           <div className="space-y-4">
             <ParcelDeletedNotice details={details} history={view.history} />
+            {!details.parcel.isDeleted ? (
+              <ParcelHandoverNoteAction
+                parcelId={details.parcel.id}
+                hasHandoverNote={details.parcel.hasHandoverNote}
+                handoverNoteCritical={details.parcel.handoverNoteCritical}
+                allowEdit={
+                  details.parcel.handoverNoteEditable &&
+                  (handoverNoteEditorBranchId === details.parcel.sourceId ||
+                    handoverNoteEditorBranchId === details.parcel.destinationId)
+                }
+              />
+            ) : null}
             {renderBanner?.(details)}
             <ParcelDetailsTabs
               key={details.parcel.id}
