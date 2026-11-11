@@ -2,34 +2,30 @@ import { resolveMnotifyApiRoot } from '../utils';
 import { env } from '@/server/utils/env';
 import { buildMnotifySmsPayload, type SmsType } from '../sms-provider-payloads';
 import type { DeliveryResult } from '../types';
+import { readProviderHttpError } from '../utils/provider-http-error';
 
 const DEFAULT_API_URL = 'https://api.mnotify.com/api';
 const REQUEST_TIMEOUT_MS = 15_000;
 const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
-function safeError(value: string, apiKey: string) {
+function redactKey(value: string, apiKey: string) {
   return value
     .replaceAll(apiKey, '[REDACTED]')
     .replaceAll(encodeURIComponent(apiKey), '[REDACTED]')
-    .replace(/([?&]key=)[^\s&"']+/gi, '$1[REDACTED]')
-    .slice(0, 500);
+    .replace(/([?&]key=)[^\s&"']+/gi, '$1[REDACTED]');
 }
+
+const safeError = (value: string, apiKey: string) => redactKey(value, apiKey).slice(0, 500);
 
 async function getHttpError(response: Response, apiKey: string) {
   if (response.status >= 500) {
     return `mNotify service error (HTTP ${response.status}). Delivery acceptance could not be confirmed. Check mNotify delivery reports before retrying.`;
   }
-  let detail = '';
-  try {
-    const payload = await response.json();
-    detail = text(payload?.message);
-  } catch {
-    // HTML error pages are not useful delivery diagnostics and may contain scripts.
-  }
-  return safeError(
-    `mNotify API returned ${response.status}: ${detail || 'No JSON error details returned. Check the provider configuration or contact mNotify support.'}`,
-    apiKey,
+  const { detail, contentType } = await readProviderHttpError(response, (value) =>
+    redactKey(value, apiKey),
   );
+  const fallback = `No error details returned${contentType ? ` (content-type: ${contentType})` : ''}. Check the provider configuration or contact mNotify support.`;
+  return safeError(`mNotify API returned ${response.status}: ${detail || fallback}`, apiKey);
 }
 
 export async function sendMnotifySms(

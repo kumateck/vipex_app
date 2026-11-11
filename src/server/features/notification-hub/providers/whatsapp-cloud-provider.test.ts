@@ -105,6 +105,29 @@ describe('WhatsApp Cloud transport', () => {
     expect(result.errorMessage).not.toContain('secret-token');
   });
 
+  test('preserves plain-text provider errors and suppresses HTML error pages', async () => {
+    const plainText = await sendWhatsAppTemplate(
+      { config, recipient: '0244123456', message },
+      (async () =>
+        new Response('Template is disabled', {
+          status: 403,
+          headers: { 'content-type': 'text/plain' },
+        })) as unknown as typeof fetch,
+    );
+    expect(plainText.errorMessage).toContain('Template is disabled');
+
+    const html = await sendWhatsAppTemplate(
+      { config, recipient: '0244123456', message },
+      (async () =>
+        new Response('<!doctype html><html><body>edge deny</body></html>', {
+          status: 403,
+          headers: { 'content-type': 'text/html' },
+        })) as unknown as typeof fetch,
+    );
+    expect(html.errorMessage).toContain('No error detail returned');
+    expect(html.errorMessage).not.toContain('<html>');
+  });
+
   test('treats a success response without a message id as failed', async () => {
     const result = await sendWhatsAppTemplate(
       { config, recipient: '0244123456', message },

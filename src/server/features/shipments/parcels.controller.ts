@@ -34,7 +34,10 @@ import { listParcelStorageClearancesSvc } from './parcel-storage-clearance-list.
 export { listParcelsCtrl } from './parcel-list.controller';
 
 export const getParcelByIdCtrl = getParcelSvc;
-export async function getParcelDetailsCtrl(id: string, scope: { companyId?: string | null } = {}) {
+export async function getParcelDetailsCtrl(
+  id: string,
+  scope: { companyId?: string | null; pickupQueueTodayOnly?: boolean } = {},
+) {
   const result = await getParcelFullDetailsSvc(id, scope);
   return {
     summary: result.summary,

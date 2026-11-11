@@ -1,13 +1,20 @@
 import { ParcelStatus } from '@mobile/constants/parcel-status';
+import { isQueueDateToday } from '@mobile/features/operations/queue-management/utils';
 import type { PickupContext, PickupListQuery, PickupParcel } from '../types';
 
 export const PICKUP_PAGE_SIZE = 20;
 
 export function getPickupQueueBadgeNumber(
   isPickupQueueEnabled: boolean,
-  parcel: Pick<PickupParcel, 'pickupQueueNumber' | 'pickupQueueEndedAt'>,
+  parcel: Pick<
+    PickupParcel,
+    'pickupQueueNumber' | 'pickupQueueEndedAt' | 'pickupQueueDate' | 'pickupQueuedAt'
+  >,
+  now = new Date(),
 ) {
-  return isPickupQueueEnabled && !parcel.pickupQueueEndedAt
+  return isPickupQueueEnabled &&
+    !parcel.pickupQueueEndedAt &&
+    isQueueDateToday(parcel.pickupQueueDate, parcel.pickupQueuedAt, now)
     ? (parcel.pickupQueueNumber ?? null)
     : null;
 }
@@ -45,6 +52,7 @@ export function buildPickupListQuery(
     destinationId: context.branchId,
     status: ParcelStatus.AWAITING_PICKUP,
     cashierCollectionRequired: false,
+    pickupQueueTodayOnly: isPickupQueueEnabled,
   };
   if (term) {
     if (exactCode) query.parcelCode = term;

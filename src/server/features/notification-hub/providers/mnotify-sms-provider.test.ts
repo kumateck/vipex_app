@@ -124,8 +124,23 @@ describe('BMS mNotify OTP transport', () => {
         new Response('<html>Access denied</html>', { status: 403 })) as unknown as typeof fetch,
     );
     expect(result.status).toBe('failed');
-    expect(result.errorMessage).toContain('No JSON error details returned');
+    expect(result.errorMessage).toContain('No error details returned');
     expect(result.errorMessage).not.toContain('<html>');
+  });
+  test('preserves a non-JSON provider rejection reason without exposing the API key', async () => {
+    const result = await sendMnotifySms(
+      input,
+      (async () =>
+        new Response('API key private key is disabled', {
+          status: 403,
+          headers: { 'content-type': 'text/plain; charset=utf-8' },
+        })) as unknown as typeof fetch,
+    );
+
+    expect(result).toEqual({
+      status: 'failed',
+      errorMessage: 'mNotify API returned 403: API key [REDACTED] is disabled',
+    });
   });
   test('timeouts fail once without silently retrying a billable SMS', async () => {
     let calls = 0;

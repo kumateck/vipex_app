@@ -16,6 +16,7 @@ export async function listParcelsCtrl(
     senderPaid?: boolean | null;
     paymentType?: 'paid' | 'to_be_paid' | 'partial' | null;
     hasPickupQueue?: boolean | null;
+    pickupQueueTodayOnly?: boolean;
     agedOnly?: boolean | null;
     storageChargeAccruing?: boolean | null;
     cashierCollectionRequired?: boolean | null;
@@ -46,6 +47,7 @@ export async function listParcelsCtrl(
     senderPaid: q.filters?.senderPaid ?? null,
     paymentType: q.filters?.paymentType ?? null,
     hasPickupQueue: q.filters?.hasPickupQueue ?? null,
+    pickupQueueTodayOnly: q.filters?.pickupQueueTodayOnly ?? false,
     agedOnly: q.filters?.agedOnly ?? null,
     storageChargeAccruing: q.filters?.storageChargeAccruing ?? null,
     cashierCollectionRequired: q.filters?.cashierCollectionRequired ?? null,
@@ -74,6 +76,7 @@ export async function listParcelsCtrl(
       bookingCreatedAt: p.bookingCreatedAt ? p.bookingCreatedAt.toISOString() : null,
       consignmentCreatedAt: p.consignmentCreatedAt ? p.consignmentCreatedAt.toISOString() : null,
       pickupQueuedAt: p.pickupQueuedAt ? p.pickupQueuedAt.toISOString() : null,
+      pickupQueueDate: p.pickupQueueDate ? p.pickupQueueDate.toISOString() : null,
       pickupQueueEndedAt: p.pickupQueueEndedAt ? p.pickupQueueEndedAt.toISOString() : null,
       deliveredAt: p.deliveredAt ? p.deliveredAt.toISOString() : null,
     })),

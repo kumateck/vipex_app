@@ -1,10 +1,15 @@
 import { NotFound } from '../../../utils/http-error';
+import { ParcelStatus } from '@/db/schemas/enums';
 import { listPaymentsForParcelRepo } from '../../payments/repository';
 import { getDeliveryByParcelRepo } from '../../deliveries/repository';
 import { listUserNamesByIdsRepo } from '../parcel-actors.repository';
 import { collectParcelDetailsUserIds } from '../parcel-details-actors';
 import { listConsignmentsForParcelRepo } from '../consignments.repository';
-import { getPickupQueueByParcelRepo } from '../../pickup-queues/repository';
+import {
+  getPickupQueueByParcelAndDateRepo,
+  getPickupQueueByParcelRepo,
+} from '../../pickup-queues/repository';
+import { getPickupQueueDate } from '../../pickup-queues/queue-date';
 import { getParcelInternalHolderByParcelRepo } from '../../parcel-internal-transfers/repository';
 import {
   listParcelDispositionActionsRepo,
@@ -16,11 +21,13 @@ import { listParcelsSvc, getParcelSvc } from './queries';
 
 export async function getParcelFullDetailsSvc(
   id: string,
-  scope: { companyId?: string | null } = {},
+  scope: { companyId?: string | null; pickupQueueTodayOnly?: boolean } = {},
 ) {
   const parcel = await getParcelSvc(id);
   // Same 404 as a missing parcel so other companies' parcel ids are not disclosed.
   if (scope.companyId && parcel.companyId !== scope.companyId) throw NotFound('Parcel not found');
+  const pickupQueueTodayOnly =
+    scope.pickupQueueTodayOnly ?? parcel.status === ParcelStatus.AWAITING_PICKUP;
   const [
     summary,
     payments,
@@ -32,9 +39,13 @@ export async function getParcelFullDetailsSvc(
     storageWaivers,
     storageSettlement,
   ] = await Promise.all([
-    listParcelsSvc({ parcelId: id, includeDeleted: true, limit: 1, offset: 0 }).then(
-      (result) => result.data[0] ?? null,
-    ),
+    listParcelsSvc({
+      parcelId: id,
+      includeDeleted: true,
+      pickupQueueTodayOnly,
+      limit: 1,
+      offset: 0,
+    }).then((result) => result.data[0] ?? null),
     (async () => {
       try {
         return await listPaymentsForParcelRepo(id);
@@ -61,7 +72,12 @@ export async function getParcelFullDetailsSvc(
     })(),
     (async () => {
       try {
-        return await getPickupQueueByParcelRepo(id);
+        return pickupQueueTodayOnly
+          ? await getPickupQueueByParcelAndDateRepo({
+              parcelId: id,
+              queueDate: getPickupQueueDate(),
+            })
+          : await getPickupQueueByParcelRepo(id);
       } catch (error) {
         if (isSchemaCompatibilityError(error)) return null;
         throw error;

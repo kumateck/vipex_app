@@ -11,7 +11,7 @@ import {
   submitPickupHandover,
 } from '../services';
 import type { PhoneSlot, PickupContext, PickupParcel, PickupResources } from '../types';
-import { getConfirmBlocker, resolveShelfPickerStaffId } from '../utils';
+import { getConfirmBlocker, getCurrentDayPickupQueue, resolveShelfPickerStaffId } from '../utils';
 import { usePickupHandoverForm } from './use-pickup-handover-form';
 import { usePickupOtp } from './use-pickup-otp';
 
@@ -32,6 +32,7 @@ export function useOfficePickupHandover(input: {
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const loadRequest = useRef(0);
   const [completed, setCompleted] = useState<CompletedPickup | null>(null);
   const [phoneSlot, setPhoneSlotState] = useState<PhoneSlot>('primary');
   const otp = usePickupOtp({
@@ -53,6 +54,7 @@ export function useOfficePickupHandover(input: {
 
   const open = useCallback(
     async (next: PickupParcel) => {
+      const id = ++loadRequest.current;
       resetOtp();
       resetFor(next);
       setPhoneSlotState('primary');
@@ -62,23 +64,28 @@ export function useOfficePickupHandover(input: {
       setLoadError(false);
       setLoading(true);
       try {
-        const loaded = await withAuth((token) => loadPickupResources(token, next, context));
+        const loaded = await withAuth((token) =>
+          loadPickupResources(token, next, context, isPickupQueueEnabled),
+        );
+        if (id !== loadRequest.current) return;
         setResources(loaded);
         setPickerStaffId(resolveShelfPickerStaffId(loaded.details));
       } catch (error) {
+        if (id !== loadRequest.current) return;
         setLoadError(true);
         notifyError(
           'Unable to load pickup details',
           getMobileErrorMessage(error, '') || 'Go back and open the parcel again.',
         );
       } finally {
-        setLoading(false);
+        if (id === loadRequest.current) setLoading(false);
       }
     },
-    [context, resetFor, resetOtp, setPickerStaffId, withAuth],
+    [context, isPickupQueueEnabled, resetFor, resetOtp, setPickerStaffId, withAuth],
   );
 
   const close = useCallback(() => {
+    loadRequest.current += 1;
     resetOtp();
     setSignatureImage('');
     setParcel(null);
@@ -86,7 +93,7 @@ export function useOfficePickupHandover(input: {
     setCompleted(null);
   }, [resetOtp, setSignatureImage]);
 
-  const hasPickupQueue = Boolean(resources?.details.pickupQueue);
+  const hasPickupQueue = Boolean(resources && getCurrentDayPickupQueue(resources.details));
   const confirmBlocker = getConfirmBlocker({
     pickerStaffId: form.pickerStaffId,
     isPickupOtpRequired,

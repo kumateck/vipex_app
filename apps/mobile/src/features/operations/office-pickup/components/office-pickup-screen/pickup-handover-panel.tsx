@@ -4,6 +4,7 @@ import { AppButton, AppCard, AppSelectField, AppSkeletonCard } from '@mobile/com
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { OfficePickupHandover } from '../../hooks';
 import type { PickupContext } from '../../types';
+import { getCurrentDayPickupQueue } from '../../utils';
 import { PickupCardFields } from './pickup-card-fields';
 import { PickupCollectorFields } from './pickup-collector-fields';
 import { PickupOtpSection } from './pickup-otp-section';
@@ -49,15 +50,17 @@ export function PickupHandoverPanel(props: Props) {
   }
 
   const assignedPicker = Boolean(
-    resources.details.parcel.shelfPickerStaffId || resources.details.pickupQueue?.pickerStaffId,
+    resources.details.parcel.shelfPickerStaffId ||
+      getCurrentDayPickupQueue(resources.details)?.pickerStaffId,
   );
+  const currentQueue = getCurrentDayPickupQueue(resources.details);
   const muted = { color: theme.colors.textMuted };
   const collector = form.handoverTarget === 'second' ? 'Second receiver' : 'Main receiver';
 
   return (
     <>
       <PickupSummaryCard parcel={parcel} />
-      {isPickupQueueEnabled ? <PickupQueueNotice queue={resources.details.pickupQueue} /> : null}
+      {isPickupQueueEnabled ? <PickupQueueNotice queue={currentQueue} /> : null}
       <AppCard>
         <AppSelectField
           label="Shelf picker staff"
