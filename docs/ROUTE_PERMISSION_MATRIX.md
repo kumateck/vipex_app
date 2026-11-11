@@ -1,5 +1,19 @@
 # Route Permission Matrix
 
+`PATCH /v1/shipments/parcels/:id/handover-note` requires `CanUpdateParcelHandoverNote` and
+the parcel’s source or destination branch. The matching `GET` accepts existing parcel workflow
+grants within company and branch scope. The mobile Assignment and Shelf Picker note views use
+`CanReadCallCenterAssignment` and `CanReadShelfPickerUpdate`. See
+[Parcel handover notes](PARCEL_HANDOVER_NOTES.md).
+`GET /v1/shipments/parcels/receiver-cashier-queue` requires `CanCreateReceiverPayments` and uses
+the authenticated company and destination branch.
+
+`/parcels/customer-corrections` and its booking/customer lookup endpoints accept either
+`CanCorrectParcelCustomers` or `CanOverrideParcelCustomerDetails`. Saves require the former for
+relinking and the latter for profile/name/telephone edits. These grants authorize all branches
+within the authenticated company until handover/delivery confirmation. They add no module gate
+or automatic role grants. See [Parcel Customer Corrections](PARCEL_CUSTOMER_CORRECTIONS.md).
+
 `/settings/maintenance` and `/v1/maintenance/*` are restricted to the **System Admin role**, not
 a grantable permission. Navigation and page guard use the role name; each API call rechecks the
 active user and non-deleted role in the database and scopes operations/history to that company.
@@ -23,6 +37,9 @@ authenticated user. Internal ticket permissions grant no inbox access. See
 [Customer website messages](CUSTOMER_WEBSITE_MESSAGES.md).
 
 Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`).
+
+`GET /v1/payments/receiver-otp/session` accepts `CanCreateReceiverPayments` or
+`CanCompleteOfficePickup` and checks the authenticated company and destination branch.
 
 Mobile `/(app)/office-pickup` (native screen `OfficePickup`), its sidebar item and Operations Hub card require
 `CanCompleteOfficePickup`, matching web/desktop `/parcels/waiting-pickup`. Helper API reads

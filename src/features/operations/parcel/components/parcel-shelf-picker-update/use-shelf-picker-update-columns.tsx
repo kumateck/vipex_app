@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,11 @@ export function useShelfPickerUpdateColumns({
       cell: ({ row }) => (
         <div className="space-y-1">
           <div className="font-mono font-medium">{row.original.bookingCode}</div>
+          <ParcelHandoverNoteAction
+            parcelId={row.original.id}
+            hasHandoverNote={row.original.hasHandoverNote}
+            handoverNoteCritical={row.original.handoverNoteCritical}
+          />
           <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
         </div>
       ),

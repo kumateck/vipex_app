@@ -1,3 +1,4 @@
+import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
 import {
   type ParcelSearchRow,
   type ParcelDispositionActionRow,
@@ -9,7 +10,7 @@ import { type ParcelInternalHolderSnapshot } from './parcel-exceptions.types';
 export type ParcelFullDetails = {
   /** The parcel as list/search rows show it (names, phones, payer totals, rider, holder). */
   summary?: ParcelSearchRow | null;
-  parcel: {
+  parcel: ParcelHandoverNoteIndicator & {
     id: string;
     companyId: string;
     sourceId: string;
@@ -52,6 +53,7 @@ export type ParcelFullDetails = {
     receivedAt: string | null;
     confirmedBy: string | null;
     confirmedAt: string | null;
+    handoverNoteEditable?: boolean;
     updatedAt: string;
     cashierSessionId: string | null;
   };
@@ -170,19 +172,20 @@ export type PickupQueueRecord = {
   updatedAt: string;
 };
 
-export type PickupQueueCard = PickupQueueRecord & {
-  trackingCode: string;
-  bookingCode: string;
-  parcelDetails: string;
-  plannedToBePaidPsw: number;
-  chargeExemptCustomerType?: number | null;
-  relatedStaffId?: string | null;
-  relatedStaffNameSnapshot?: string | null;
-  chargePsw: number;
-  callSender: boolean;
-  receiverName: string | null;
-  receiverPhone: string | null;
-};
+export type PickupQueueCard = PickupQueueRecord &
+  ParcelHandoverNoteIndicator & {
+    trackingCode: string;
+    bookingCode: string;
+    parcelDetails: string;
+    plannedToBePaidPsw: number;
+    chargeExemptCustomerType?: number | null;
+    relatedStaffId?: string | null;
+    relatedStaffNameSnapshot?: string | null;
+    chargePsw: number;
+    callSender: boolean;
+    receiverName: string | null;
+    receiverPhone: string | null;
+  };
 
 export type RiderDoorstepRecord = {
   deliveryId: string;

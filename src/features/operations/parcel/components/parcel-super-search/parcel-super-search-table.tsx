@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical, Search } from 'lucide-react';
@@ -63,6 +64,11 @@ export function ParcelSuperSearchTable({
             <p>
               <span className="text-muted-foreground">Booking:</span> {row.original.bookingCode}
             </p>
+            <ParcelHandoverNoteAction
+              parcelId={row.original.id}
+              hasHandoverNote={row.original.hasHandoverNote}
+              handoverNoteCritical={row.original.handoverNoteCritical}
+            />
           </div>
         ),
       },
@@ -203,7 +209,7 @@ export function ParcelSuperSearchTable({
         cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="outline" className="h-8 w-8">
+              <Button size="icon" variant="outline" aria-label="Parcel actions" className="h-8 w-8">
                 <EllipsisVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

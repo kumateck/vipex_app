@@ -20,3 +20,4 @@ export { useParcelAutoPrint } from './use-parcel-auto-print';
 export * from './use-parcel-charge-agent-options';
 export { useBookingCustomerEdit } from './use-booking-customer-edit';
 export type { BookingCustomerEditFields } from './use-booking-customer-edit';
+export { useReceiverOtpSession, type ReceiverOtpSessionState } from './use-receiver-otp-session';

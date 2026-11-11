@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -27,6 +28,11 @@ export function useParcelPickupQueueColumns({ onViewQueue }: UseParcelPickupQueu
         cell: ({ row }) => (
           <div className="space-y-1">
             <span>{row.original.bookingCode}</span>
+            <ParcelHandoverNoteAction
+              parcelId={row.original.id}
+              hasHandoverNote={row.original.hasHandoverNote}
+              handoverNoteCritical={row.original.handoverNoteCritical}
+            />
             <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
           </div>
         ),
@@ -98,7 +104,7 @@ export function useParcelPickupQueueColumns({ onViewQueue }: UseParcelPickupQueu
         cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="outline" className="h-8 w-8">
+              <Button size="icon" variant="outline" aria-label="Parcel actions" className="h-8 w-8">
                 <EllipsisVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

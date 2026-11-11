@@ -1,3 +1,4 @@
+import { handoverNoteProjection } from '../../shipments/handover-note/projection';
 import { and, desc, eq, lt, isNotNull, or, ilike, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { auditLogs, customers, parcels, ParcelStatus, pickupQueues } from '@/db/schemas';
@@ -43,6 +44,7 @@ export async function listReceiverHandovers(
       id: parcels.id,
       handoverId: sql<string>`${parcels.pendingReceiverHandover}->>'id'`,
       bookingCode: parcels.bookingCode,
+      ...handoverNoteProjection,
       trackingCode: parcels.trackingCode,
       receiverId: parcels.receiverId,
       collectorName: sql<string>`${parcels.pendingReceiverHandover}->>'collectorName'`,

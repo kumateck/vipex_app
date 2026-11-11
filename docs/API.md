@@ -1,5 +1,16 @@
 # API Documentation Index
 
+Internal parcel responses expose handover note indicators. The scoped
+`GET/PATCH /v1/shipments/parcels/:id/handover-note` endpoints return or update the note itself.
+`GET /v1/shipments/parcels/receiver-cashier-queue` lists parcels requiring collection at the
+authenticated cashier's branch, with optional search and pagination.
+See [Parcel handover notes](PARCEL_HANDOVER_NOTES.md#api-and-rollout).
+
+The company-wide booking-code correction API under `/v1/shipments/parcels/customer-corrections`
+has separate relink and profile-edit grants, preview versions, atomic audit/OTP invalidation,
+and a handover/delivery cutoff. Its lookup/save contracts and failure cases are documented in
+[Parcel Customer Corrections](PARCEL_CUSTOMER_CORRECTIONS.md#api).
+
 Base URL: `/v1`
 
 `GET /shipments/parcels` accepts optional `parcelCode` for an exact, case-sensitive tracking
@@ -612,7 +623,18 @@ parcel return the existing ticket for today. Queue-enabled office pickup and rec
 require today's open ticket and return HTTP 409 if it is missing. A receiver payment already
 awaiting signature retains its original ticket for confirmation, even across midnight.
 
-## Receiver OTP Send Failures
+## Receiver Pickup OTP
+
+New pickup codes expire after 10 minutes. SMS templates receive `expiresInMinutes: 10`.
+`GET /v1/payments/receiver-otp/session?parcelId=...&targetReceiver=main` requires
+`CanCreateReceiverPayments` or `CanCompleteOfficePickup` and scopes the parcel to the
+authenticated company and destination branch. It returns `null` when no session can resume,
+or `{ sentAt, expiresAt, channel, phoneSlot, verificationToken }` with `Cache-Control: no-store, private`.
+Unverified sessions return a null token and their code expiry. A verified session can return a
+live, unconsumed token and its expiry to the officer who requested the code. The response contains
+no code or code hash. The same route accepts `targetReceiver=second` for a linked second receiver.
+Out-of-scope parcels return 404, missing authentication returns 401, and missing grants return 403.
+Reopening a parcel loads this endpoint without sending an OTP or extending its expiry.
 
 `POST /v1/payments/receiver-otp/request` still returns `{ expiresAt }` after successful SMS
 provider acceptance. It now returns HTTP 503 with a diagnostic error if dispatch fails,

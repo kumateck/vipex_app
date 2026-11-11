@@ -6,21 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { getReceiverOtpRemainingSeconds } from '@/shared/shipments/receiver-otp-session';
 import type { PickupOtpVerification } from './use-pickup-otp-verification';
 import { OtpChannelToggle } from '../otp-channel-toggle';
 
 type PhoneSlot = 'primary' | 'secondary';
 
 function useCountdownSeconds(expiresAt: string | null) {
-  const [remaining, setRemaining] = useState(0);
+  const [remaining, setRemaining] = useState(() =>
+    getReceiverOtpRemainingSeconds(expiresAt, Date.now()),
+  );
 
   useEffect(() => {
     if (!expiresAt) {
       setRemaining(0);
       return;
     }
-    const target = new Date(expiresAt).getTime();
-    const tick = () => setRemaining(Math.max(0, Math.round((target - Date.now()) / 1000)));
+    const tick = () => setRemaining(getReceiverOtpRemainingSeconds(expiresAt, Date.now()));
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
@@ -54,8 +56,9 @@ export function PickupOtpVerificationSection({
   const handleSend = async () => {
     const isResend = Boolean(otp.otpSentAt);
     try {
-      await otp.request(isResend);
-      toast.success(isResend ? 'Collection OTP resent to the customer' : 'Collection OTP sent');
+      if (await otp.request(isResend)) {
+        toast.success(isResend ? 'Collection OTP resent to the customer' : 'Collection OTP sent');
+      }
     } catch (error) {
       toast.error(getApplicationErrorMessage(error, '') || 'Failed to send collection OTP');
     }
@@ -86,6 +89,14 @@ export function PickupOtpVerificationSection({
         ) : null}
       </div>
 
+      {otp.restoreError ? (
+        <div role="alert" className="space-y-2 text-sm text-destructive">
+          <p>{otp.restoreError}</p>
+          <Button type="button" variant="outline" onClick={() => void otp.retryRestore()}>
+            Retry OTP recovery
+          </Button>
+        </div>
+      ) : null}
       {otp.otpVerified ? (
         <p className="text-xs text-muted-foreground">
           Customer presence confirmed with the one-time collection code.
@@ -124,13 +135,15 @@ export function PickupOtpVerificationSection({
               variant="outline"
               size="sm"
               onClick={() => void handleSend()}
-              disabled={otp.otpRequestPending || otp.otpVerifyPending}
+              disabled={otp.otpRequestPending || otp.otpVerifyPending || Boolean(otp.restoreError)}
             >
-              {otp.otpRequestPending
-                ? 'Sending...'
-                : otp.otpSentAt
-                  ? 'Resend OTP'
-                  : 'Send Collection OTP'}
+              {otp.isRestoring
+                ? 'Restoring OTP…'
+                : otp.otpRequestPending
+                  ? 'Sending...'
+                  : otp.otpSentAt
+                    ? 'Resend OTP'
+                    : 'Send Collection OTP'}
             </Button>
             {otp.otpSentAt ? (
               <span

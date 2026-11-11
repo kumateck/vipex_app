@@ -1,10 +1,13 @@
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
+import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
 import { StyleSheet, Text } from 'react-native';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import { AppButton, AppCard, AppStatusChip } from '@mobile/components/ui';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileTypography } from '@mobile/theme/layout';
 
-type ParcelCardData = {
+type ParcelCardData = ParcelHandoverNoteIndicator & {
+  id?: string;
   bookingCode: string;
   parcelDetails: string;
   senderName?: string | null;
@@ -41,6 +44,13 @@ export function ParcelCard({ parcel, onPress, actionLabel = 'Open Parcel' }: Par
       </Text>
       <Text style={[styles.body, { color: theme.colors.textSubtle }]}>{parcel.parcelDetails}</Text>
       <AppStatusChip label={parcel.status} />
+      {parcel.id ? (
+        <ParcelHandoverNoteAction
+          parcelId={parcel.id}
+          hasHandoverNote={parcel.hasHandoverNote}
+          handoverNoteCritical={parcel.handoverNoteCritical}
+        />
+      ) : null}
       {isVoidStatus ? (
         <Text style={[styles.void, { color: theme.colors.danger }]}>Void Record</Text>
       ) : null}

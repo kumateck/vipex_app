@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppCard, AppInput, AppSkeletonCard } from '@mobile/components/ui';
 import { getParcelStatusLabel } from '@mobile/constants/parcel-status';
@@ -54,6 +55,11 @@ export function AssignedCallList(props: Props) {
               </View>
               <ContactState contacted={Boolean(parcel.callCenterCalledAt)} />
             </View>
+            <ParcelHandoverNoteAction
+              parcelId={parcel.id}
+              hasHandoverNote={parcel.hasHandoverNote}
+              handoverNoteCritical={parcel.handoverNoteCritical}
+            />
             <View style={styles.details}>
               <Text style={[styles.text, { color: theme.colors.text }]}>
                 {parcel.receiverName ?? '-'}

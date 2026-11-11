@@ -61,6 +61,29 @@ export function mapAuditEntry(entry: AuditEntry): ParcelHistoryDraft[] {
   const message = text(entry.message);
 
   switch (entry.action) {
+    case 'PARCEL_HANDOVER_NOTE_SAVED':
+      return [
+        draft(entry, {
+          category: 'edit',
+          title: message ?? 'Handover note saved',
+        }),
+      ];
+    case 'PARCEL_CUSTOMER_CORRECTED':
+      return [
+        draft(entry, {
+          category: 'edit',
+          title: `${humanize(String(meta.party ?? 'customer'))} corrected`,
+          description: joinParts([
+            text(asRecord(meta.previous).fullname) &&
+              `Previous customer: ${text(asRecord(meta.previous).fullname)}`,
+            text(asRecord(meta.customer).fullname) &&
+              `Customer: ${text(asRecord(meta.customer).fullname)}`,
+            text(asRecord(meta.customer).telephone) &&
+              `Telephone: ${text(asRecord(meta.customer).telephone)}`,
+            text(meta.reason) && `Reason: ${text(meta.reason)}`,
+          ]),
+        }),
+      ];
     case 'PARCEL_UPDATED': {
       const patch = asRecord(meta.patch);
       const drafts: ParcelHistoryDraft[] = [];

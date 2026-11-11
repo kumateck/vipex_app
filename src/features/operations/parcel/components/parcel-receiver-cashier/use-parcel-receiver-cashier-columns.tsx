@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useMemo } from 'react';
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -58,6 +59,11 @@ export function useParcelReceiverCashierColumns({
             <div className="inline-flex items-center gap-2">
               <span className={`h-2.5 w-2.5 rounded-full ${paymentType.dotClassName}`} />
               <span>{row.original.bookingCode}</span>
+              <ParcelHandoverNoteAction
+                parcelId={row.original.id}
+                hasHandoverNote={row.original.hasHandoverNote}
+                handoverNoteCritical={row.original.handoverNoteCritical}
+              />
             </div>
           );
         },

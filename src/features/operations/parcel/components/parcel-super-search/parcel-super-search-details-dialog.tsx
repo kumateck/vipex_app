@@ -75,6 +75,7 @@ export function ParcelSuperSearchDetailsDialog({
     <ParcelDetailsDialog
       parcelId={parcelId}
       onClose={onClose}
+      handoverNoteEditorBranchId={branchId}
       renderBanner={renderBanner}
       renderActions={renderActions}
     />

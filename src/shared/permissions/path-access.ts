@@ -12,6 +12,12 @@ export function hasRequiredPermissionForPath(
   if (!requiredPermission) return true;
 
   const granted = new Set(grantedPermissions);
+  if (requiredPermission === PermissionKeys.CanCorrectParcelCustomers) {
+    return (
+      granted.has(PermissionKeys.CanCorrectParcelCustomers) ||
+      granted.has(PermissionKeys.CanOverrideParcelCustomerDetails)
+    );
+  }
   if (requiredPermission === PermissionKeys.CanReadParcelStorageClearances) {
     return [
       PermissionKeys.CanReadParcelStorageClearances,

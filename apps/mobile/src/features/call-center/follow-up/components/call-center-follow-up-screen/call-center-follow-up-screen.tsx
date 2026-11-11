@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
@@ -109,6 +110,11 @@ export function CallCenterFollowUpScreen() {
                   <Text style={[styles.title, { color: theme.colors.text }]}>
                     {parcel.bookingCode}
                   </Text>
+                  <ParcelHandoverNoteAction
+                    parcelId={parcel.id}
+                    hasHandoverNote={parcel.hasHandoverNote}
+                    handoverNoteCritical={parcel.handoverNoteCritical}
+                  />
                   <Text style={[styles.text, { color: theme.colors.textMuted }]}>
                     {parcel.receiverName ?? '-'} · {parcel.receiverPhone ?? '-'}
                   </Text>

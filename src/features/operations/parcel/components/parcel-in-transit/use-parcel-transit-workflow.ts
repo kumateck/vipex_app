@@ -93,6 +93,7 @@ export function useParcelTransitWorkflow(view: InTransitView) {
 
   const { data, isLoading, refetch } = useSearchParcelsQuery(query, {
     skip: !companyId || !branchId,
+    refetchOnMountOrArgChange: view === 'incoming',
   });
   const rows = data?.data ?? EMPTY_ROWS;
   const batchArrival = useIncomingParcelBatchArrival({ rows, onArrived: refetch });
@@ -102,6 +103,16 @@ export function useParcelTransitWorkflow(view: InTransitView) {
       event.preventDefault();
       const term = searchInput.trim();
       batchArrival.clearSelection();
+      if (
+        view === 'incoming' &&
+        companyId &&
+        branchId &&
+        term === (query.search ?? '') &&
+        query.page === 1
+      ) {
+        void refetch();
+        return;
+      }
       setQuery((prev) => ({
         ...prev,
         page: 1,
@@ -109,7 +120,17 @@ export function useParcelTransitWorkflow(view: InTransitView) {
         filters: serverFilters,
       }));
     },
-    [batchArrival, searchInput, serverFilters],
+    [
+      batchArrival,
+      branchId,
+      companyId,
+      query.page,
+      query.search,
+      refetch,
+      searchInput,
+      serverFilters,
+      view,
+    ],
   );
 
   const handleRequestChange = useCallback(

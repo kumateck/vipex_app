@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useReceiverOtpSession } from '../../hooks';
 import { PaymentMethod } from '@/db/schemas/enums';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import type { ReceiptPrintData } from '../parcel-receipt.types';
@@ -34,25 +35,12 @@ export function useReceiverCashierDialogState() {
   // unreachable. Defaults to the primary; only shown/used when a second
   // number exists.
   const [phoneSlot, setPhoneSlotState] = useState<'primary' | 'secondary'>('primary');
-  // SMS or WhatsApp for the next OTP send; a code already sent stays valid.
-  const [otpChannel, setOtpChannel] = useState<'sms' | 'whatsapp'>('sms');
-  const [otpSentAt, setOtpSentAt] = useState<string | null>(null);
-  const [otpExpiresAt, setOtpExpiresAt] = useState<string | null>(null);
-  const [otpCode, setOtpCode] = useState('');
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [otpVerificationToken, setOtpVerificationToken] = useState('');
-  const [otpRequestPending, setOtpRequestPending] = useState(false);
-  const [otpVerifyPending, setOtpVerifyPending] = useState(false);
-
-  const resetOtpState = () => {
-    setOtpSentAt(null);
-    setOtpExpiresAt(null);
-    setOtpCode('');
-    setOtpVerified(false);
-    setOtpVerificationToken('');
-    setOtpRequestPending(false);
-    setOtpVerifyPending(false);
-  };
+  const otp = useReceiverOtpSession({
+    parcelId: selectedParcel?.id ?? null,
+    targetReceiver: 'main',
+    phoneSlot,
+    onPhoneSlotRestored: setPhoneSlotState,
+  });
 
   const openParcelDialog = (parcel: ParcelSearchRow) => {
     setSelectedParcel(parcel);
@@ -75,17 +63,11 @@ export function useReceiverCashierDialogState() {
     setSecondNewPhone('');
     setMomoTransactionId('');
     setPhoneSlotState('primary');
-    resetOtpState();
-  };
-
-  const setHandoverTargetAndResetOtp = (target: HandoverTarget) => {
-    setHandoverTarget(target);
-    resetOtpState();
+    void otp.restore(parcel.id);
   };
 
   const setPhoneSlot = (slot: 'primary' | 'secondary') => {
     setPhoneSlotState(slot);
-    resetOtpState();
   };
 
   const setPaymentMethodAndResetMomo = (method: string) => {
@@ -95,10 +77,13 @@ export function useReceiverCashierDialogState() {
 
   return {
     selectedParcel,
-    setSelectedParcel,
+    setSelectedParcel: (next: ParcelSearchRow | null) => {
+      if (!next) otp.reset();
+      setSelectedParcel(next);
+    },
     openParcelDialog,
     handoverTarget,
-    setHandoverTarget: setHandoverTargetAndResetOtp,
+    setHandoverTarget,
     pickerStaffId,
     setPickerStaffId,
     paymentMethod,
@@ -137,22 +122,19 @@ export function useReceiverCashierDialogState() {
     setSecondNewPhone,
     phoneSlot,
     setPhoneSlot,
-    otpChannel,
-    setOtpChannel,
-    otpSentAt,
-    otpExpiresAt,
-    otpCode,
-    setOtpCode,
-    otpVerified,
-    otpVerificationToken,
-    otpRequestPending,
-    otpVerifyPending,
-    setOtpSentAt,
-    setOtpExpiresAt,
-    setOtpVerified,
-    setOtpVerificationToken,
-    setOtpRequestPending,
-    setOtpVerifyPending,
-    resetOtpState,
+    otp,
+    otpChannel: otp.otpChannel,
+    setOtpChannel: otp.setOtpChannel,
+    otpSentAt: otp.otpSentAt,
+    otpExpiresAt: otp.otpExpiresAt,
+    otpCode: otp.otpCode,
+    setOtpCode: otp.setOtpCode,
+    otpVerified: otp.otpVerified,
+    otpVerificationToken: otp.verificationToken,
+    otpRequestPending: otp.otpRequestPending,
+    otpVerifyPending: otp.otpVerifyPending,
+    otpRestoreError: otp.restoreError,
+    otpRestoring: otp.isRestoring,
+    retryOtpRestore: otp.retryRestore,
   };
 }

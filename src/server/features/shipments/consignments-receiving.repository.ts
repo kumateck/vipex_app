@@ -1,6 +1,8 @@
 import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
+import { handoverNoteProjection } from './handover-note/projection';
+import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
 import {
   consignments,
   consignmentItems,
@@ -13,7 +15,7 @@ import {
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
-export type ConsignmentItemDetailRow = {
+export type ConsignmentItemDetailRow = ParcelHandoverNoteIndicator & {
   parcelId: string;
   trackingCode: string;
   bookingCode: string;
@@ -41,6 +43,7 @@ export async function listConsignmentItemsRepo(
       trackingCode: parcels.trackingCode,
       bookingCode: parcels.bookingCode,
       parcelDetails: parcels.parcelDetails,
+      ...handoverNoteProjection,
       senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
       receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       addedAt: consignmentItems.addedAt,

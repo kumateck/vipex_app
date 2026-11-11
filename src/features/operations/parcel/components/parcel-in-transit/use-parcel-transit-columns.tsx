@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -74,6 +75,11 @@ export function useParcelTransitColumns(workflow: ReturnType<typeof useParcelTra
                   className={`h-2.5 w-2.5 shrink-0 rounded-full ${paymentStatus.dotClassName}`}
                 />
                 <p className="font-medium">{row.original.bookingCode}</p>
+                <ParcelHandoverNoteAction
+                  parcelId={row.original.id}
+                  hasHandoverNote={row.original.hasHandoverNote}
+                  handoverNoteCritical={row.original.handoverNoteCritical}
+                />
                 <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
               </div>
               <p className="pl-[18px] text-muted-foreground text-xs">

@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { AppStatusChip } from '@mobile/components/ui/mobile';
@@ -27,6 +28,11 @@ export function ParcelSearchResultCard({
           <Text numberOfLines={1} style={[styles.booking, { color: theme.colors.text }]}>
             {parcel.bookingCode}
           </Text>
+          <ParcelHandoverNoteAction
+            parcelId={parcel.id}
+            hasHandoverNote={parcel.hasHandoverNote}
+            handoverNoteCritical={parcel.handoverNoteCritical}
+          />
         </View>
         <View style={styles.statusWrap}>
           <AppStatusChip label={parcel.status} />

@@ -1,10 +1,11 @@
 import { isHandoverSignature, MAX_HANDOVER_SIGNATURE_LENGTH } from './handover-signature';
+import type { ParcelHandoverNoteIndicator } from './parcel-handover-note';
 
 export type ReceiverCashierSignature =
   | { source: 'touchscreen'; signatureImage: string }
   | { source: 'topaz'; signatureImage: string; sigString: string };
 
-export type PendingReceiverHandoverRow = {
+export type PendingReceiverHandoverRow = ParcelHandoverNoteIndicator & {
   id: string;
   handoverId: string;
   trackingCode: string;

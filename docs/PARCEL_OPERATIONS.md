@@ -707,9 +707,22 @@ Both controls default to enabled for branches unless explicitly changed. OTP enf
 
 Mobile discrepancy capture supports an expected system parcel that is physically missing and a physical parcel without a system record. Mobile requires notes and a camera photo. The photo is uploaded with model type `parcel-discrepancy-evidence` and the created discrepancy ID. If photo upload fails after record creation, the client reports partial success and must not create a duplicate discrepancy.
 
+## Parcel handover notes
+
+Staff can attach a [critical handover note](PARCEL_HANDOVER_NOTES.md) to an in-transit parcel from All Parcels Super Search on web or Super Search on mobile.
+Receiving, call center, pickup and cashier staff can open it from their parcel views. Delivery
+clears the alert permanently and keeps the instruction on the record.
+
 ## Receiver OTP
 
-- A receiver OTP is six digits and expires after five minutes.
+- A newly issued receiver OTP is six digits and expires 10 minutes after it is requested.
+  Previously issued codes use their stored expiry.
+- Staff can close the confirmation, work on another parcel, and return to enter the original
+  code. Web and desktop Waiting for Pickup and Receiver Cashier, and mobile Waiting for Pickup,
+  reload the code's remaining time, channel, and phone selection for the reopened parcel.
+  The code input stays available through the final second of the active session.
+  Reopening does not send a new code. If the same staff member requested and already verified
+  the code, the screen can also restore the unconsumed verification token during its validity.
 - Staff can select the main or alternate recipient and the primary or secondary stored phone where available.
 - Request, verification, and final action are separate server operations.
 - Verification must be tied to the intended parcel and action; a valid code must not authorize another parcel.
@@ -722,7 +735,9 @@ Mobile discrepancy capture supports an expected system parcel that is physically
   Failed-send dispatch logs retain the diagnostic error. See
   [SMS dispatch diagnostics](NOTIFICATION_HUB_MODULE.md#application-sms-definitions).
 - QA: test success, missing provider/configuration, provider rejection, transport exceptions,
-  retry and failed forced resend; verify unchanged parcel/payment state and five-minute expiry.
+  retry and failed forced resend. Verify 10-minute expiry and that reopening a parcel after
+  switching to another restores its input and countdown. Verify the original code works before
+  expiry, expired codes can be replaced, and stale responses do not appear on a different parcel.
 - **Channel choice (WhatsApp):** when the `whatsapp_messaging` module is enabled and configured, the
   Receiver Cashier and Waiting for Pickup OTP sections show an SMS / WhatsApp toggle (default SMS).
   The request sends `channel`; the channel is recorded on `parcel_receiver_otps.channel`. WhatsApp
@@ -840,6 +855,12 @@ Automated coverage: `parcel-sender-correction.spec.ts`,
 `parcel-sender-correction-access.spec.ts` and `existing-customer-edit-dialog.test.tsx`.
 
 #### Correcting a receiver from a parcel
+
+The **Parcel Customer Corrections** page supports privileged company-wide sender, main-receiver
+and second-receiver corrections by booking code until handover/delivery confirmation, including
+after a closed call outcome. Separate grants control relinking and full contact editing. See
+[Parcel Customer Corrections](PARCEL_CUSTOMER_CORRECTIONS.md) for scope, shared-profile effects,
+OTP invalidation, migration `0095`, API and QA scenarios.
 
 The **Edit** action on incoming in-transit parcels, Waiting for Pickup, Receiver Cashier,
 and Shelf Picker Update, and on source-branch Processed Parcels / Consignment, In Transit

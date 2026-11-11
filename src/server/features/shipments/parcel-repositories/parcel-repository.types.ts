@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { db } from '@/db/config';
+import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
 
 import type { SortField } from '@/server/types/pagination.types';
 
@@ -19,7 +20,8 @@ export function effectiveParcelReceivedAt() {
   )`.mapWith((value) => (value == null ? null : new Date(String(value))));
 }
 
-export type ParcelRow = {
+export type ParcelRow = ParcelHandoverNoteIndicator & {
+  handoverNoteEditable?: boolean;
   hasPendingReceiverHandover?: boolean;
   id: string;
   companyId: string;

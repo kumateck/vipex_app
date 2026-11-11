@@ -4,10 +4,9 @@ import { EMPTY_CARD_SELECTION } from '../utils';
 
 /**
  * Form fields of the pickup handover, reset per parcel the same way the web
- * dialog resets them. Changing the collector clears any OTP already sent,
- * via `onOtpInvalidated`.
+ * dialog resets them. Changing the collector requires a fresh signature.
  */
-export function usePickupHandoverForm(onOtpInvalidated: () => void) {
+export function usePickupHandoverForm() {
   const [pickerStaffId, setPickerStaffId] = useState('');
   const [handoverTarget, setHandoverTargetState] = useState<HandoverTarget>('main');
   const [mainCard, setMainCard] = useState<CardSelection>(EMPTY_CARD_SELECTION);
@@ -26,14 +25,10 @@ export function usePickupHandoverForm(onOtpInvalidated: () => void) {
     setSignatureImage('');
   }, []);
 
-  const setHandoverTarget = useCallback(
-    (target: HandoverTarget) => {
-      onOtpInvalidated();
-      setHandoverTargetState(target);
-      setSignatureImage('');
-    },
-    [onOtpInvalidated],
-  );
+  const setHandoverTarget = useCallback((target: HandoverTarget) => {
+    setHandoverTargetState(target);
+    setSignatureImage('');
+  }, []);
 
   const setSecondNewName = useCallback((value: string) => {
     setSecondNewNameState(value);
