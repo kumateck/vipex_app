@@ -5,6 +5,7 @@ import type { ComponentProps } from 'react';
 import { AppScreen } from '@mobile/components/screen';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   canCaptureReceiverSignature,
   canCompleteOfficePickup,
@@ -118,6 +119,33 @@ export function MobileOperationsHubScreen() {
           description="Verify the receiver's collection OTP and hand over sender-paid parcels."
           href="/(app)/office-pickup"
           linkLabel="Open Pickup"
+        />
+      ) : null}
+      {permissions.includes(PermissionKeys.CanReadCallCenterAssignment) ? (
+        <ModuleCard
+          icon="call-outline"
+          title="Call Center Assignment"
+          description="Find parcels and review handover notes in the assignment queue."
+          href="/(app)/call-center-assignment"
+          linkLabel="Open Assignment Queue"
+        />
+      ) : null}
+      {permissions.includes(PermissionKeys.CanReadShelfPickerUpdate) ? (
+        <ModuleCard
+          icon="list-outline"
+          title="Shelf Picker Update"
+          description="Find parcels and review handover notes in the shelf picker queue."
+          href="/(app)/shelf-picker-update"
+          linkLabel="Open Shelf Picker Queue"
+        />
+      ) : null}
+      {canCaptureReceiverSignature(permissions) ? (
+        <ModuleCard
+          icon="cash-outline"
+          title="Receiver Cashier"
+          description="Look up parcels awaiting cashier collection and read their handover notes."
+          href="/(app)/receiver-cashier"
+          linkLabel="Open Cashier Queue"
         />
       ) : null}
       {canCaptureReceiverSignature(permissions) ? (

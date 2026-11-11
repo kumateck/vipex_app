@@ -87,6 +87,8 @@ export const parcels = pgTable(
     status: smallint('status').notNull().default(ParcelStatus.CREATED),
     parcelDetails: varchar('parcel_details', { length: 255 }).notNull(),
     parcelContent: varchar('parcel_content', { length: 255 }).notNull(),
+    handoverNote: varchar('handover_note', { length: 1000 }),
+    handoverNoteClearedAt: timestamp('handover_note_cleared_at', { withTimezone: false }),
 
     // bigint defaults via SQL literal
     parcelValuePsw: bigint('parcel_value_psw', { mode: 'number' })

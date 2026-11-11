@@ -32,6 +32,14 @@ describe('office pickup OTP rules', () => {
     expect(formatCountdown(5)).toBe('0:05');
   });
 
+  test('the shared countdown keeps the code input available through the final millisecond', () => {
+    const expiry = '2026-11-08T10:10:00.000Z';
+    const timestamp = Date.parse(expiry);
+    expect(getRemainingSeconds(expiry, timestamp - 1)).toBe(1);
+    expect(getRemainingSeconds(expiry, timestamp)).toBe(0);
+    expect(getRemainingSeconds(expiry, timestamp + 1)).toBe(0);
+  });
+
   test('labels the send button for first send, resend and in-flight', () => {
     expect(getOtpSendLabel({ pending: false, sent: false })).toBe('Send Collection OTP');
     expect(getOtpSendLabel({ pending: false, sent: true })).toBe('Resend OTP');

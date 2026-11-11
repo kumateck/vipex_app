@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
@@ -70,6 +71,11 @@ export function ReceiverSignaturesScreen() {
           <Text style={{ color: theme.colors.text, fontWeight: '600' }}>
             {row.trackingCode} · {row.bookingCode}
           </Text>
+          <ParcelHandoverNoteAction
+            parcelId={row.id}
+            hasHandoverNote={row.hasHandoverNote}
+            handoverNoteCritical={row.handoverNoteCritical}
+          />
           <Text style={{ color: theme.colors.textMuted }}>
             {row.collectorName} · Associate: {row.associateName}
           </Text>

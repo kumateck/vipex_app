@@ -126,6 +126,42 @@ export const routes = new Elysia({ name: 'parcel-queues' })
     },
   )
   .get(
+    '/receiver-cashier-queue',
+    async ({ query, user }) => {
+      if (!user?.companyId || !user.branchId) return emptyParcelList(query);
+      const branch = await getBranchRepo(user.branchId);
+      if (!branch || branch.isDeleted || branch.companyId !== user.companyId)
+        return emptyParcelList(query);
+      const search = query.search?.trim();
+      if (!search && !branch.usePickupQueue) return emptyParcelList(query);
+      return listParcelsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search,
+        sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
+        filters: {
+          companyId: user.companyId,
+          destinationId: user.branchId,
+          status: ParcelStatus.AWAITING_PICKUP,
+          cashierCollectionRequired: true,
+          hasPickupQueue: search ? undefined : true,
+        },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 200 })),
+        search: t.Optional(t.String({ maxLength: 255 })),
+      }),
+      beforeHandle: requirePermissions(PermissionKeys.CanCreateReceiverPayments),
+      detail: {
+        tags: ['Shipments'],
+        summary: 'Look up parcels awaiting receiver cashier collection',
+      },
+    },
+  )
+  .get(
     '/shelf-picker',
     async ({ query, user }) => {
       const authUser = user as AuthUser;

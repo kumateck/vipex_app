@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNull, max, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
+import { handoverNoteProjection } from '../shipments/handover-note/projection';
 import { customers, parcels, ParcelStatus, pickupQueues } from '@/db/schemas';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
@@ -134,6 +135,7 @@ export async function listActivePickupQueuesForBranchRepo(
       trackingCode: parcels.trackingCode,
       bookingCode: parcels.bookingCode,
       parcelDetails: parcels.parcelDetails,
+      ...handoverNoteProjection,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       chargePsw: parcels.chargePsw,
       callSender: parcels.callSender,

@@ -1,5 +1,9 @@
 # Mobile Frontline Workflows
 
+Mobile parcel cards show [handover notes](PARCEL_HANDOVER_NOTES.md) in Super Search,
+receiving, call center, pickup queues, Waiting for Pickup and Receiver Signatures. Operations also
+has permission-gated Call Center Assignment, Shelf Picker Update and Receiver Cashier queue lookups for note review.
+
 Last audited: 2026-09-21
 
 ## Scope

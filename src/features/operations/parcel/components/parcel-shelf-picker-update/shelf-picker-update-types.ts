@@ -1,9 +1,10 @@
+import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
 export type StaffOption = {
   id: string;
   fullname: string;
 };
 
-export type ParcelRow = {
+export type ParcelRow = ParcelHandoverNoteIndicator & {
   id: string;
   bookingCode: string;
   trackingCode: string;

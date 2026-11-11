@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { getReceiverOtpRemainingSeconds } from '@/shared/shipments/receiver-otp-session';
 import type { useParcelReceiverCashierWorkflow } from './use-parcel-receiver-cashier-workflow';
 import { OtpChannelToggle } from '../otp-channel-toggle';
 
@@ -16,15 +17,16 @@ type ReceiverOtpSectionProps = {
 };
 
 function useCountdownSeconds(expiresAt: string | null) {
-  const [remaining, setRemaining] = useState(0);
+  const [remaining, setRemaining] = useState(() =>
+    getReceiverOtpRemainingSeconds(expiresAt, Date.now()),
+  );
 
   useEffect(() => {
     if (!expiresAt) {
       setRemaining(0);
       return;
     }
-    const target = new Date(expiresAt).getTime();
-    const tick = () => setRemaining(Math.max(0, Math.round((target - Date.now()) / 1000)));
+    const tick = () => setRemaining(getReceiverOtpRemainingSeconds(expiresAt, Date.now()));
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);

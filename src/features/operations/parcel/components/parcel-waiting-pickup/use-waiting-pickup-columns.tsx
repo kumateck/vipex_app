@@ -1,3 +1,4 @@
+import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -60,6 +61,11 @@ export function useWaitingPickupColumns({
           <div className="inline-flex items-center gap-2">
             <span className={`h-2.5 w-2.5 rounded-full ${paymentDotClass(row.original)}`} />
             <span>{row.original.bookingCode}</span>
+            <ParcelHandoverNoteAction
+              parcelId={row.original.id}
+              hasHandoverNote={row.original.hasHandoverNote}
+              handoverNoteCritical={row.original.handoverNoteCritical}
+            />
           </div>
         ),
       },

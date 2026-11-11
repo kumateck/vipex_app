@@ -1,0 +1,1 @@
+export { parcelHandoverNoteRoutes } from './routes';

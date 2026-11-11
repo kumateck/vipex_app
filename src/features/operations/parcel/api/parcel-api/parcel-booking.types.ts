@@ -1,3 +1,4 @@
+import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
 export type CreateBookingWithParcelsInput = {
   senderId: string;
   status: number;
@@ -79,7 +80,7 @@ export type SenderCashierParcel = {
 
 export type ProcessedParcel = SenderCashierParcel;
 
-export type ParcelSearchRow = {
+export type ParcelSearchRow = ParcelHandoverNoteIndicator & {
   id: string;
   companyId: string;
   sourceId: string;

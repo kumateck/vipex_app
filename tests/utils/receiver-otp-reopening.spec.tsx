@@ -53,6 +53,12 @@ describe('web OTP reopening', () => {
         });
         expect(view.current.otp.otpSentAt).toBeNull();
         await act(async () => {
+          view.current.otp.setOtpChannel('sms');
+        });
+        await act(async () => {
+          await view.current.otp.request();
+        });
+        await act(async () => {
           view.current.openParcelDialog(parcel('a'));
         });
         expect(view.current.otp.otpSentAt).toBeTruthy();
@@ -74,7 +80,7 @@ describe('web OTP reopening', () => {
         });
         expect(view.current.otp.otpVerified).toBe(true);
         expect(view.current.otp.verificationToken).toBe('proof-a');
-        expect(sends).toEqual(['a']);
+        expect(sends).toEqual(['a', 'b']);
         expect(verifications).toEqual(['a']);
       } finally {
         await view.unmount();
@@ -145,6 +151,12 @@ describe('mobile OTP reopening', () => {
       });
       expect(view.current.otp.sentAt).toBeNull();
       await act(async () => {
+        view.current.otp.setChannel('sms');
+      });
+      await act(async () => {
+        await view.current.otp.request();
+      });
+      await act(async () => {
         await view.current.open(parcel('a'));
       });
       expect(view.current.otp.sentAt).toBeTruthy();
@@ -165,7 +177,7 @@ describe('mobile OTP reopening', () => {
       });
       expect(view.current.otp.verified).toBe(true);
       expect(view.current.otp.verificationToken).toBe('proof-a');
-      expect(sends).toEqual(['a']);
+      expect(sends).toEqual(['a', 'b']);
       expect(verifications).toEqual(['a']);
     } finally {
       await view.unmount();

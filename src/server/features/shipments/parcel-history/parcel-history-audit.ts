@@ -61,6 +61,13 @@ export function mapAuditEntry(entry: AuditEntry): ParcelHistoryDraft[] {
   const message = text(entry.message);
 
   switch (entry.action) {
+    case 'PARCEL_HANDOVER_NOTE_SAVED':
+      return [
+        draft(entry, {
+          category: 'edit',
+          title: message ?? 'Handover note saved',
+        }),
+      ];
     case 'PARCEL_CUSTOMER_CORRECTED':
       return [
         draft(entry, {
