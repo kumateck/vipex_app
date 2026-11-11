@@ -3,7 +3,7 @@ import { AppButton, AppCard, AppStatusChip } from '@mobile/components/ui';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { ParcelFullDetails, ParcelSearchRow } from '@mobile/types/parcels';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
-import { formatCedis, formatQueueDate } from '../../utils/queue-management-utils';
+import { formatCedis, formatQueueDate, isQueueDateToday } from '../../utils/queue-management-utils';
 import { QueueDetailRow } from './queue-detail-row';
 
 type QueueDetailsCardProps = {
@@ -18,6 +18,8 @@ type QueueDetailsCardProps = {
 
 export function QueueDetailsCard(props: QueueDetailsCardProps) {
   const { theme } = useAppearance();
+  const queue = props.details?.pickupQueue;
+  const currentQueue = queue && isQueueDateToday(queue.queueDate, queue.queuedAt) ? queue : null;
   const recentPayments = (props.details?.payments ?? []).slice(0, 3);
   return (
     <AppCard>
@@ -37,17 +39,9 @@ export function QueueDetailsCard(props: QueueDetailsCardProps) {
         <QueueDetailRow label="Charge" value={formatCedis(props.parcel.chargePsw)} />
         <QueueDetailRow label="To be paid" value={formatCedis(props.parcel.plannedToBePaidPsw)} />
         <QueueDetailRow label="Status" value={<AppStatusChip label={props.parcel.status} />} />
-        <QueueDetailRow
-          label="Queue"
-          value={
-            props.details?.pickupQueue?.queueCode ?? props.parcel.pickupQueueCode ?? 'Not queued'
-          }
-        />
-        {props.details?.pickupQueue?.queuedAt ? (
-          <QueueDetailRow
-            label="Queued at"
-            value={formatQueueDate(props.details.pickupQueue.queuedAt)}
-          />
+        <QueueDetailRow label="Queue" value={currentQueue?.queueCode ?? 'Not queued'} />
+        {currentQueue?.queuedAt ? (
+          <QueueDetailRow label="Queued at" value={formatQueueDate(currentQueue.queuedAt)} />
         ) : null}
         {props.details?.delivery ? (
           <>

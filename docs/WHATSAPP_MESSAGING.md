@@ -77,6 +77,9 @@ Meta webhook URL to configure: `https://app.vipexparcels.com/v1/public/whatsapp/
 
 ## Pickup OTP over WhatsApp
 
+- New pickup codes expire in the application after 10 minutes. The WhatsApp authentication
+  template's displayed expiry is configured in Meta and should match the application lifetime.
+
 - `POST /v1/payments/receiver-otp/request` accepts optional `channel: 'sms' | 'whatsapp'` (default `sms`). The response includes the `channel` used.
 - `whatsapp` returns 400 if the module is disabled ("WhatsApp Messaging is not enabled for this company") or not configured. No OTP is created in that case.
 - The chosen channel is stored on `parcel_receiver_otps.channel` (migration `0084`, default `sms`).

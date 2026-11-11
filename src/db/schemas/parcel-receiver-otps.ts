@@ -5,7 +5,7 @@ import { parcels } from './shipments';
 
 // Receiver identity verification for office pickup handover: a 6-digit code is
 // texted to the receiver (or second/alternate receiver) and must be verified
-// within 5 minutes. Staff choose whether the code goes by SMS or WhatsApp. Once verified, a separate short-lived opaque
+// within 10 minutes. Staff choose whether the code goes by SMS or WhatsApp. Once verified, a separate short-lived opaque
 // verificationToken is minted so the cashier does not have to re-enter the OTP
 // again when finishing the payment dialog a few minutes later.
 export const parcelReceiverOtps = pgTable(

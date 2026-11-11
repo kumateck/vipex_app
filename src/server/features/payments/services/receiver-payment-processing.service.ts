@@ -13,6 +13,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { updateParcelRepo } from '../../shipments/parcels.repository';
 import { assertNoOpenParcelReconciliationCaseForDelivery } from '../../shipments/parcel-delivery-reconciliation-guard';
 import { endPickupQueueForParcelSvc } from '../../pickup-queues/service';
+import { getPickupQueueDate } from '../../pickup-queues/queue-date';
 import {
   assertReceiverOtpVerifiedSvc,
   consumeReceiverOtpTokenSvc,
@@ -120,11 +121,12 @@ export async function collectReceiverPaymentAndDeliverSvc(input: ReceiverPayment
           and(
             eq(pickupQueues.parcelId, input.parcelId),
             eq(pickupQueues.branchId, input.branchId),
+            eq(pickupQueues.queueDate, getPickupQueueDate()),
             isNull(pickupQueues.endedAt),
           ),
         )
         .limit(1);
-      if (pendingSignature && destinationBranch.usePickupQueue && !activeQueue) {
+      if (destinationBranch.usePickupQueue && !activeQueue) {
         throw Conflict('Create a pickup queue ticket before processing receiver payment');
       }
       await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);

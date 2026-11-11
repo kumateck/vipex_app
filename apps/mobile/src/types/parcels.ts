@@ -35,6 +35,7 @@ export type ParcelSearchRow = {
   pickupQueueId?: string | null;
   pickupQueueCode?: string | null;
   pickupQueueNumber?: number | null;
+  pickupQueueDate?: string | null;
   pickupQueuedAt?: string | null;
   riderUserId?: string | null;
   riderName?: string | null;
@@ -105,6 +106,7 @@ export type ParcelFullDetails = {
     id: string;
     queueCode: string;
     queueNumber: number;
+    queueDate?: string;
     queuedAt: string;
     paymentBucket: string;
     queuedBy?: string | null;

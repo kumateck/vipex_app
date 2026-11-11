@@ -1,5 +1,6 @@
 import { getParcelDetails, mobileApiGet, mobileApiPatch, mobileApiPost } from '@mobile/lib/api';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
+import type { ReceiverOtpSession } from '@/shared/shipments/receiver-otp-session';
 import type {
   BranchPickupSettings,
   SignedPickupConfirmation,
@@ -63,10 +64,11 @@ export async function loadPickupResources(
   token: string,
   parcel: PickupParcel,
   context: PickupContext,
+  pickupQueueTodayOnly: boolean,
 ): Promise<PickupResources> {
   const [details, staffOptions, cardOptions, mainReceiverCards, secondReceiverCards] =
     await Promise.all([
-      getParcelDetails(token, parcel.id),
+      getParcelDetails(token, parcel.id, { pickupQueueTodayOnly }),
       listLocationStaff(token, context),
       mobileApiGet<PickupCardOption[]>({ path: '/customers/cards/options', token }),
       listCustomerCards(token, parcel.receiverId),
@@ -83,6 +85,14 @@ export function requestPickupOtp(
     path: '/payments/receiver-otp/request',
     token,
     body: { ...input, targetReceiver: 'main' },
+  });
+}
+
+export function getPickupOtpSession(token: string, parcelId: string) {
+  return mobileApiGet<ReceiverOtpSession | null>({
+    path: '/payments/receiver-otp/session',
+    token,
+    query: { parcelId, targetReceiver: 'main' },
   });
 }
 

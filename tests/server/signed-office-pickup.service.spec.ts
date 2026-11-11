@@ -4,6 +4,11 @@ import { db } from '@/db/config';
 import { branches, customers, parcelReceiverOtps, parcels, pickupQueues } from '@/db/schemas';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { confirmOfficePickupSvc } from '@/server/features/shipments/parcel-services/confirm-office-pickup';
+import {
+  createPickupQueueSvc,
+  listActivePickupQueuesForBranchSvc,
+} from '@/server/features/pickup-queues/service';
+import { listParcelsRepo } from '@/server/features/shipments/parcel-repositories/parcel-list.repository';
 import { encodeHandoverSignature } from '@/shared/shipments/handover-signature';
 import { createShelfPickupFixture } from '../utils/shelf-pickup-fixture';
 
@@ -17,6 +22,7 @@ const signatureImage = encodeHandoverSignature(
   300,
   240,
 );
+const receiverTelephone = '0240000000';
 
 describe('signed office pickup', () => {
   let fixture: Awaited<ReturnType<typeof createShelfPickupFixture>>;
@@ -33,13 +39,17 @@ describe('signed office pickup', () => {
     await fixture.cleanup();
   });
 
-  async function setup() {
+  async function setup(day = 0) {
     const parcel = await fixture.parcel();
+    await db
+      .update(customers)
+      .set({ telephone: receiverTelephone })
+      .where(eq(customers.id, parcel.receiverId));
     await db
       .update(parcels)
       .set({ chargePsw: 0, plannedToBePaidPsw: 0, receivedAt: new Date() })
       .where(eq(parcels.id, parcel.id));
-    const ticket = await fixture.ticket(parcel.id);
+    const ticket = await fixture.ticket(parcel.id, { day });
     const [otp] = await db
       .insert(parcelReceiverOtps)
       .values({
@@ -47,7 +57,7 @@ describe('signed office pickup', () => {
         branchId: fixture.branchId,
         parcelId: parcel.id,
         targetReceiver: 'main',
-        phone: '0240000000',
+        phone: receiverTelephone,
         otpHash: 'fixture',
         createdBy: fixture.actor,
         expiresAt: new Date(Date.now() + 60_000),
@@ -81,6 +91,40 @@ describe('signed office pickup', () => {
     };
   }
 
+  test('reissues a previous-day ticket once and keeps it out of live queues and duplicate list rows', async () => {
+    const { parcel, ticket: yesterday, input } = await setup(1);
+    const createInput = { parcelId: parcel.id, queuedBy: fixture.actor, sendSms: false };
+    const list = (queuedOnly?: true) =>
+      listParcelsRepo({
+        parcelId: parcel.id,
+        status: ParcelStatus.AWAITING_PICKUP,
+        hasPickupQueue: queuedOnly,
+        limit: 20,
+        offset: 0,
+      });
+    expect((await list()).data[0]?.pickupQueueId).toBeNull();
+    expect((await list(true)).totalRecords).toBe(0);
+    await expect(confirmOfficePickupSvc(input)).rejects.toThrow('Create a pickup queue ticket');
+    const [today, retry] = await Promise.all([
+      createPickupQueueSvc(createInput),
+      createPickupQueueSvc(createInput),
+    ]);
+    expect(today.id).toBe(retry.id);
+    expect(today.id).not.toBe(yesterday.id);
+    expect((await list(true)).totalRecords).toBe(1);
+    expect((await list()).data.map((row) => row.pickupQueueId)).toEqual([today.id]);
+    expect(
+      (await listActivePickupQueuesForBranchSvc(fixture.branchId)).map((row) => row.id),
+    ).not.toContain(yesterday.id);
+    await confirmOfficePickupSvc(input);
+    const tickets = await db
+      .select()
+      .from(pickupQueues)
+      .where(eq(pickupQueues.parcelId, parcel.id));
+    expect(tickets).toHaveLength(2);
+    expect(tickets.every((ticket) => ticket.endedAt !== null)).toBe(true);
+  });
+
   test('rejects missing signatures and out-of-branch requests without consuming OTP or ending the queue', async () => {
     const { parcel, ticket, otp, input } = await setup();
     await expect(confirmOfficePickupSvc({ ...input, signatureImage: '' })).rejects.toThrow(
@@ -92,6 +136,11 @@ describe('signed office pickup', () => {
     await expect(
       confirmOfficePickupSvc({ ...input, receiverOtpVerificationToken: 'invalid' }),
     ).rejects.toThrow('verification');
+    await db
+      .update(parcelReceiverOtps)
+      .set({ phone: '0240000001' })
+      .where(eq(parcelReceiverOtps.id, otp.id));
+    await expect(confirmOfficePickupSvc(input)).rejects.toMatchObject({ status: 401 });
     const [saved] = await db.select().from(parcels).where(eq(parcels.id, parcel.id));
     const [queue] = await db.select().from(pickupQueues).where(eq(pickupQueues.id, ticket.id));
     const [verified] = await db

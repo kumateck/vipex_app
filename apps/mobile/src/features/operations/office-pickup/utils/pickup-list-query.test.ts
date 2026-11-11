@@ -12,10 +12,26 @@ const context = { companyId: 'co', branchId: 'br', locationId: 'loc', locationNa
 describe('office pickup list query', () => {
   test('shows only active ticket numbers when the branch uses pickup queues', () => {
     const ticket = { pickupQueueNumber: 47, pickupQueueEndedAt: null };
-    expect(getPickupQueueBadgeNumber(true, ticket)).toBe(47);
+    const today = new Date(2026, 10, 10, 12);
+    expect(
+      getPickupQueueBadgeNumber(
+        true,
+        { ...ticket, pickupQueueDate: '2026-11-10T00:00:00.000Z' },
+        today,
+      ),
+    ).toBe(47);
     expect(getPickupQueueBadgeNumber(false, ticket)).toBeNull();
-    expect(getPickupQueueBadgeNumber(true, { ...ticket, pickupQueueEndedAt: 'ended' })).toBeNull();
+    expect(
+      getPickupQueueBadgeNumber(
+        true,
+        { ...ticket, pickupQueueDate: '2026-11-10', pickupQueueEndedAt: 'ended' },
+        today,
+      ),
+    ).toBeNull();
     expect(getPickupQueueBadgeNumber(true, { pickupQueueNumber: null })).toBeNull();
+    expect(
+      getPickupQueueBadgeNumber(true, { ...ticket, pickupQueueDate: '2026-11-09' }, today),
+    ).toBeNull();
   });
   test('lists only queued parcels by default when pickup queues are on', () => {
     expect(buildPickupListQuery(context, true, '')).toEqual({
@@ -25,6 +41,7 @@ describe('office pickup list query', () => {
       destinationId: 'br',
       status: ParcelStatus.AWAITING_PICKUP,
       cashierCollectionRequired: false,
+      pickupQueueTodayOnly: true,
       hasPickupQueue: true,
     });
   });
@@ -59,6 +76,7 @@ describe('office pickup list query', () => {
         destinationId: 'br',
         status: ParcelStatus.AWAITING_PICKUP,
         cashierCollectionRequired: false,
+        pickupQueueTodayOnly: true,
         parcelCode: 'TRK-1',
       });
     },

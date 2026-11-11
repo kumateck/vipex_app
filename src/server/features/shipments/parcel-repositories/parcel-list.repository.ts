@@ -40,6 +40,7 @@ export async function listParcelsRepo(
     pickupQueueId: string | null;
     pickupQueueCode: string | null;
     pickupQueueNumber: number | null;
+    pickupQueueDate: Date | null;
     pickerStaffId: string | null;
     pickerStaffName: string | null;
     callCenterAssignedToUserId: string | null;
@@ -103,9 +104,11 @@ export async function listParcelsRepo(
       .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
       .leftJoin(cg, eq(cg.id, ci.consignmentId));
   }
+  if (typeof p.hasPickupQueue === 'boolean' || p.shelfPickerAssigned) {
+    countQuery = countQuery.leftJoin(pickupQueues, pickupQueueJoin);
+  }
   const countPromise = countQuery
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
-    .leftJoin(pickupQueues, pickupQueueJoin)
     .where(whereClause);
   const rowsPromise = executor
     .select({
@@ -188,6 +191,7 @@ export async function listParcelsRepo(
       pickupQueueId: pickupQueues.id,
       pickupQueueCode: pickupQueues.queueCode,
       pickupQueueNumber: pickupQueues.queueNumber,
+      pickupQueueDate: pickupQueues.queueDate,
       shelfPickerStaffId: parcels.shelfPickerStaffId,
       pickerStaffId: sql<
         string | null

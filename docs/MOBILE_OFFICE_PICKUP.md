@@ -25,14 +25,20 @@ printing and the full web cashier table are not implemented by this feature.
   Tap a matching parcel to open its details. Multiple parcels can share a booking code.
   An unknown or ineligible code returns no results. Manual search remains available if
   camera access is denied. Deploy the server's `parcelCode` filter before shipping this app build.
-- The query fixes company and destination branch, `status=AWAITING_PICKUP` and
-  `cashierCollectionRequired=false`. No payment-method filter is sent: eligibility depends on
-  the remaining balance, even though the UI calls these sender-paid parcels.
-- With `usePickupQueue=true`, the initial list is restricted to queued parcels. A search drops
-  that queue filter so staff can also find a parcel without a ticket. Handover still requires
-  a ticket when queues are enabled; create it through the separate Queue workflow.
-- Awaiting Pickup results show an active ticket’s queue number only when pickup queues are
-  enabled for the branch. Turning queues off hides numbers even on parcels with older tickets.
+- The query fixes company and destination branch, `status=AWAITING_PICKUP`,
+  `cashierCollectionRequired=false`, and `pickupQueueTodayOnly=true` when queues are enabled. No
+  payment-method filter is sent: eligibility depends on the remaining balance, even though the
+  UI calls these sender-paid parcels.
+- With `usePickupQueue=true`, the initial list is restricted to parcels with a ticket dated today.
+  A search drops that queue-presence filter so staff can find unqueued parcels, while retaining
+  the current-day queue-date filter. Handover still requires a ticket dated today; issue it through
+  Queue Management.
+- Queue Management boards and mobile Awaiting Pickup show current-day tickets only. A ticket left
+  unserved from yesterday remains historical and does not count for today's handover. Staff can
+  issue a fresh queue code for today's date. Queue numbers are hidden when the branch disables
+  pickup queues, including numbers on older tickets. Queue details requests also ask the server
+  to omit previous-day active tickets. Queue Management and Waiting for Pickup reload when the
+  screen is reopened, when Android resumes it, and at midnight Ghana time (UTC).
 - With queues disabled, staff must search or scan before results load. Results are limited to
   the first 20 matches; there is currently no paging/load-more control. Narrow a search when
   needed. Mobile does not send an explicit sort.
@@ -41,7 +47,7 @@ printing and the full web cashier table are not implemented by this feature.
 
 Opening a result loads parcel details, active location staff, card types and existing main/
 second receiver cards in parallel. Required-resource failure shows retry/back controls and
-blocks completion. The shelf picker is initialized from the parcel, then its queue ticket;
+blocks completion. The shelf picker is initialized from the parcel, then today's queue ticket;
 an existing assignment is read-only. Otherwise select active staff at the signed-in location.
 An account without a location cannot load staff choices.
 
@@ -54,16 +60,15 @@ existing card requires a current saved-card record; a new card requires both fie
 When `requirePickupOtp=true`, send a six-digit collection OTP to the **main receiver**, even
 when the second receiver collects. Choose their primary or stored secondary telephone.
 SMS is the default; WhatsApp is offered only when availability reports it enabled/configured.
-An availability lookup failure leaves SMS available. Choosing another channel affects the
-next send and preserves an already sent code. Changing collector or phone slot clears local
-OTP state; reopening a parcel clears the form and verification state.
+An availability lookup failure leaves SMS available. The chosen phone slot and channel apply
+to the next send. The OTP verifies the main receiver regardless of who collects the parcel.
 
-The code countdown uses the request's five-minute expiry. Successful resend uses `force=true`
-and clears local code/verification. Verification returns an opaque token; the server gives
-that token a ten-minute lifetime and rejects expired/consumed tokens at completion. The
-mobile verified badge does not track this token expiry; request and verify another code if
-the server rejects it. An existing active code after reopening can produce a conflict on the
-first send; there is no dedicated force-resend recovery control for that conflict yet.
+New codes expire after 10 minutes. Staff can close the panel, work on another parcel, and reopen
+the first parcel to enter the code already sent. Reopening restores the countdown, channel and
+phone slot from the server. The code entry starts empty. An expired code requires a new request.
+Successful resend uses `force=true` and clears local code and verification. The server can restore
+the requesting staff member's unconsumed verification token for up to 10 minutes after verification.
+If OTP recovery fails, use **Retry OTP recovery**. Capture the collector's signature after reopening.
 When branch pickup OTP is disabled, the screen shows a warning and omits OTP fields.
 
 Tap **Capture signature** and ask the selected collector to sign with a finger. The dialog
@@ -71,7 +76,7 @@ uses the rider delivery drawing pad. **Clear** starts the drawing again and **Sa
 keeps the drawing on the form. A tap without a stroke cannot be saved. Changing collector,
 editing a new second receiver’s details or reopening the parcel requires a fresh signature.
 
-Confirmation requires a shelf picker, any required queue ticket, OTP when enabled, and the
+Confirmation requires a shelf picker, today's queue ticket when the branch uses queues, OTP when enabled, and the
 collector’s signature. Local validation happens before writes. Submission saves new cards,
 resolves a new second receiver when needed and sends the signed confirmation. Collecting as the
 main receiver retains a linked second receiver and clears second-card handover fields.
@@ -87,11 +92,13 @@ All paths below have the `/v1` prefix. Signed pickup uses the existing office pi
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /branches/:id/operations-settings`                    | Authentication; own branch, or branch-read access within company. Reads `usePickupQueue` and `requirePickupOtp`.                                                                                                                            |
 | `GET /shipments/parcels`                                   | Parcel read (the endpoint also accepts call-center assignment read); client narrows to company/destination branch and eligible balance/status.                                                                                              |
+| `GET /pickup-queues/branch/:id/cards?todayOnly=true`       | `CanReadParcels`; mobile queue boards request current-day active cards only.                                                                                                                                                                |
 | `GET /shipments/parcels/:id/details`                       | `CanReadParcels`; required handover resource.                                                                                                                                                                                               |
 | `GET /users/options`                                       | `CanReadUsers`; active company/branch/location staff.                                                                                                                                                                                       |
 | `GET /customers/cards/options`, `GET /customers/:id/cards` | `CanReadCustomers`; required handover resources.                                                                                                                                                                                            |
 | `GET /whatsapp/availability`                               | Authentication; returns company availability, SMS fallback on failure.                                                                                                                                                                      |
 | `POST /payments/receiver-otp/request`                      | Receiver-payment or office-pickup permission. Sends `{ parcelId, targetReceiver: 'main', phoneSlot, channel, force }`; returns `{ expiresAt, channel }`.                                                                                    |
+| `GET /payments/receiver-otp/session`                       | Same permissions and destination branch. Returns active OTP session metadata or `null` for `{ parcelId, targetReceiver: 'main' }`.                                                                                                          |
 | `POST /payments/receiver-otp/verify`                       | Same permission alternatives; sends `{ parcelId, targetReceiver: 'main', otp }`; returns `{ verificationToken, expiresAt }`.                                                                                                                |
 | `POST /customers/:id/cards`                                | `CanUpdateCustomers`; saves a new card before final handover.                                                                                                                                                                               |
 | `POST /customers/resolve-second-receiver`                  | `CanCreateCustomers`; sends `{ fullname, telephone }` and uses returned `id`.                                                                                                                                                               |

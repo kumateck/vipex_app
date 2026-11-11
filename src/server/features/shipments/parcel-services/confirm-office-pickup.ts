@@ -9,7 +9,11 @@ import {
   assertReceiverOtpVerifiedSvc,
   consumeReceiverOtpTokenSvc,
 } from '../../parcel-receiver-otp/service';
-import { getPickupQueueByParcelRepo } from '../../pickup-queues/repository';
+import {
+  getPickupQueueByParcelAndDateRepo,
+  getPickupQueueByParcelRepo,
+} from '../../pickup-queues/repository';
+import { getPickupQueueDate } from '../../pickup-queues/queue-date';
 import { endPickupQueueForParcelSvc } from '../../pickup-queues/service';
 import { assertNoOpenParcelReconciliationCaseForDelivery } from '../parcel-delivery-reconciliation-guard';
 import { assertParcelFullyPaid } from '../parcel-payment-settlement';
@@ -72,7 +76,9 @@ export async function confirmOfficePickupSvc(input: {
         ),
       );
     if (!branch) throw NotFound('Destination branch not found');
-    const queue = await getPickupQueueByParcelRepo(parcelId, tx);
+    const queue = branch.usePickupQueue
+      ? await getPickupQueueByParcelAndDateRepo({ parcelId, queueDate: getPickupQueueDate() }, tx)
+      : await getPickupQueueByParcelRepo(parcelId, tx);
     if (branch.usePickupQueue && queue?.branchId !== branchId) {
       throw Conflict('Create a pickup queue ticket for this parcel before handover');
     }

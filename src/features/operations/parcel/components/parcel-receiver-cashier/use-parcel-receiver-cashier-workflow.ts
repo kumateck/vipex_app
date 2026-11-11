@@ -13,9 +13,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import {
   type ParcelSearchRow,
   useCollectReceiverAndDeliverMutation,
-  useRequestReceiverOtpMutation,
   useUpdateParcelMutation,
-  useVerifyReceiverOtpMutation,
 } from '../../api/parcel.api';
 import { confirmReceiverDelivery } from './confirm-receiver-delivery';
 import { useReceiverCashierDialogState } from './use-receiver-cashier-dialog-state';
@@ -63,13 +61,9 @@ export function useParcelReceiverCashierWorkflow() {
   const [collectReceiverAndDeliver, { isLoading: isCollectingPayment }] =
     useCollectReceiverAndDeliverMutation();
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
-  const [requestReceiverOtp] = useRequestReceiverOtpMutation();
-  const [verifyReceiverOtp] = useVerifyReceiverOtpMutation();
   const edit = useReceiverCashierEdit();
   const { handleRequestOtp, handleVerifyOtp } = useReceiverOtpActions({
     dialog,
-    requestReceiverOtp,
-    verifyReceiverOtp,
   });
 
   const resources = useReceiverCashierResources({

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { notifyError } from '@mobile/lib/notify';
 import { extractScannedCode } from '@mobile/lib/scan-code';
+import { usePickupQueueRefresh } from '@mobile/lib/use-pickup-queue-refresh';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { getBranchPickupSettings, listPickupParcels } from '../services';
 import type { BranchPickupSettings, PickupContext, PickupParcel } from '../types';
@@ -21,6 +22,7 @@ export function useOfficePickupList(context: PickupContext, enabled: boolean) {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const requestId = useRef(0);
+  const listDay = useRef<string | null>(null);
   const { branchId } = context;
 
   const loadSettings = useCallback(async () => {
@@ -44,6 +46,11 @@ export function useOfficePickupList(context: PickupContext, enabled: boolean) {
   const load = useCallback(async () => {
     if (!enabled || !settings) return;
     const id = ++requestId.current;
+    const today = new Date().toISOString().slice(0, 10);
+    if (isPickupQueueEnabled && listDay.current !== today) {
+      listDay.current = today;
+      setRows([]);
+    }
     const query = buildPickupListQuery(
       context,
       isPickupQueueEnabled,
@@ -58,7 +65,7 @@ export function useOfficePickupList(context: PickupContext, enabled: boolean) {
       }
       setLoading(true);
       const result = await withAuth((token) => listPickupParcels(token, query));
-      if (id !== requestId.current) return;
+      if (id !== requestId.current || (isPickupQueueEnabled && listDay.current !== today)) return;
       const matches = Array.isArray(result?.data) ? result.data : [];
       const { parcelCode } = query;
       setRows(
@@ -78,7 +85,7 @@ export function useOfficePickupList(context: PickupContext, enabled: boolean) {
     }
   }, [context, enabled, isPickupQueueEnabled, lookup, settings, withAuth]);
 
-  useEffect(() => void load(), [load]);
+  usePickupQueueRefresh(load);
 
   const submitLookup = useCallback(
     (term: string, exactCode: boolean) => {

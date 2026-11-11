@@ -2,26 +2,32 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { createChargeAgentMigrationFixture } from '../utils/charge-agent-migration-fixture';
+import { createMigrationJournalFixture } from '../utils/migration-journal-fixture';
 
 const databaseUrl = process.env.CHARGE_AGENT_MIGRATION_TEST_DATABASE_URL;
 
 describe.skipIf(!databaseUrl)('parcel charge-agent migration safety', () => {
   let fixture: ReturnType<typeof createChargeAgentMigrationFixture>;
   let sql: ReturnType<typeof createChargeAgentMigrationFixture>['sql'];
+  let journal: Awaited<ReturnType<typeof createMigrationJournalFixture>>;
+  let batch: Awaited<ReturnType<typeof createMigrationJournalFixture>>;
   beforeAll(async () => {
     fixture = createChargeAgentMigrationFixture(databaseUrl!);
     sql = fixture.sql;
     await fixture.ensureEmpty();
+    journal = await createMigrationJournalFixture('0080_parcel_charge_agent');
+    batch = await createMigrationJournalFixture(
+      '0079_pickup_queue_legacy_uniqueness',
+      '0080_parcel_charge_agent',
+    );
   });
   beforeEach(() => fixture.setup());
   afterEach(() => fixture.cleanup());
-  afterAll(() => fixture?.close());
+  afterAll(async () => {
+    await Promise.all([fixture?.close(), journal?.cleanup(), batch?.cleanup()]);
+  });
 
   async function setupProductionPendingMigrations() {
-    const journal = await Bun.file('drizzle/meta/_journal.json').json();
-    const previous = journal.entries.find(
-      (entry: { tag: string }) => entry.tag === '0078_parcel_call_center_assignment',
-    );
     await sql.unsafe(`CREATE SCHEMA drizzle;
       CREATE TABLE drizzle.__drizzle_migrations (id serial PRIMARY KEY, hash text NOT NULL, created_at bigint);
       CREATE TABLE public.pickup_queues (
@@ -32,12 +38,12 @@ describe.skipIf(!databaseUrl)('parcel charge-agent migration safety', () => {
       CREATE UNIQUE INDEX pickup_queues_open_parcel_daily_uq ON public.pickup_queues (parcel_id, queue_date) WHERE ended_at IS NULL;
       CREATE UNIQUE INDEX pickup_queues_daily_code_uq ON public.pickup_queues (branch_id, location_id, queue_date, queue_number);
       INSERT INTO public.pickup_queues VALUES ('ticket-a', 'parcel-a', 'branch-a', 'location-a', '2026-10-12', 1, NULL);`);
-    await sql`INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('production-baseline', ${previous.when})`;
+    await sql`INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('production-baseline', ${batch.previous.when})`;
   }
 
   test('applies both production-pending migrations while preserving parcel and ticket data', async () => {
     await setupProductionPendingMigrations();
-    await migrate(drizzle(sql), { migrationsFolder: './drizzle' });
+    await migrate(drizzle(sql), { migrationsFolder: batch.folder });
     const [parcel] = await sql`SELECT * FROM public.parcels`;
     expect(parcel).toMatchObject({
       id: 'parcel-a',
@@ -57,9 +63,11 @@ describe.skipIf(!databaseUrl)('parcel charge-agent migration safety', () => {
     await setupProductionPendingMigrations();
     await sql.begin(async (tx) => {
       await tx.unsafe('LOCK TABLE public.parcels IN ACCESS SHARE MODE');
-      await expect(migrate(drizzle(sql), { migrationsFolder: './drizzle' })).rejects.toMatchObject({
-        cause: { code: '55P03' },
-      });
+      await expect(migrate(drizzle(sql), { migrationsFolder: batch.folder })).rejects.toMatchObject(
+        {
+          cause: { code: '55P03' },
+        },
+      );
     });
     const [legacy] = await sql`SELECT to_regclass('public.pickup_queues_parcel_uq') AS name`;
     expect(legacy?.name).toBe('pickup_queues_parcel_uq');
@@ -70,20 +78,15 @@ describe.skipIf(!databaseUrl)('parcel charge-agent migration safety', () => {
   });
 
   test('the standard migrator applies the registered repair after the previous journal entry', async () => {
-    const journal = await Bun.file('drizzle/meta/_journal.json').json();
-    const previous = journal.entries.find(
-      (entry: { tag: string }) => entry.tag === '0079_pickup_queue_legacy_uniqueness',
-    );
     await sql.unsafe(`CREATE SCHEMA drizzle;
       CREATE TABLE drizzle.__drizzle_migrations (id serial PRIMARY KEY, hash text NOT NULL, created_at bigint);`);
-    await sql`INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('fixture-baseline', ${previous.when})`;
-    await migrate(drizzle(sql), { migrationsFolder: './drizzle' });
+    await sql`INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('fixture-baseline', ${journal.previous.when})`;
+    await migrate(drizzle(sql), { migrationsFolder: journal.folder });
     const ledger =
       await sql`SELECT created_at FROM drizzle.__drizzle_migrations ORDER BY created_at`;
-    expect(ledger).toHaveLength(
-      journal.entries.filter((entry: { when: number }) => entry.when >= previous.when).length,
+    expect(ledger.map((row) => Number(row.created_at))).toEqual(
+      [journal.previous, ...journal.entries].map(({ when }) => when),
     );
-    expect(Number(ledger.at(-1)?.created_at)).toBe(journal.entries.at(-1).when);
     const [parcel] = await sql`SELECT charge_agent_user_id FROM public.parcels`;
     expect(parcel?.charge_agent_user_id).toBeNull();
   });

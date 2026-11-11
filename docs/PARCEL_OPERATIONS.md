@@ -80,12 +80,12 @@ separate step; review pre-existing orphan values if validation fails. Applicatio
 leave the additive column/FK in place without changing parcel data. This change does not run a
 production migration automatically.
 
-Read-only preflight on 2026-10-12 confirmed the configured production database has migrations
-through `0078` applied and lacks `charge_agent_user_id`. Both
-`0079_pickup_queue_legacy_uniqueness` and `0080_parcel_charge_agent` are pending. Production
-still has the legacy parcel-only pickup queue unique index alongside the valid daily indexes;
-review that earlier repair before invoking the migration runner. No production writes were
-performed for this check.
+Historical read-only preflight on 2026-10-12 found the configured production database at migration
+`0078`, with `0079_pickup_queue_legacy_uniqueness` and `0080_parcel_charge_agent` pending and the
+legacy parcel-only queue index still present. This is not a current schema check: verify the target
+server's migration ledger and indexes before deployment. If the legacy index remains, `0079` must
+be applied before a parcel with an unserved ticket can receive a ticket on a later date. No
+production writes were performed for that preflight.
 
 QA covers multi-parcel selections, independent creator/cashier attribution, inactive/wrong-branch/
 wrong-company rejection, unchanged payments and amounts, empty selection, failed lookup/retry,
@@ -246,6 +246,22 @@ Run `bun run migrate:test`, then `bun run test:prepush`; do not skip the hook or
 from tests to hide the failure. Production repair requires verifying that environment's current
 indexes; applying this migration to the local test database does not update production.
 
+Queue boards and **Waiting for Pickup** use the current Ghana calendar day (midnight UTC) on
+web, desktop and Android. Search still finds parcels without a current ticket. Issue a fresh
+ticket for a parcel that went unserved on a previous day. Both ticket rows remain in history,
+and leaving the pickup workflow closes all open tickets for the parcel. Concurrent requests
+for the same parcel return today's ticket; numbers are reserved in sequence for each branch,
+location and date, including the branch's fallback queue with no location. General parcel lists
+show one queue row per parcel. The dedicated reassignment screen still recognises a picker
+stored on an older active ticket.
+
+Office pickup and new receiver payment require today's ticket where the branch uses queues.
+An already processed receiver payment keeps its original ticket for signature and confirmation
+across midnight. Staff open that parcel in **Awaiting Signature**. QA: keep a ticket open from
+yesterday, search for the parcel today and issue a new ticket twice. Verify both requests return
+today's code, the parcel appears once, and successful handover closes the open tickets while
+preserving their records. Repeat with an already processed receiver payment awaiting signature.
+
 **Pickup & Collection → Reassign Shelf Pickup** opens the separate page at
 `/parcels/shelf-pickup-reassignment`. It requires the existing
 `CanUpdateParcelShelfPicker` permission; `CanReadShelfPickerUpdate` alone does not allow
@@ -310,7 +326,7 @@ Verify both date lines for a newly received parcel and the `-` fallback for a le
 receipt timestamp.
 
 Web and Electron **Shelf Picker Update** show a **Queue Number** column when the signed-in
-branch uses pickup queues. It shows the latest active ticket number, or `—` for search results
+branch uses pickup queues. It shows today's active ticket number, or `—` for search results
 without an active ticket. Ended tickets do not supply a number or duplicate rows. The column
 is hidden when queues are disabled. Mobile shows the queue number on **Awaiting Pickup**
 results for active tickets only when the branch uses pickup queues. QA: compare a branch
@@ -693,7 +709,13 @@ Mobile discrepancy capture supports an expected system parcel that is physically
 
 ## Receiver OTP
 
-- A receiver OTP is six digits and expires after five minutes.
+- A newly issued receiver OTP is six digits and expires 10 minutes after it is requested.
+  Previously issued codes use their stored expiry.
+- Staff can close the confirmation, work on another parcel, and return to enter the original
+  code. Web and desktop Waiting for Pickup and Receiver Cashier, and mobile Waiting for Pickup,
+  reload the code's remaining time, channel, and phone selection for the reopened parcel.
+  Reopening does not send a new code. If the same staff member requested and already verified
+  the code, the screen can also restore the unconsumed verification token during its validity.
 - Staff can select the main or alternate recipient and the primary or secondary stored phone where available.
 - Request, verification, and final action are separate server operations.
 - Verification must be tied to the intended parcel and action; a valid code must not authorize another parcel.
@@ -706,7 +728,9 @@ Mobile discrepancy capture supports an expected system parcel that is physically
   Failed-send dispatch logs retain the diagnostic error. See
   [SMS dispatch diagnostics](NOTIFICATION_HUB_MODULE.md#application-sms-definitions).
 - QA: test success, missing provider/configuration, provider rejection, transport exceptions,
-  retry and failed forced resend; verify unchanged parcel/payment state and five-minute expiry.
+  retry and failed forced resend. Verify 10-minute expiry and that reopening a parcel after
+  switching to another restores its input and countdown. Verify the original code works before
+  expiry, expired codes can be replaced, and stale responses do not appear on a different parcel.
 - **Channel choice (WhatsApp):** when the `whatsapp_messaging` module is enabled and configured, the
   Receiver Cashier and Waiting for Pickup OTP sections show an SMS / WhatsApp toggle (default SMS).
   The request sends `channel`; the channel is recorded on `parcel_receiver_otps.channel`. WhatsApp
@@ -824,6 +848,12 @@ Automated coverage: `parcel-sender-correction.spec.ts`,
 `parcel-sender-correction-access.spec.ts` and `existing-customer-edit-dialog.test.tsx`.
 
 #### Correcting a receiver from a parcel
+
+The **Parcel Customer Corrections** page supports privileged company-wide sender, main-receiver
+and second-receiver corrections by booking code until handover/delivery confirmation, including
+after a closed call outcome. Separate grants control relinking and full contact editing. See
+[Parcel Customer Corrections](PARCEL_CUSTOMER_CORRECTIONS.md) for scope, shared-profile effects,
+OTP invalidation, migration `0095`, API and QA scenarios.
 
 The **Edit** action on incoming in-transit parcels, Waiting for Pickup, Receiver Cashier,
 and Shelf Picker Update, and on source-branch Processed Parcels / Consignment, In Transit
@@ -1409,10 +1439,8 @@ behavior:
   the backend to establish connections with this setting; a frontend/mobile update alone does
   not apply it. No migration is needed.
 - The row query and the count query run in parallel.
-- The count query joins only the tables its filters reference: customers only when a search
-  term is present, consignment tables only for sent-date or consignment-number filters.
-  Deliveries and pickup queues are always joined because they are not unique per parcel and the
-  row query joins them, so the total stays equal to the rows returned.
+- The count query joins customers for search, consignment tables for consignment filters, and
+  pickup queues for queue and picker filters. The queue join returns at most one row per parcel.
 - When a filter needs the company's storage policy, the list loads it once and reuses it for the
   storage snapshot.
 - Migration `0083_parcel_search_indexes` adds `parcels (company_id, destination_id, status)`

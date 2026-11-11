@@ -15,6 +15,12 @@ The CRM system currently provides:
 
 ## Core Rules
 
+The privileged booking-code correction page supports parcel/customer name and telephone
+correction or customer relinking across company branches before handover/delivery confirmation.
+Phone-only corrections preserve names. Shared contact edits invalidate affected pickup
+credentials and pending signatures. See [Parcel Customer Corrections](PARCEL_CUSTOMER_CORRECTIONS.md)
+for dedicated grants, credit-ledger restrictions and validation scenarios.
+
 - `customerType` enum is fixed as:
   - `Individual = 0`
   - `Business = 1`

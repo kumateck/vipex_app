@@ -66,6 +66,7 @@ export type PickupListQuery = {
   status: number;
   cashierCollectionRequired: false;
   hasPickupQueue?: boolean;
+  pickupQueueTodayOnly?: boolean;
 };
 
 export type SignedPickupConfirmation = {

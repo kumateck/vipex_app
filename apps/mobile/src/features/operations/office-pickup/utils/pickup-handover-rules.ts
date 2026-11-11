@@ -1,4 +1,5 @@
 import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
+import { isQueueDateToday } from '@mobile/features/operations/queue-management/utils';
 import type {
   CardSelection,
   SignedPickupConfirmation,
@@ -14,9 +15,27 @@ export const EMPTY_CARD_SELECTION: CardSelection = {
   newCardNumber: '',
 };
 
+/** A prior-day ticket is history, not a valid ticket for today's handover. */
+export function isPickupQueueForCurrentDay(
+  queue: PickupParcelDetails['pickupQueue'],
+  now = new Date(),
+): boolean {
+  if (!queue) return false;
+  return isQueueDateToday(queue.queueDate, queue.queuedAt, now);
+}
+
+export function getCurrentDayPickupQueue(
+  details: PickupParcelDetails,
+  now = new Date(),
+): PickupParcelDetails['pickupQueue'] {
+  return isPickupQueueForCurrentDay(details.pickupQueue, now) ? details.pickupQueue : null;
+}
+
 /** Shelf picker already assigned to the parcel (or its queue ticket), if any. */
-export function resolveShelfPickerStaffId(details: PickupParcelDetails): string {
-  return details.parcel.shelfPickerStaffId ?? details.pickupQueue?.pickerStaffId ?? '';
+export function resolveShelfPickerStaffId(details: PickupParcelDetails, now = new Date()): string {
+  return (
+    details.parcel.shelfPickerStaffId ?? getCurrentDayPickupQueue(details, now)?.pickerStaffId ?? ''
+  );
 }
 
 export type ResolvedCard =

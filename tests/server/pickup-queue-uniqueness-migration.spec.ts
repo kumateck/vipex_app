@@ -61,6 +61,27 @@ describe.skipIf(!databaseUrl)('pickup queue uniqueness repair safety', () => {
     expect(await sql`SELECT id FROM public.pickup_queues`).toHaveLength(3);
   });
 
+  test('allows an unserved previous-day parcel to receive a fresh ticket after the repair', async () => {
+    await sql.unsafe(
+      `UPDATE public.pickup_queues SET ended_at = NULL WHERE parcel_id = 'parcel-a'`,
+    );
+    await expect(
+      Promise.resolve(
+        sql.unsafe(`INSERT INTO public.pickup_queues (parcel_id, branch_id, location_id, queue_date, queue_number)
+          VALUES ('parcel-a', 'branch-a', 'location-a', '2026-10-08', 2)`),
+      ),
+    ).rejects.toThrow('pickup_queues_parcel_uq');
+
+    await apply();
+    await sql.unsafe(`INSERT INTO public.pickup_queues (parcel_id, branch_id, location_id, queue_date, queue_number)
+      VALUES ('parcel-a', 'branch-a', 'location-a', '2026-10-08', 2)`);
+    const tickets =
+      await sql`SELECT queue_date, ended_at FROM public.pickup_queues WHERE parcel_id = 'parcel-a' ORDER BY queue_date`;
+    expect(tickets).toHaveLength(2);
+    expect(tickets[0]?.ended_at).toBeNull();
+    expect(tickets[1]?.ended_at).toBeNull();
+  });
+
   test('refuses to remove the old key when a replacement index is missing', async () => {
     await sql.unsafe('DROP INDEX public.pickup_queues_open_parcel_daily_uq');
     await expect(apply()).rejects.toThrow('refusing to remove legacy key');

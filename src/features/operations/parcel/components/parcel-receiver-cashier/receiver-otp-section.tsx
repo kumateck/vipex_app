@@ -46,8 +46,9 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
   const handleSend = async () => {
     const isResend = Boolean(dialog.otpSentAt);
     try {
-      await dialog.handleRequestOtp(isResend);
-      toast.success(isResend ? 'Collection OTP resent to the customer' : 'Collection OTP sent');
+      if (await dialog.handleRequestOtp(isResend)) {
+        toast.success(isResend ? 'Collection OTP resent to the customer' : 'Collection OTP sent');
+      }
     } catch (error) {
       toast.error(getApplicationErrorMessage(error, '') || 'Failed to send OTP');
     }
@@ -78,6 +79,14 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
         ) : null}
       </div>
 
+      {dialog.otpRestoreError ? (
+        <div role="alert" className="space-y-2 text-sm text-destructive">
+          <p>{dialog.otpRestoreError}</p>
+          <Button type="button" variant="outline" onClick={() => void dialog.retryOtpRestore()}>
+            Retry OTP recovery
+          </Button>
+        </div>
+      ) : null}
       {dialog.otpVerified ? (
         <p className="text-xs text-muted-foreground">
           Customer presence confirmed with the one-time collection code.
@@ -116,13 +125,19 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
               variant="outline"
               size="sm"
               onClick={() => void handleSend()}
-              disabled={dialog.otpRequestPending || dialog.otpVerifyPending}
+              disabled={
+                dialog.otpRequestPending ||
+                dialog.otpVerifyPending ||
+                Boolean(dialog.otpRestoreError)
+              }
             >
-              {dialog.otpRequestPending
-                ? 'Sending...'
-                : dialog.otpSentAt
-                  ? 'Resend OTP'
-                  : 'Send OTP'}
+              {dialog.otpRestoring
+                ? 'Restoring OTP…'
+                : dialog.otpRequestPending
+                  ? 'Sending...'
+                  : dialog.otpSentAt
+                    ? 'Resend OTP'
+                    : 'Send OTP'}
             </Button>
             {dialog.otpSentAt ? (
               isExpired ? (
