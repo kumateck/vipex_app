@@ -142,6 +142,20 @@ describe('BMS mNotify OTP transport', () => {
       errorMessage: 'mNotify API returned 403: API key [REDACTED] is disabled',
     });
   });
+  test('preserves the BMS top-level error string on a rejected SMS', async () => {
+    const result = await sendMnotifySms(
+      { ...input, smsType: undefined },
+      fakeFetch(
+        { error: 'invalid api key. please make sure your api key is valid and enabled' },
+        403,
+      ),
+    );
+    expect(result).toEqual({
+      status: 'failed',
+      errorMessage:
+        'mNotify API returned 403: invalid api key. please make sure your api key is valid and enabled',
+    });
+  });
   test('timeouts fail once without silently retrying a billable SMS', async () => {
     let calls = 0;
     const result = await sendMnotifySms(input, (async () => {

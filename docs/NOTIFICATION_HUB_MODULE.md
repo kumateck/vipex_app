@@ -271,8 +271,9 @@ monitoring scripts, are recorded as readable mNotify service errors. A 5xx respo
 confirm whether the provider accepted the SMS. Check mNotify delivery reports before manually
 retrying; if service errors persist, contact mNotify support with the failure time and endpoint.
 The app makes one request and does not automatically retry billable sends. Non-5xx JSON errors
-retain their provider message with API credentials redacted; safe plain-text provider reasons are
-also retained. HTML response bodies are suppressed, with their content type included in the mNotify
+retain their provider message with API credentials redacted, including BMS responses with a
+top-level `error` string. Safe plain-text provider reasons are also retained. HTML response
+bodies are suppressed, with their content type included in the mNotify
 fallback diagnostic. WhatsApp Graph errors use the same parser. A 403 containing no JSON or plain
 text detail confirms provider rejection but does not identify the exact account setting; check the
 active API key and approved OTP sender ID configuration in BMS before contacting support. The
