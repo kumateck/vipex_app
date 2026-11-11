@@ -50,7 +50,10 @@ export async function readProviderHttpError(
         record.error && typeof record.error === 'object'
           ? (record.error as Record<string, unknown>)
           : null;
-      const message = stringValue(record.message) || stringValue(nestedError?.message);
+      const message =
+        stringValue(record.message) ||
+        stringValue(nestedError?.message) ||
+        stringValue(record.error);
       const code = clean(redact(stringValue(record.code) || stringValue(nestedError?.code))).slice(
         0,
         80,
