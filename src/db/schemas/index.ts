@@ -38,3 +38,4 @@ export * from './management-daily-briefs';
 // export * from './shifts';
 // export * from './shifts';
 export * from './parcel-charge-corrections';
+export * from './receiving-offices';

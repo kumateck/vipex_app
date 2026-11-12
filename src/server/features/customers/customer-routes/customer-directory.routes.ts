@@ -87,11 +87,12 @@ export const customersRoutes1 = new Elysia({ name: 'customers-1' })
 
   .get(
     '/lookup/booking-by-telephone/:telephone',
-    async ({ params, user }) => {
+    async ({ params, query, user }) => {
       const rows = await findCustomersByTelephoneCtrl({
         companyId: (user as AuthUser).companyId ?? '',
         telephone: params.telephone,
         limit: 10,
+        nonIndividualOnly: query.nonIndividualOnly,
       });
       return rows.map(({ id, fullname, telephone, telephone2, customerType }) => ({
         id,
@@ -103,6 +104,7 @@ export const customersRoutes1 = new Elysia({ name: 'customers-1' })
     },
     {
       params: t.Object({ telephone: t.String({ pattern: '^\\d{10}$' }) }),
+      query: t.Object({ nonIndividualOnly: t.Optional(t.Boolean()) }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateBookingWithParcels)],
       detail: { tags: ['Customers'], summary: 'Find customer for parcel booking by telephone' },
     },

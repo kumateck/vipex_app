@@ -2,8 +2,8 @@ import { db, sql } from '@/db/config';
 import { branches, users, customers, employees } from '@/db/schemas';
 import { createIsolatedSchemaFixture } from './isolated-schema-fixture';
 
-export async function createChargeExemptionFixture() {
-  await createIsolatedSchemaFixture('vipex_charge_exemption_test');
+export async function createChargeExemptionFixture(databaseName = 'vipex_charge_exemption_test') {
+  await createIsolatedSchemaFixture(databaseName);
   await sql.begin(async (tx) => {
     await tx.unsafe(await Bun.file('drizzle/0092_customer_charge_exemptions.sql').text());
   });

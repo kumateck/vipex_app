@@ -8,6 +8,7 @@ export type CustomerDetailsTabKey =
   | 'payments'
   | 'statements'
   | 'credits'
+  | 'outstanding-debt'
   | 'cards';
 
 type CustomerTabRangeFilterProps = {
@@ -33,7 +34,7 @@ export function CustomerTabRangeFilter({
   creditsRange,
   onCreditsRangeChange,
 }: CustomerTabRangeFilterProps) {
-  if (activeTab === 'cards') return null;
+  if (activeTab === 'cards' || activeTab === 'outstanding-debt') return null;
 
   const value =
     activeTab === 'transactions'

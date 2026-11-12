@@ -110,14 +110,16 @@ export const consignmentsRoutes = new Elysia({ name: 'consignments' })
       const authUser = user as AuthUser;
       return receiveConsignmentItemCtrl({
         consignmentId: params.id,
-        code: (body as { code: string }).code,
+        code: body.code,
+        receivingOfficeId: body.receivingOfficeId,
+        actorCompanyId: authUser.companyId,
         actorUserId: authUser.sub,
         actorBranchId: authUser.branchId,
       });
     },
     {
       params: t.Object({ id: UUID }),
-      body: t.Object({ code: t.String({ minLength: 1 }) }),
+      body: t.Object({ code: t.String({ minLength: 1 }), receivingOfficeId: t.Optional(UUID) }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelScan)],
       detail: {
         tags: ['Shipments'],

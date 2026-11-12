@@ -1,3 +1,4 @@
+import { receivingOfficeJoin } from './parcel-receiving-office/projection';
 import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
@@ -8,6 +9,8 @@ import {
   consignmentItems,
   branches,
   customers,
+  locations,
+  receivingOffices,
   parcels,
   users,
   ConsignmentReceivingStatus,
@@ -26,6 +29,8 @@ export type ConsignmentItemDetailRow = ParcelHandoverNoteIndicator & {
   arrivedAt: Date | null;
   arrivedBy: string | null;
   arrivedByName: string | null;
+  pickupLocationName: string | null;
+  receivingOfficeName: string | null;
 };
 
 export async function listConsignmentItemsRepo(
@@ -44,6 +49,8 @@ export async function listConsignmentItemsRepo(
       bookingCode: parcels.bookingCode,
       parcelDetails: parcels.parcelDetails,
       ...handoverNoteProjection,
+      pickupLocationName: locations.name,
+      receivingOfficeName: receivingOffices.name,
       senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
       receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       addedAt: consignmentItems.addedAt,
@@ -53,6 +60,8 @@ export async function listConsignmentItemsRepo(
     })
     .from(consignmentItems)
     .innerJoin(parcels, eq(parcels.id, consignmentItems.parcelId))
+    .leftJoin(locations, eq(locations.id, parcels.pickupLocationId))
+    .leftJoin(receivingOffices, receivingOfficeJoin)
     .leftJoin(sender, eq(sender.id, parcels.senderId))
     .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
     .where(

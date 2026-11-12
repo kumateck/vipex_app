@@ -16,42 +16,9 @@ import {
 import { BadRequest, Conflict, NotFound } from '@/server/utils/http-error';
 import {
   parsePositiveCedis,
-  type CreditParcel,
   type CreditSettlementInput,
 } from '@/shared/customers/credit-settlement';
 import { listOpenParcelCharges } from './repository';
-
-export async function listCreditParcelsSvc(input: { companyId: string; customerId: string }) {
-  const [customer] = await db
-    .select({ id: customers.id })
-    .from(customers)
-    .where(
-      and(
-        eq(customers.id, input.customerId),
-        eq(customers.companyId, input.companyId),
-        eq(customers.isDeleted, false),
-      ),
-    );
-  if (!customer) throw NotFound('Customer not found');
-  const charges = await listOpenParcelCharges(input.companyId, input.customerId);
-  const grouped = new Map<string, CreditParcel>();
-  for (const charge of charges) {
-    const item = grouped.get(charge.parcelId) ?? {
-      parcelId: charge.parcelId,
-      bookingCode: charge.bookingCode,
-      trackingCode: charge.trackingCode,
-      createdAt: charge.createdAt,
-      chargeAmountPsw: 0,
-      allocatedAmountPsw: 0,
-      outstandingAmountPsw: 0,
-    };
-    item.chargeAmountPsw += charge.chargeAmountPsw;
-    item.allocatedAmountPsw += charge.allocatedAmountPsw;
-    item.outstandingAmountPsw += charge.outstandingAmountPsw;
-    grouped.set(charge.parcelId, item);
-  }
-  return [...grouped.values()];
-}
 
 export async function postCustomerCreditPaymentSvc(
   input: CreditSettlementInput & {

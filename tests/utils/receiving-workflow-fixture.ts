@@ -4,23 +4,29 @@ import { PermissionKeys } from '@/shared/permissions/constants';
 import { createMaintenanceBookingFixture } from './maintenance-booking-fixture';
 import { signAccessToken } from '@/server/utils/jwt';
 import { Elysia } from 'elysia';
+import { locationsRoutes } from '@/server/features/locations/routes';
 import { parcelsRoutes } from '@/server/features/shipments/parcels.routes';
 import { errorHandler } from '@/server/middlewares/error-handler';
 
 export async function createReceivingWorkflowFixture() {
   const fixture = await createMaintenanceBookingFixture('vipex_receiving_workflow_test');
-  const app = new Elysia().use(errorHandler).group('/parcels', (route) => route.use(parcelsRoutes));
+  const app = new Elysia()
+    .use(errorHandler)
+    .group('/parcels', (route) => route.use(parcelsRoutes))
+    .group('/locations', (route) => route.use(locationsRoutes));
   return {
     ...fixture,
     async reset() {
       await fixture.reset();
-      await sql`truncate role_permissions, consignments, consignment_items, bookings`;
+      await sql`truncate receiving_offices, role_permissions, consignments, consignment_items, bookings`;
       await sql`update users set branch_id = 'destination',status = 0,location_id = null`;
       await sql`update parcels set status = 2`;
       await db
         .insert(rolePermissions)
         .values(
           [
+            PermissionKeys.CanReadParcels,
+            PermissionKeys.CanUpdateLocations,
             PermissionKeys.CanReadParcelIncoming,
             PermissionKeys.CanReadParcelScan,
             PermissionKeys.CanUpdateParcels,
@@ -30,10 +36,10 @@ export async function createReceivingWorkflowFixture() {
     async location(id = 'circle', branchId = 'destination', companyId = 'company') {
       await db.insert(locations).values({ id, companyId, branchId, name: id, createdBy: 'admin' });
     },
-    async request(method: string, path: string, body?: unknown) {
+    async request(method: string, path: string, body?: unknown, group = 'parcels') {
       const token = await signAccessToken({ sub: 'admin' });
       return app.handle(
-        new Request(`http://localhost/parcels${path}`, {
+        new Request(`http://localhost/${group}${path}`, {
           method,
           headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
           body: body === undefined ? undefined : JSON.stringify(body),

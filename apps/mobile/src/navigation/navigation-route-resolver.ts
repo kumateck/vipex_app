@@ -29,6 +29,7 @@ const routeMap: Record<string, string> = {
   '/(app)/global-search': 'SuperSearch',
   '/(app)/super-search': 'SuperSearch',
   '/(app)/parcel-create': 'ParcelCreate',
+  '/(app)/parcel-create-other': 'ParcelCreateOther',
   '/(app)/queue': 'Queue',
   '/(app)/receive': 'Receive',
   '/(app)/receive-consignments': 'ReceiveConsignments',

@@ -92,6 +92,13 @@ export function MobileOperationsHubScreen() {
             href="/(app)/parcel-create?payment=recipient"
             linkLabel="Open Create TobePaid"
           />
+          <ModuleCard
+            icon="people-outline"
+            title="Other Customer Booking"
+            description="Book for Business, Family, Friends, Director, and Staff customers."
+            href="/(app)/parcel-create-other"
+            linkLabel="Open Other Customer Booking"
+          />
         </>
       ) : null}
       {canSearch ? (

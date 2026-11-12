@@ -627,7 +627,7 @@ ignoring an older client's `receivedBy` value. Older mobile status-only `PATCH` 
 are routed through the same receiving operation and permission checks. Arrival cannot be combined
 with other edits in that legacy PATCH; save edits separately. These server protections apply to
 web, desktop and older mobile clients after backend deployment; the new mobile button behavior
-requires the updated mobile bundle. No schema migration is needed.
+requires the updated mobile bundle.
 
 These changes prevent new missing-location arrivals and repeat-arrival regressions. They do not
 bulk-rewrite historical parcels or infer missing historical receipt timestamps. Use the reviewed
@@ -643,6 +643,46 @@ Repeat via a stale consignment item and a mixed bulk selection; verify complete 
 concurrent receipt requests and verify only one succeeds. Automated integration coverage is
 `parcel-receiving-workflow.spec.ts` using only the empty local `vipex_receiving_workflow_test`
 database with `RECEIVING_WORKFLOW_TEST=1`; its fixture refuses remote/other databases.
+
+### Receiving offices
+
+A receiving office belongs to a pickup location. Under **Locations → Edit location → Receiving
+offices**, location editors can add and rename offices. Names are trimmed and must be unique within
+the location, ignoring case. A sending-only or deleted location cannot be used for receiving offices.
+
+Migration `0097_receiving_offices` creates the office table and adds a nullable
+`parcels.receiving_office_id` foreign key. It creates **Office 1–4** for the Anloga Junction
+location in Kumasi and **Office 1** for other receiving-enabled locations. Locations first enabled
+for receiving get the same defaults. The migration assigns existing parcels already held at a
+known single-office pickup location. Existing parcels at Anloga Junction and parcels with no
+recorded pickup location need staff to verify the office before assigning it. A change to the
+parcel's destination or pickup location clears the previous office.
+
+Single, bulk and consignment receiving save the office with the receipt. A sole office is
+assigned automatically. For a location with several offices, select the actual office before
+confirming arrival. In web Scan to Receive and web/mobile consignment receiving, select the office
+before scanning or entering the code. For web bulk receiving, group parcels for a multi-office
+location in a separate batch. Missing selections at multi-office locations, offices from other
+locations and invalid receipt states leave the parcel and consignment checklist unchanged.
+Legacy clients can still receive at single-office locations. Receiving at a multi-office location
+requires a client that can send the office ID.
+
+When a parcel changes offices, receiving staff at the destination can open **Parcel details →
+Overview**, choose another office at the same pickup location and save it. The save keeps the
+original receipt and records who changed the office. A parcel with a missing pickup location needs
+that location set first. A dispatched, delivered, cancelled, deleted or warehouse-held parcel
+cannot be assigned an office through this action.
+
+Staff search results and parcel details show the location and office together, for example
+**Anloga Junction → Office 3**, on web, desktop and mobile. This includes pickup and receiving
+queues. Search continues to use the existing booking, tracking, name and phone fields. If the
+office is unknown or custody has moved away from the pickup location, the response has no
+current office. Public tracking shows the location and office names while the parcel is
+**Awaiting Pickup** and an office is recorded.
+
+QA scenarios are in [Mobile QA](MOBILE_QA_SMOKE_CHECKLIST.md#receiving-office-qa). The receiving
+workflow integration suite covers single-office defaults, multi-office validation and rollback,
+reassignment, search and details, and office management.
 
 The web **In Transit (Receiving Branch)** list has optional Send Date, Source Branch, and
 Consignment Number filters. Apply Filters combines them with the destination branch and in-transit
@@ -786,6 +826,31 @@ receipts, or reports. If staff deliberately change a parcel's main or second rec
 parcel records the replacement customer's name at that change. Removing a second receiver
 clears its stored name. Phone numbers and other customer contact fields still come from the
 linked customer record.
+
+#### Other Customer Booking
+
+In web and desktop, open **Booking & Shipping → Other Customer Booking**. On mobile, open
+**Other Customer Booking** from the Operations Hub or drawer. Enter the sender’s saved
+10-digit primary or secondary telephone and choose the matching Business, Family, Friends,
+Director or Staff profile. Each match shows its category. If there is no eligible match,
+check the number or set up the sender in Customer Management before booking.
+
+The sender must have one of those categories. Recipients can be from any category, including
+Individual, and use the ordinary recipient lookup and creation flow. The page reuses each
+client's Parcel Create workflow for parcel details, pickup location, payment and printing.
+Business charges and credit eligibility follow the existing rules. Family, Friends, Director
+and Staff continue to qualify for exemption. A Staff parcel requires an active receiving
+employee at the destination. Changing the sender's phone clears its selection.
+
+The page and its lookup and booking endpoints use `CanCreateBookingWithParcels`. Booking is
+unavailable at head office. The API checks the saved sender type again in the booking
+transaction. An Individual sender is rejected, and a concurrent category change requires
+refreshing and trying again. The standard Parcel Create flow retains its current eligibility.
+
+QA covers all five categories with an Individual recipient, a phone that only matches an
+Individual, a shared alternate phone, an unavailable sender, a category change while the form
+is open, Business charges and Staff employee selection. See
+[Mobile QA](MOBILE_QA_SMOKE_CHECKLIST.md#other-customer-booking).
 
 #### Editing customer names before parcel creation
 

@@ -9,3 +9,4 @@ export {
 } from './parcel-charge-agents.service';
 export { listReceivingLocations } from './receiving-locations.service';
 export { listReceivingStaff, type ReceivingStaffOption } from './receiving-staff.service';
+export { findNonIndividualSenders } from './non-individual-senders';

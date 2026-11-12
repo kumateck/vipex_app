@@ -8,13 +8,16 @@ import type { MobilePaymentResponsibility } from '../../mobile-parcel-payment-pl
 
 export function ParcelCreateHeader({
   paymentResponsibility,
+  nonIndividualSender,
 }: {
   paymentResponsibility: MobilePaymentResponsibility;
+  nonIndividualSender?: boolean;
 }) {
   const { theme } = useAppearance();
   const navigation = useNavigation();
-  const title =
-    paymentResponsibility === PaymentResponsibility.SENDER
+  const title = nonIndividualSender
+    ? 'Other Customer Booking'
+    : paymentResponsibility === PaymentResponsibility.SENDER
       ? 'Create Paid Parcel'
       : 'Create TobePaid Parcel';
 
@@ -32,9 +35,11 @@ export function ParcelCreateHeader({
       <View style={styles.titleGroup}>
         <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-          {paymentResponsibility === PaymentResponsibility.RECIPIENT
-            ? 'Choose whether to queue the parcel or complete it and print a sticker here.'
-            : 'Create the booking here, then complete sender payment at the cashier.'}
+          {nonIndividualSender
+            ? 'Book parcels for Business, Family, Friends, Director, or Staff senders.'
+            : paymentResponsibility === PaymentResponsibility.RECIPIENT
+              ? 'Choose whether to queue the parcel or complete it and print a sticker here.'
+              : 'Create the booking here, then complete sender payment at the cashier.'}
         </Text>
       </View>
     </View>

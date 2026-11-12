@@ -48,12 +48,12 @@ export const parcelApiPart3 = api.injectEndpoints({
     }),
     receiveConsignmentItem: builder.mutation<
       ReceiveConsignmentItemResult,
-      { consignmentId: string; code: string }
+      { consignmentId: string; code: string; receivingOfficeId?: string }
     >({
-      query: ({ consignmentId, code }) => ({
+      query: ({ consignmentId, code, receivingOfficeId }) => ({
         url: `/shipments/consignments/${consignmentId}/receive`,
         method: 'POST',
-        body: { code },
+        body: { code, receivingOfficeId },
       }),
       invalidatesTags: (_result, _error, { consignmentId }) => [
         { type: 'Bookings', id: 'LIST' },
@@ -86,18 +86,18 @@ export const parcelApiPart3 = api.injectEndpoints({
     }),
     markParcelReceived: builder.mutation<
       { id: string; receivedAt: string },
-      { id: string; receivedBy: string; status: number }
+      { id: string; receivedBy: string; status: number; receivingOfficeId?: string }
     >({
-      query: ({ id, receivedBy, status }) => ({
+      query: ({ id, receivedBy, status, receivingOfficeId }) => ({
         url: `/shipments/parcels/${id}/mark-received`,
         method: 'POST',
-        body: { receivedBy, status },
+        body: { receivedBy, status, receivingOfficeId },
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
     markParcelsReceived: builder.mutation<
       { parcelIds: string[]; updatedCount: number; receivedAt: string },
-      { parcelIds: string[] }
+      { parcelIds: string[]; receivingOfficeId?: string }
     >({
       query: (body) => ({
         url: '/shipments/parcels/bulk-mark-received',

@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppCard, AppStatusChip } from '@mobile/components/ui';
@@ -27,6 +28,15 @@ export function QueueDetailsCard(props: QueueDetailsCardProps) {
       <Text style={[styles.title, { color: theme.colors.text }]}>Parcel details</Text>
       <View style={styles.list}>
         <QueueDetailRow label="Booking" value={props.parcel.bookingCode} first />
+        {props.parcel.pickupLocationName || props.parcel.receivingOfficeName ? (
+          <QueueDetailRow
+            label="Pickup location"
+            value={pickupOfficeLabel(
+              props.parcel.pickupLocationName,
+              props.parcel.receivingOfficeName,
+            )}
+          />
+        ) : null}
         <ParcelHandoverNoteAction
           parcelId={props.parcel.id}
           hasHandoverNote={props.parcel.hasHandoverNote}

@@ -17,6 +17,8 @@ This directory is the canonical documentation set for the current Vipex applicat
 ## Operations and Parcels
 
 - [Parcel operations](PARCEL_OPERATIONS.md)
+  - [Receiving offices](PARCEL_OPERATIONS.md#receiving-offices)
+  - [Other Customer Booking](PARCEL_OPERATIONS.md#other-customer-booking)
 - [Parcel details and history](PARCEL_DETAILS.md)
 - [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md)
 - [Parcel printing](PARCEL_PRINTING.md)
@@ -32,6 +34,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 - [Accounting](ACCOUNTING_MODULE.md)
 - [Parcel tax data generation](PARCEL_TAX_DATA.md)
 - [Customer and CRM](CRM_SYSTEM.md)
+  - [Outstanding Debt](CRM_SYSTEM.md#outstanding-debt)
 - [Customer charge exemptions and staff recipients](CUSTOMER_CHARGE_EXEMPTIONS.md)
 - [Customer website enquiries, complaints and feedback](CUSTOMER_WEBSITE_MESSAGES.md)
 - [Customer wallet and credit](CUSTOMER_WALLET_CREDIT_MODULE.md)

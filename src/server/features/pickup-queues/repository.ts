@@ -1,8 +1,16 @@
+import { receivingOfficeJoin } from '../shipments/parcel-receiving-office/projection';
 import { and, asc, desc, eq, isNull, max, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
 import { handoverNoteProjection } from '../shipments/handover-note/projection';
-import { customers, parcels, ParcelStatus, pickupQueues } from '@/db/schemas';
+import {
+  customers,
+  locations,
+  parcels,
+  ParcelStatus,
+  pickupQueues,
+  receivingOffices,
+} from '@/db/schemas';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
@@ -136,6 +144,8 @@ export async function listActivePickupQueuesForBranchRepo(
       bookingCode: parcels.bookingCode,
       parcelDetails: parcels.parcelDetails,
       ...handoverNoteProjection,
+      pickupLocationName: locations.name,
+      receivingOfficeName: receivingOffices.name,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       chargePsw: parcels.chargePsw,
       callSender: parcels.callSender,
@@ -144,6 +154,8 @@ export async function listActivePickupQueuesForBranchRepo(
     })
     .from(pickupQueues)
     .innerJoin(parcels, eq(parcels.id, pickupQueues.parcelId))
+    .leftJoin(locations, eq(locations.id, parcels.pickupLocationId))
+    .leftJoin(receivingOffices, receivingOfficeJoin)
     .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
     .where(
       and(

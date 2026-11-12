@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { memo } from 'react';
 import { Text, View } from 'react-native';
@@ -39,7 +40,10 @@ export const PickupSummaryCard = memo(function PickupSummaryCard({
       />
       <Line label="Parcel" value={parcel.parcelDetails} />
       <Line label="Content" value={parcel.parcelContent} />
-      <Line label="Pickup location" value={parcel.pickupLocationName} />
+      <Line
+        label="Pickup location"
+        value={pickupOfficeLabel(parcel.pickupLocationName, parcel.receivingOfficeName)}
+      />
     </AppCard>
   );
 });

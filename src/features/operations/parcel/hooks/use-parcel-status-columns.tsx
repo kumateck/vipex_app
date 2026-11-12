@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -143,7 +144,12 @@ export function useParcelStatusColumns({
         header: 'Destination',
         cell: ({ row }) => (
           <div className="leading-tight">
-            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+            <p className="font-medium">
+              {pickupOfficeLabel(
+                row.original.pickupLocationName,
+                row.original.receivingOfficeName,
+              ) || '-'}
+            </p>
             <p className="text-muted-foreground text-xs">{row.original.destinationName ?? '-'}</p>
           </div>
         ),

@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
@@ -147,6 +148,9 @@ export function ReceiveDiscrepanciesScreen() {
                   >
                     <Text style={[styles.title, { color: theme.colors.text }]}>
                       {match.bookingCode}
+                      {match.receivingOfficeName
+                        ? ` · ${pickupOfficeLabel(match.pickupLocationName, match.receivingOfficeName)}`
+                        : ''}
                     </Text>
                     <Text style={[styles.text, { color: theme.colors.textMuted }]}>
                       {match.trackingCode} · {match.parcelDetails}

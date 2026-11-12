@@ -1,6 +1,7 @@
 import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
 export type CreateBookingWithParcelsInput = {
   senderId: string;
+  nonIndividualSender?: boolean;
   status: number;
   cashierSessionId?: string | null;
   parcels: Array<{
@@ -114,6 +115,8 @@ export type ParcelSearchRow = ParcelHandoverNoteIndicator & {
   secondCardNumber: string | null;
   pickupLocationId: string | null;
   pickupLocationName?: string | null;
+  receivingOfficeId?: string | null;
+  receivingOfficeName?: string | null;
   plannedToBePaidPsw: number;
   outstandingPrincipalPsw?: number;
   paidPrincipalPsw?: number;

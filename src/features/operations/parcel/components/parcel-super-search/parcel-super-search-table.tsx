@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -173,7 +174,10 @@ export function ParcelSuperSearchTable({
             </p>
             <p>
               <span className="text-muted-foreground">Location:</span>{' '}
-              {row.original.pickupLocationName ?? '-'}
+              {pickupOfficeLabel(
+                row.original.pickupLocationName,
+                row.original.receivingOfficeName,
+              ) || '-'}
             </p>
           </div>
         ),
