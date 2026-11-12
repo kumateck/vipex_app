@@ -100,6 +100,10 @@ export default function AppLayout() {
         }}
       />
       <Drawer.Screen
+        name="parcel-create-other"
+        options={{ title: 'Other Customer Booking', headerShown: false }}
+      />
+      <Drawer.Screen
         name="rider"
         options={{
           title: 'Rider Operations',

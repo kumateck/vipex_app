@@ -60,6 +60,11 @@ export function toPublicTrackingResponse(
     receiptCode: row.receiptCode,
     sourceBranch: row.sourceBranchName,
     destinationBranch: row.destinationBranchName,
+    ...(row.status === ParcelStatus.AWAITING_PICKUP &&
+    row.pickupLocationName &&
+    row.receivingOfficeName
+      ? { pickupLocation: row.pickupLocationName, receivingOffice: row.receivingOfficeName }
+      : {}),
     processingTime: iso(processedEvent?.occurredAt ?? row.createdAt),
     sentTime: iso(sentEvent?.occurredAt ?? row.sentAt),
     reachedDestinationAt: iso(row.receivedAt),

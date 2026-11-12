@@ -9,6 +9,7 @@ import HomeTabScreen from '../../../../../app/(app)/(tabs)/index';
 import ChatTabScreen from '../../../../../app/(app)/(tabs)/chat';
 import OperationsTabScreen from '../../../../../app/(app)/(tabs)/operations';
 import ProfileTabScreen from '../../../../../app/(app)/(tabs)/profile';
+import ParcelCreateOtherScreen from '../../../../../app/(app)/parcel-create-other';
 import ParcelCreateScreen from '../../../../../app/(app)/parcel-create';
 import SuperSearchScreen from '../../../../../app/(app)/super-search';
 import QueueScreen from '../../../../../app/(app)/queue';
@@ -130,6 +131,11 @@ export function MobileAppDrawer() {
         name="ParcelCreate"
         component={ParcelCreateScreen}
         options={{ title: 'Create Parcel', headerShown: false }}
+      />
+      <Drawer.Screen
+        name="ParcelCreateOther"
+        component={ParcelCreateOtherScreen}
+        options={{ title: 'Other Customer Booking', headerShown: false }}
       />
       <Drawer.Screen
         name="SuperSearch"

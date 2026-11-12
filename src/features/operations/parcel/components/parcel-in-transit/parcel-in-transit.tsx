@@ -159,6 +159,7 @@ export function ParcelInTransit({ view }: { view: InTransitView }) {
       <ParcelDetailsDialog parcelId={selectedParcelId} onClose={() => setSelectedParcelId(null)} />
 
       <ConfirmMarkArrivedDialog
+        key={arrivalConfirmationParcel?.id}
         parcel={arrivalConfirmationParcel}
         isConfirming={isUpdatingStatus}
         onCancel={() => setArrivalConfirmationParcel(null)}
@@ -166,6 +167,7 @@ export function ParcelInTransit({ view }: { view: InTransitView }) {
       />
 
       <ConfirmBulkArrivalDialog
+        key={String(batchArrival.isConfirmationOpen)}
         open={view === 'incoming' && batchArrival.isConfirmationOpen}
         parcels={batchArrival.selectedParcels}
         isConfirming={batchArrival.isLoading}

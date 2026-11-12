@@ -18,6 +18,7 @@ export const routes = new Elysia({ name: 'parcel-receiving' })
       const authUser = user as AuthUser;
       return markIncomingParcelsArrivedCtrl({
         parcelIds: body.parcelIds,
+        receivingOfficeId: body.receivingOfficeId,
         companyId: authUser.companyId ?? '',
         branchId: authUser.branchId ?? '',
         actorUserId: authUser.sub,
@@ -25,6 +26,7 @@ export const routes = new Elysia({ name: 'parcel-receiving' })
     },
     {
       body: t.Object({
+        receivingOfficeId: t.Optional(UUID),
         parcelIds: t.Array(UUID, {
           minItems: 1,
           maxItems: MAX_BULK_ARRIVAL_PARCELS,
@@ -43,6 +45,7 @@ export const routes = new Elysia({ name: 'parcel-receiving' })
       params: t.Object({ id: UUID }),
       body: t.Object({
         receivedBy: t.Optional(UUID),
+        receivingOfficeId: t.Optional(UUID),
         receivedAt: t.Optional(t.String({ format: 'date-time' })),
         status: t.Optional(t.Number()),
       }),

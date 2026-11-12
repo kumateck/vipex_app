@@ -46,7 +46,11 @@ export async function markIncomingParcelsArrivedRepo(
     branchId: string;
     receivedBy: string;
     receivedAt: Date;
-    resolvedLocations: Array<{ id: string; pickupLocationId: string | null }>;
+    resolvedLocations: Array<{
+      id: string;
+      pickupLocationId: string | null;
+      receivingOfficeId: string | null;
+    }>;
   },
   executor: DbExecutor = db,
 ) {
@@ -57,6 +61,14 @@ export async function markIncomingParcelsArrivedRepo(
       receivedAt: input.receivedAt,
       status: ParcelStatus.ARRIVED_AT_DESTINATION,
       updatedAt: input.receivedAt,
+      receivingOfficeId: sql`case ${sql.join(
+        input.resolvedLocations.map(
+          (parcel) =>
+            sql`when ${parcels.id} = ${parcel.id} then ${parcel.receivingOfficeId}::varchar`,
+        ),
+        sql` `,
+      )}
+        else ${parcels.receivingOfficeId} end`,
       pickupLocationId: sql`case ${sql.join(
         input.resolvedLocations.map(
           (parcel) =>

@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppCard, AppStatusChip } from '@/components/ui/mobile';
 import { getParcelRiderLine } from '@mobile/constants/parcel-status';
@@ -64,7 +65,10 @@ export function ParcelSummarySections({
           />
           <DetailRow
             label="Destination"
-            value={branchLocationLabel(destinationBranchName, destinationLocationName)}
+            value={branchLocationLabel(
+              destinationBranchName,
+              pickupOfficeLabel(destinationLocationName, details.parcel.receivingOfficeName),
+            )}
           />
           <DetailRow
             label="Route"

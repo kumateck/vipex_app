@@ -1,4 +1,5 @@
 export { ParcelPage } from './pages/parcel-page';
+export { ParcelCreateOtherPage } from './pages/parcel-create-other-page';
 export { ParcelCreatePage } from './pages/parcel-create-page';
 export { ParcelSenderPaymentsPage } from './pages/parcel-sender-payments-page';
 export { ParcelProcessedConsignmentPage } from './pages/parcel-processed-consignment-page';

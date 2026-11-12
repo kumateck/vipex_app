@@ -10,6 +10,7 @@ export async function markIncomingParcelsArrivedSvc(input: {
   branchId: string;
   actorUserId: string;
   receivedAt?: Date;
+  receivingOfficeId?: string;
 }) {
   if (!input.companyId || !input.branchId || !input.actorUserId)
     throw BadRequest('Company, receiving branch, and user context are required');
@@ -29,6 +30,7 @@ export async function markIncomingParcelsArrivedSvc(input: {
       parcelIds: updatedIds,
       branchId: input.branchId,
       receivedAt: receivedAt.toISOString(),
+      receivingOfficeId: input.receivingOfficeId ?? null,
     },
   });
   return {

@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 
 export function ParcelTransitRouteCell({
@@ -27,7 +28,9 @@ export function ParcelTransitRouteCell({
       </p>
       <p>
         <span className="text-muted-foreground">Location:</span>{' '}
-        <span className="font-medium">{parcel.pickupLocationName ?? '-'}</span>
+        <span className="font-medium">
+          {pickupOfficeLabel(parcel.pickupLocationName, parcel.receivingOfficeName) || '-'}
+        </span>
       </p>
     </div>
   );

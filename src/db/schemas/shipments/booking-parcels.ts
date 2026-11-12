@@ -11,6 +11,7 @@ import {
   check,
 } from 'drizzle-orm/pg-core';
 import { companies, branches, users, locations } from '../core';
+import { receivingOffices } from '../receiving-offices';
 import { customers, cards } from '../customers';
 import { employees } from '../hr';
 import { sql } from 'drizzle-orm';
@@ -107,6 +108,10 @@ export const parcels = pgTable(
     secondCardNumber: varchar('second_card_number', { length: 255 }),
 
     pickupLocationId: varchar('pickup_location_id', { length: 25 }).references(() => locations.id),
+
+    receivingOfficeId: varchar('receiving_office_id', { length: 25 }).references(
+      () => receivingOffices.id,
+    ),
 
     plannedToBePaidPsw: bigint('planned_tobepaid_psw', { mode: 'number' })
       .notNull()

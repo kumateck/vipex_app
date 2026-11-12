@@ -16,7 +16,10 @@ import { useParcelBranchOptions } from './use-parcel-branch-options';
 import { useParcelChargeAgents } from './use-parcel-charge-agents';
 import { getRequiredPickupLocationError } from '@/shared/shipments/pickup-location';
 
-export function useParcelCreateWorkflow(initialPaymentResponsibility: MobilePaymentResponsibility) {
+export function useParcelCreateWorkflow(
+  initialPaymentResponsibility: MobilePaymentResponsibility,
+  nonIndividualSender = false,
+) {
   const { session, withAuth } = useAuth();
   const permissions = session.user?.permissions ?? [];
   const canCreate = canCreateParcelBooking(permissions);
@@ -24,7 +27,7 @@ export function useParcelCreateWorkflow(initialPaymentResponsibility: MobilePaym
   const isHeadOffice = branchType === BranchType.HEADOFFICE;
   const companyId = session.user?.company?.id ?? session.user?.companyId ?? null;
   const userBranchId = session.user?.branch?.id ?? session.user?.branchId ?? null;
-  const sender = useCustomerLookup(withAuth);
+  const sender = useCustomerLookup(withAuth, nonIndividualSender);
   const receiver = useCustomerLookup(withAuth);
   const [destinationBranchId, setDestinationBranchId] = useState('');
   const exemption = useParcelChargeExemption(
@@ -86,6 +89,7 @@ export function useParcelCreateWorkflow(initialPaymentResponsibility: MobilePaym
     setStickerCopies('1');
   };
   const submitState = {
+    nonIndividualSender,
     session,
     withAuth,
     companyId,

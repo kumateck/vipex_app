@@ -1,3 +1,4 @@
+import { registerOutstandingDebtCases } from '../utils/customer-outstanding-debt-cases';
 import { registerCreditApiCases } from '../utils/customer-credit-api-cases';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { Elysia } from 'elysia';
@@ -178,5 +179,6 @@ describe.skipIf(!enabled)('exact parcel debt settlement on isolated PostgreSQL',
       ).data.map((row) => row.id),
     ).toEqual(['customer']);
   });
+  registerOutstandingDebtCases(request);
   registerCreditApiCases(app, request);
 });

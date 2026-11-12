@@ -1,3 +1,6 @@
+import { useWatch } from 'react-hook-form';
+import { isNonIndividualCustomerType } from '@/shared/customers/customer-types';
+import { NonIndividualSenderField } from './parcel-create-other/sender';
 import { Plus } from 'lucide-react';
 import {
   Card,
@@ -23,7 +26,11 @@ import {
   useParcelCreateFormWorkflow,
 } from './parcel-create';
 
-export function ParcelCreateForm() {
+export function ParcelCreateForm({
+  nonIndividualSender = false,
+}: {
+  nonIndividualSender?: boolean;
+}) {
   const {
     form,
     fields,
@@ -44,7 +51,14 @@ export function ParcelCreateForm() {
     onSubmit,
     handleCancel,
     createEmptyParcel,
-  } = useParcelCreateFormWorkflow();
+  } = useParcelCreateFormWorkflow(nonIndividualSender);
+  const [senderId, senderType] = useWatch({
+    control: form.control,
+    name: ['sender.customerId', 'sender.customerType'],
+    disabled: !nonIndividualSender,
+  });
+  const senderRequired =
+    nonIndividualSender && (!senderId || !isNonIndividualCustomerType(senderType));
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -52,9 +66,13 @@ export function ParcelCreateForm() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold">Create Parcel Booking</h2>
+              <h2 className="text-lg font-semibold">
+                {nonIndividualSender ? 'Other Customer Booking' : 'Create Parcel Booking'}
+              </h2>
               <p className="text-sm text-muted-foreground">
-                Confirm the source branch and default parcel status for this booking.
+                {nonIndividualSender
+                  ? 'Book parcels for Business, Family, Friends, Director, or Staff senders.'
+                  : 'Confirm the source branch and default parcel status for this booking.'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2 md:justify-end">
@@ -75,7 +93,7 @@ export function ParcelCreateForm() {
               <Button type="button" variant="outline" onClick={handleCancel} disabled={isSaving}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitDisabled} className="gap-2">
+              <Button type="submit" disabled={submitDisabled || senderRequired} className="gap-2">
                 {isSaving ? <Spinner /> : null}
                 {isSaving ? 'Saving...' : 'Save Booking'}
               </Button>
@@ -101,15 +119,19 @@ export function ParcelCreateForm() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <CustomerLookupSection
-                        label="Sender"
-                        phoneName="sender.telephone"
-                        secondaryPhoneName="sender.telephone2"
-                        customerIdName="sender.customerId"
-                        fullnameName="sender.fullname"
-                        helperText="Lookup starts after 1 second when exactly 10 digits are entered."
-                        layout="split"
-                      />
+                      {nonIndividualSender ? (
+                        <NonIndividualSenderField />
+                      ) : (
+                        <CustomerLookupSection
+                          label="Sender"
+                          phoneName="sender.telephone"
+                          secondaryPhoneName="sender.telephone2"
+                          customerIdName="sender.customerId"
+                          fullnameName="sender.fullname"
+                          helperText="Lookup starts after 1 second when exactly 10 digits are entered."
+                          layout="split"
+                        />
+                      )}
                     </div>
                   </CardContent>
                 </Card>

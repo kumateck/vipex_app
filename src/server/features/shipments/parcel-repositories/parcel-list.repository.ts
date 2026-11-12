@@ -1,9 +1,20 @@
+import {
+  receivingOfficeJoin,
+  receivingOfficeProjection,
+} from '../parcel-receiving-office/projection';
 import { createParcelListContext } from '../parcel-list/parcel-list-context';
 import { createParcelListOrder } from '../parcel-list/parcel-list-order';
 import { handoverNoteProjection } from '../handover-note/projection';
 import { and, count, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { parcels, bookings, deliveries, parcelInternalHolders, pickupQueues } from '@/db/schemas';
+import {
+  receivingOffices,
+  parcels,
+  bookings,
+  deliveries,
+  parcelInternalHolders,
+  pickupQueues,
+} from '@/db/schemas';
 import {
   type DbExecutor,
   effectiveParcelReceivedAt,
@@ -141,6 +152,7 @@ export async function listParcelsRepo(
       secondCardId: parcels.secondCardId,
       secondCardNumber: parcels.secondCardNumber,
       pickupLocationId: parcels.pickupLocationId,
+      ...receivingOfficeProjection,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       outstandingPrincipalPsw: outstandingPrincipalPsw.mapWith(Number),
       paidPrincipalPsw: paidPrincipalPsw.mapWith(Number),
@@ -222,6 +234,7 @@ export async function listParcelsRepo(
     .leftJoin(sb, eq(parcels.sourceId, sb.id))
     .leftJoin(sl, eq(sl.id, parcels.sourceLocationId))
     .leftJoin(pl, eq(pl.id, parcels.pickupLocationId))
+    .leftJoin(receivingOffices, receivingOfficeJoin)
     .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))

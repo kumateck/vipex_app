@@ -1,3 +1,4 @@
+import { isNonIndividualCustomerType } from '@/shared/customers/customer-types';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 
 import { ParcelStatus } from '@mobile/constants/parcel-status';
@@ -18,6 +19,7 @@ import { parseAmount } from '../utils';
 
 import type { ParcelCreateSubmitState } from './use-parcel-create-workflow';
 export function useParcelBookingSubmit({
+  nonIndividualSender,
   withAuth,
   companyId,
   userBranchId,
@@ -49,6 +51,11 @@ export function useParcelBookingSubmit({
     if (isSubmitting) return;
     if (!companyId || !userBranchId)
       return notifyError('Missing context', 'Your company or branch is missing.');
+    if (
+      nonIndividualSender &&
+      (!sender.customerId || !isNonIndividualCustomerType(sender.customerType))
+    )
+      return notifyError('Sender required', 'Select an eligible sender from Customer Management.');
     if (!isExempt && !chargeAgents.options.some((agent) => agent.value === chargeAgentUserId))
       return notifyError('Charge agent required', 'Select the agent who charged the parcel.');
     if (!isTenDigitPhone(sender.telephone))
@@ -95,12 +102,15 @@ export function useParcelBookingSubmit({
           withAuth((token) => createCustomer(token, input)),
       };
       const [senderId, receiverId] = await Promise.all([
-        resolveBookingCustomer(sender, 'Sender', customerDependencies),
+        nonIndividualSender
+          ? sender.customerId
+          : resolveBookingCustomer(sender, 'Sender', customerDependencies),
         resolveBookingCustomer(receiver, 'Recipient', customerDependencies),
       ]);
       const response = await withAuth((token) =>
         createBookingWithParcels(token, {
           senderId,
+          nonIndividualSender: nonIndividualSender || undefined,
           status: ParcelStatus.CREATED,
           deferSenderCashierCompletion:
             !isExempt &&

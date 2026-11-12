@@ -5,6 +5,7 @@ import {
   getBulkArrivalCandidatesRepo,
   markIncomingParcelsArrivedRepo,
 } from '../parcel-bulk-receiving.repository';
+import { resolveParcelReceivingOffices } from './receiving-office';
 import { assertBulkArrivalCandidates } from './rules';
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -14,6 +15,7 @@ export type ReceiveIncomingInput = {
   branchId: string;
   actorUserId: string;
   receivedAt: Date;
+  receivingOfficeId?: string;
 };
 export async function receiveIncomingParcels(tx: Transaction, input: ReceiveIncomingInput) {
   const candidates = await getBulkArrivalCandidatesRepo(input.parcelIds, tx);
@@ -23,11 +25,16 @@ export async function receiveIncomingParcels(tx: Transaction, input: ReceiveInco
     candidates,
     tx,
   );
+  const resolvedOffices = await resolveParcelReceivingOffices(
+    resolvedLocations,
+    input.receivingOfficeId,
+    tx,
+  );
   const updated = await markIncomingParcelsArrivedRepo(
     {
       ...input,
       receivedBy: input.actorUserId,
-      resolvedLocations,
+      resolvedLocations: resolvedOffices,
     },
     tx,
   );

@@ -1,3 +1,4 @@
+import { useReceivingOfficeChoice } from '@mobile/features/operations/parcel-receiving-office';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from '@mobile/navigation/router-compat';
@@ -32,6 +33,12 @@ export function useReceiveProcess() {
   const [editReceiverName, setEditReceiverName] = useState('');
   const [editReceiverPhone, setEditReceiverPhone] = useState('');
   const canConfirmArrival = parcel?.status === ParcelStatus.IN_TRANSIT && !parcel.receivedAt;
+
+  const office = useReceivingOfficeChoice({
+    enabled: canView && canEdit && canConfirmArrival,
+    locationId: parcel?.pickupLocationId,
+  });
+  const needsOffice = office.options.length > 1 && !office.officeId;
 
   const loadParcel = useCallback(async () => {
     if (!parcelId || !companyId) return;
@@ -121,7 +128,7 @@ export function useReceiveProcess() {
 
   async function markArrived() {
     if (!parcelId || !parcel) return;
-    if (arriveBusy) return;
+    if (arriveBusy || office.isLoading || office.isError || needsOffice) return;
     if (!canConfirmArrival) {
       notifyError(
         'Arrival unavailable',
@@ -136,7 +143,9 @@ export function useReceiveProcess() {
     }
     try {
       setArriveBusy(true);
-      await withAuth((token) => receiveIncomingParcel(token, parcelId));
+      await withAuth((token) =>
+        receiveIncomingParcel(token, parcelId, office.officeId || undefined),
+      );
       notifySuccess(`Parcel ${parcel.bookingCode} marked ARRIVED_AT_DESTINATION.`);
       void hapticSuccess();
       router.replace('/(app)/receive');
@@ -155,6 +164,8 @@ export function useReceiveProcess() {
     canView,
     canEdit,
     canConfirmArrival,
+    office,
+    needsOffice,
     router,
     busy,
     parcel,

@@ -1,3 +1,4 @@
+import { ParcelOfficeEditor } from '@mobile/features/operations/parcel-receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -92,6 +93,16 @@ export function ParcelRecordDetailsScreen() {
             details.parcel.handoverNoteEditable &&
             (branchId === details.parcel.sourceId || branchId === details.parcel.destinationId)
           }
+          onSaved={() => {
+            void load();
+            void history.reload();
+          }}
+        />
+      ) : null}
+      {tab === 'overview' ? (
+        <ParcelOfficeEditor
+          key={details.parcel.id}
+          parcel={details.parcel}
           onSaved={() => {
             void load();
             void history.reload();

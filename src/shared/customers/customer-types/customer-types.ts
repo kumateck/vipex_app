@@ -8,6 +8,14 @@ export const CUSTOMER_TYPE_OPTIONS = [
   { value: 5, label: 'Staff' },
 ] as const;
 
+export const NON_INDIVIDUAL_CUSTOMER_TYPES = CUSTOMER_TYPE_OPTIONS.filter(
+  (option) => option.value !== 0,
+).map((option) => option.value);
+
+export function isNonIndividualCustomerType(value?: number | null) {
+  return NON_INDIVIDUAL_CUSTOMER_TYPES.some((customerType) => customerType === value);
+}
+
 export function customerTypeLabel(value: number) {
   return CUSTOMER_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? 'Unknown';
 }

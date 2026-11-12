@@ -1,14 +1,17 @@
-import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
+import { ConsignmentReceivingChecklist } from './consignment-receiving-checklist';
+import { formatConsignmentTime } from './format-consignment-time';
+import {
+  ReceivingOfficeField,
+  useReceivingOfficeChoice,
+} from '@/features/operations/parcel-receiving-office';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CheckCircle2, Circle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { formatDateTime } from '@/lib/dates';
 import { ConsignmentReceivingStatus } from '@/db/schemas/enums';
 import {
   useCloseConsignmentMutation,
@@ -17,14 +20,6 @@ import {
   useReceiveConsignmentItemMutation,
 } from '../../api/parcel.api';
 import { CloseWithExceptionsDialog } from './close-with-exceptions-dialog';
-import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return formatDateTime(date);
-}
 
 function extractErrorDetails(error: unknown) {
   if (typeof error === 'object' && error && 'data' in error) {
@@ -57,6 +52,8 @@ export function ConsignmentReceivingSessionPage() {
     isLoading: isLoadingItems,
     refetch: refetchItems,
   } = useListConsignmentItemsQuery(id, { skip: !id });
+  const office = useReceivingOfficeChoice({ enabled: Boolean(id), allLocations: true });
+  const { officeId } = office;
   const [receiveConsignmentItem, { isLoading: isReceiving }] = useReceiveConsignmentItemMutation();
   const [closeConsignment, { isLoading: isClosing }] = useCloseConsignmentMutation();
 
@@ -72,12 +69,16 @@ export function ConsignmentReceivingSessionPage() {
       setCode('');
 
       try {
-        const result = await receiveConsignmentItem({ consignmentId: id, code: trimmed }).unwrap();
+        const result = await receiveConsignmentItem({
+          consignmentId: id,
+          code: trimmed,
+          receivingOfficeId: officeId || undefined,
+        }).unwrap();
         if (result.outcome === 'RECEIVED') {
           toast.success(`Received ${result.bookingCode} (${result.arrived} of ${result.total})`);
         } else if (result.outcome === 'ALREADY_RECEIVED') {
           toast.warning(
-            `${result.bookingCode} was already received at ${formatDate(result.arrivedAt)}${
+            `${result.bookingCode} was already received at ${formatConsignmentTime(result.arrivedAt)}${
               result.arrivedByName ? ` by ${result.arrivedByName}` : ''
             }`,
           );
@@ -98,13 +99,14 @@ export function ConsignmentReceivingSessionPage() {
         }
         await Promise.all([refetchDetail(), refetchItems()]);
       } catch (error) {
+        setCode(trimmed);
         const { message } = extractErrorDetails(error);
         toast.error(message || 'Failed to receive parcel');
       } finally {
         inputRef.current?.focus();
       }
     },
-    [code, id, receiveConsignmentItem, refetchDetail, refetchItems],
+    [code, id, officeId, receiveConsignmentItem, refetchDetail, refetchItems],
   );
 
   const handleCloseClick = useCallback(async () => {
@@ -185,6 +187,10 @@ export function ConsignmentReceivingSessionPage() {
                 </Badge>
               ) : null}
 
+              {isOpen ? (
+                <ReceivingOfficeField {...office} allowAutomatic disabled={isReceiving} />
+              ) : null}
+
               <form className="flex items-center gap-2" onSubmit={handleScanSubmit}>
                 <Input
                   ref={inputRef}
@@ -217,64 +223,7 @@ export function ConsignmentReceivingSessionPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Checklist</CardTitle>
-              <CardDescription>All parcels loaded into this consignment.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingItems ? (
-                <p className="text-muted-foreground text-sm">Loading...</p>
-              ) : (
-                <div className="divide-y rounded-md border">
-                  {items.map((item) => (
-                    <div
-                      key={item.parcelId}
-                      className="flex items-center justify-between gap-3 p-3 text-sm"
-                    >
-                      <div className="leading-tight">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium">{item.bookingCode}</p>
-                          <ParcelHandoverNoteAction
-                            parcelId={item.parcelId}
-                            hasHandoverNote={item.hasHandoverNote}
-                            handoverNoteCritical={item.handoverNoteCritical}
-                          />
-                          <ViewParcelDetailsButton parcelId={item.parcelId} />
-                        </div>
-                        <p className="text-muted-foreground text-xs">{item.receiverName}</p>
-                      </div>
-                      <div className="flex items-center gap-2 text-right">
-                        {item.arrivedAt ? (
-                          <div className="flex items-center gap-1.5 text-emerald-600">
-                            <CheckCircle2 className="h-4 w-4" />
-                            <div className="leading-tight">
-                              <p className="text-xs">Arrived {formatDate(item.arrivedAt)}</p>
-                              {item.arrivedByName ? (
-                                <p className="text-muted-foreground text-xs">
-                                  by {item.arrivedByName}
-                                </p>
-                              ) : null}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Circle className="h-4 w-4" />
-                            <p className="text-xs">Pending</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {items.length === 0 ? (
-                    <p className="p-4 text-center text-muted-foreground text-sm">
-                      No parcels in this consignment.
-                    </p>
-                  ) : null}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ConsignmentReceivingChecklist items={items} isLoadingItems={isLoadingItems} />
         </div>
       </ScrollableWrapper>
 

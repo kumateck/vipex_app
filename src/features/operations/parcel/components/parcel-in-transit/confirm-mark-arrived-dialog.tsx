@@ -1,3 +1,7 @@
+import {
+  ReceivingOfficeField,
+  useReceivingOfficeChoice,
+} from '@/features/operations/parcel-receiving-office';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -14,7 +18,7 @@ type ConfirmMarkArrivedDialogProps = {
   parcel: ParcelSearchRow | null;
   isConfirming: boolean;
   onCancel: () => void;
-  onConfirm: () => Promise<void>;
+  onConfirm: (receivingOfficeId?: string) => Promise<void>;
 };
 
 export function ConfirmMarkArrivedDialog({
@@ -23,6 +27,10 @@ export function ConfirmMarkArrivedDialog({
   onCancel,
   onConfirm,
 }: ConfirmMarkArrivedDialogProps) {
+  const office = useReceivingOfficeChoice({
+    enabled: Boolean(parcel),
+    locationId: parcel?.pickupLocationId,
+  });
   return (
     <AlertDialog
       open={Boolean(parcel)}
@@ -50,9 +58,23 @@ export function ConfirmMarkArrivedDialog({
           </div>
         ) : null}
 
+        <ReceivingOfficeField
+          {...office}
+          allowAutomatic={office.options.length <= 1}
+          disabled={isConfirming}
+        />
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isConfirming}>Cancel</AlertDialogCancel>
-          <Button type="button" onClick={onConfirm} disabled={isConfirming}>
+          <Button
+            type="button"
+            onClick={() => void onConfirm(office.officeId || undefined)}
+            disabled={
+              isConfirming ||
+              office.isLoading ||
+              office.isError ||
+              (office.options.length > 1 && !office.officeId)
+            }
+          >
             {isConfirming ? 'Marking Arrived...' : 'Confirm Arrival'}
           </Button>
         </AlertDialogFooter>

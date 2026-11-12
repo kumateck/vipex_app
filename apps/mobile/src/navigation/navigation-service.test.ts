@@ -3,6 +3,7 @@ import { resolveMobileHref } from './navigation-route-resolver';
 
 describe('mobile frontline navigation', () => {
   test.each([
+    ['/(app)/parcel-create-other', 'ParcelCreateOther'],
     ['/(app)/receive', 'Receive'],
     ['/(app)/self-service', 'SelfService'],
     ['/(app)/call-center-follow-up', 'CallCenterFollowUp'],

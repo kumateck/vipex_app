@@ -1,3 +1,7 @@
+import {
+  ReceivingOfficeField,
+  useReceivingOfficeChoice,
+} from '@/features/operations/parcel-receiving-office';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -21,8 +25,20 @@ export function ConfirmBulkArrivalDialog({
   parcels: ParcelSearchRow[];
   isConfirming: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => Promise<void>;
+  onConfirm: (receivingOfficeId?: string) => Promise<void>;
 }) {
+  const locations = new Set(parcels.map((parcel) => parcel.pickupLocationId));
+  const office = useReceivingOfficeChoice({
+    enabled: open,
+    locationId: parcels[0]?.pickupLocationId,
+    allLocations: locations.size > 1,
+  });
+  const mixedNeedsSplit =
+    locations.size > 1 &&
+    parcels.some(
+      (parcel) =>
+        office.options.filter((option) => option.locationId === parcel.pickupLocationId).length > 1,
+    );
   return (
     <AlertDialog open={open} onOpenChange={(next) => !isConfirming && onOpenChange(next)}>
       <AlertDialogContent>
@@ -43,9 +59,31 @@ export function ConfirmBulkArrivalDialog({
           ))}
         </div>
 
+        {mixedNeedsSplit ? (
+          <p className="text-sm">
+            Receive parcels for a location with multiple offices in a separate batch.
+          </p>
+        ) : locations.size <= 1 ? (
+          <ReceivingOfficeField
+            {...office}
+            allowAutomatic={office.options.length <= 1}
+            disabled={isConfirming}
+          />
+        ) : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isConfirming}>Cancel</AlertDialogCancel>
-          <Button type="button" onClick={onConfirm} disabled={isConfirming || parcels.length === 0}>
+          <Button
+            type="button"
+            onClick={() => void onConfirm(office.officeId || undefined)}
+            disabled={
+              isConfirming ||
+              office.isLoading ||
+              office.isError ||
+              parcels.length === 0 ||
+              mixedNeedsSplit ||
+              (locations.size <= 1 && office.options.length > 1 && !office.officeId)
+            }
+          >
             {isConfirming ? 'Marking Arrived...' : 'Confirm Batch Arrival'}
           </Button>
         </AlertDialogFooter>

@@ -123,6 +123,15 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
                 onPress={() => props.navigation.navigate('ParcelCreate', { payment: 'recipient' })}
                 inactiveTintColor={theme.colors.text}
               />
+              <DrawerItem
+                label="Other Customer Booking"
+                labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+                icon={({ size, color }) => (
+                  <Ionicons name="people-outline" size={size} color={color} />
+                )}
+                onPress={() => props.navigation.navigate('ParcelCreateOther')}
+                inactiveTintColor={theme.colors.text}
+              />
             </>
           ) : null}
           {canUseQueue ? (

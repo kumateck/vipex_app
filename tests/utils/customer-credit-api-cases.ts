@@ -51,7 +51,10 @@ export function registerCreditApiCases(app: Pick<Elysia, 'handle'>, request: Cre
       expect(body.meta.totalRecords).toBe(1);
       expect(body.data[0].customerType).toBe(type);
     }
-    expect((await request('customers/?customerType=2', 'GET')).status).toBe(400);
+    const family = await request('customers/?customerType=2', 'GET');
+    expect(family.status).toBe(200);
+    expect(await family.json()).toMatchObject({ meta: { totalRecords: 0 } });
+    expect((await request('customers/?customerType=6', 'GET')).status).toBe(400);
   });
   test('unauthenticated, unpermitted and module-disabled finance access is rejected', async () => {
     const path = 'customer-wallet-credit/accounts/customer/open-parcels';
