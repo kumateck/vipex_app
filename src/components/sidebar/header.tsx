@@ -3,6 +3,7 @@ import { CashierSessionControls } from './cashier-session-controls';
 import { UserProfile } from '../user-profile';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { UpdateIndicator } from './update-indicator';
+import { BranchSwitchButton } from '@/features/auth/branch-switch';
 import { RegisterDeviceButton } from '@/features/auth/device-registration';
 
 export function SiteHeader() {
@@ -11,6 +12,7 @@ export function SiteHeader() {
       <div className="flex w-full items-center  gap-2 px-4 py-1 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <RegisterDeviceButton />
+        <BranchSwitchButton />
         {/* <Separator orientation="vertical" className=" data-[orientation=vertical]:h-4" /> */}
         {/* <h1 className="text-base font-medium">Documents</h1> */}
         <div className="ml-auto flex items-center gap-2">

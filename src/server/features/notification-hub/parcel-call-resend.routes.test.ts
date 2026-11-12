@@ -12,6 +12,8 @@ const session = {
   id: 'session',
   userId: 'agent',
   deviceId: null,
+  activeBranchId: null,
+  activeLocationId: null,
   tokenHash: 'hash',
   expiresAt: new Date(Date.now() + 60_000),
   createdAt: now,

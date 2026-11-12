@@ -8,7 +8,6 @@ import {
   listRolePermissionKeysRepo,
   revokeAllUserTokensRepo,
   revokeRefreshTokenRepo,
-  rotateRefreshTokenRepo,
   updateCurrentUserProfileRepo,
   updateUserPasswordRepo,
 } from './repository';
@@ -33,6 +32,10 @@ import {
 } from './device.service';
 import { touchDeviceRepo } from './device.repository';
 import { isDeviceVerificationRequired } from './device-policy';
+
+import type { BranchSessionScope } from './branch-session.service';
+
+export { refreshSvc } from './refresh.service';
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -104,97 +107,6 @@ export async function loginSvc(
   });
   return {
     tokens: { accessToken, refreshToken: refreshPlain },
-    user: {
-      id: user.id,
-      email: user.email,
-      fullname: user.fullname,
-      employeeId: user.employeeId ?? null,
-      role: user.role ?? null,
-      company: user.company ?? null,
-      branch: user.branch ?? null,
-      location: user.location ?? null,
-      locationId: user.locationId ?? null,
-      locationName: user.location?.name ?? null,
-      userType: user.userType ?? null,
-      cashierType: user.cashierType ?? null,
-      permissions: permissionKeys,
-    },
-  };
-}
-
-export async function refreshSvc(
-  refreshToken: string,
-  deviceCredential?: DeviceCredential | null,
-  client?: 'mobile' | 'desktop' | null,
-) {
-  const hash = await sha256HexAsync(refreshToken);
-  const current = await findRefreshTokenRepo(hash);
-  if (!current) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
-  if (current.revokedAt) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token revoked');
-  if (current.expiresAt.getTime() <= Date.now())
-    throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token expired');
-  const user = await getUserByIdRepo(current.userId);
-  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
-  if ((client || current.deviceId) && user.status !== UserStatus.ACTIVE) {
-    throw new HttpError(HttpStatus.UNAUTHORIZED, 'Account unavailable');
-  }
-  const verificationRequired =
-    Boolean(client || current.deviceId) && (await isDeviceVerificationRequired(user.companyId));
-  if (verificationRequired && client && !current.deviceId) {
-    throw new HttpError(HttpStatus.UNAUTHORIZED, 'Native session requires device registration');
-  }
-  if (verificationRequired && current.deviceId) {
-    const device = await requireApprovedDeviceSvc(deviceCredential ?? null, current.userId);
-    if (device.id !== current.deviceId) {
-      throw new HttpError(HttpStatus.UNAUTHORIZED, 'Device session mismatch');
-    }
-    await touchDeviceRepo(device.id);
-  }
-  // Not enforced yet: attach an approved device to an unlinked native session on refresh.
-  const bindDevice =
-    !verificationRequired && client && !current.deviceId
-      ? await findApprovedDeviceSvc(deviceCredential ?? null, current.userId, client)
-      : null;
-
-  const permissionKeys =
-    Array.isArray(current.permissionsSnapshot) && current.permissionsSnapshot.length > 0
-      ? current.permissionsSnapshot
-      : await listRolePermissionKeysRepo(user.roleId, user.companyId);
-
-  // Rotate
-  const nextPlain = generateOpaqueToken(32);
-  const nextHash = await sha256HexAsync(nextPlain);
-  const refreshExpSec = parseDurationToSeconds(env.JWT_REFRESH_EXPIRES);
-  const nextExpiresAt = new Date(Date.now() + refreshExpSec * 1000);
-  const rotated = await rotateRefreshTokenRepo(
-    hash,
-    nextHash,
-    nextExpiresAt,
-    permissionKeys,
-    bindDevice?.id,
-  );
-  if (!rotated) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token revoked');
-
-  const nextRefresh = await findRefreshTokenRepo(nextHash);
-  if (!nextRefresh) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
-
-  const accessToken = await signAccessToken({
-    sub: user.id,
-    sid: nextRefresh.id,
-    email: user.email,
-    employeeId: user.employeeId ?? null,
-    roleId: user.roleId ?? null,
-    companyId: user.companyId ?? null,
-    branchId: user.branchId ?? null,
-    branchType: user.branch?.type ?? null,
-    locationId: user.locationId ?? null,
-    userType: user.userType ?? null,
-    cashierType: user.cashierType ?? null,
-  });
-
-  return {
-    accessToken,
-    refreshToken: nextPlain,
     user: {
       id: user.id,
       email: user.email,
@@ -321,10 +233,11 @@ export async function getCurrentUserPermissionsSvc(userId: string) {
   return { allPermissions, readOnlyPermissions };
 }
 
-export async function getCurrentUserProfileSvc(userId: string) {
+export async function getCurrentUserProfileSvc(userId: string, scope?: BranchSessionScope) {
   const user = await getUserByIdRepo(userId);
   if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
 
+  const location = scope ? scope.location : user.location;
   return {
     id: user.id,
     fullname: user.fullname,
@@ -332,11 +245,11 @@ export async function getCurrentUserProfileSvc(userId: string) {
     telephone: user.telephone,
     employeeId: user.employeeId ?? null,
     role: user.role ?? null,
-    branch: user.branch ?? null,
+    branch: scope?.branch ?? user.branch,
     company: user.company ?? null,
-    location: user.location ?? null,
-    locationId: user.locationId ?? null,
-    locationName: user.location?.name ?? null,
+    location,
+    locationId: scope ? (location?.id ?? null) : (user.locationId ?? null),
+    locationName: location?.name ?? null,
     userType: user.userType ?? null,
     cashierType: user.cashierType ?? null,
   };
@@ -345,6 +258,7 @@ export async function getCurrentUserProfileSvc(userId: string) {
 export async function updateCurrentUserProfileSvc(
   userId: string,
   patch: { fullname?: string; telephone?: string },
+  scope?: BranchSessionScope,
 ) {
   const updates: { fullname?: string; telephone?: string } = {};
 
@@ -367,5 +281,5 @@ export async function updateCurrentUserProfileSvc(
   const updated = await updateCurrentUserProfileRepo(userId, updates);
   if (!updated) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
 
-  return getCurrentUserProfileSvc(userId);
+  return getCurrentUserProfileSvc(userId, scope);
 }

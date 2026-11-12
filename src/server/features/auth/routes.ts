@@ -1,8 +1,10 @@
+import { listSessionBranchOptions } from './branch-session.service';
 import { Elysia, t } from 'elysia';
 import { authPlugin, requireAuth } from '../../plugins/auth';
 import {
   ChangePasswordBody,
   CurrentUserPermissionsResponse,
+  CurrentUserProfileResponse,
   CurrentUserReadOnlyPermissionsResponse,
   ForgotPasswordBody,
   LoginBody,
@@ -70,6 +72,7 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
           body.refreshToken,
           readDeviceCredential(request),
           readNativeClient(request),
+          body.switchBranch,
         );
       },
       {
@@ -181,6 +184,24 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
         },
       },
     )
+    .get(
+      '/me/branch-options',
+      async ({ user, set }) => {
+        if (!user?.branchId) throw BadRequest('An active branch is required');
+        set.headers['cache-control'] = 'no-store';
+        return listSessionBranchOptions(user.sub, {
+          branchId: user.branchId,
+          locationId: user.locationId ?? null,
+        });
+      },
+      {
+        beforeHandle: requireAuth(),
+        detail: {
+          tags: ['Auth'],
+          summary: 'List branches and locations available for this session',
+        },
+      },
+    )
     .get('/me/permissions', async ({ user }) => currentUserPermissionsCtrl(user!.sub), {
       response: CurrentUserPermissionsResponse,
       beforeHandle: requireAuth(),
@@ -191,57 +212,31 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
         security: [{ bearerAuth: [] }],
       },
     })
-    .get('/me/profile', async ({ user }) => currentUserProfileCtrl(user!.sub), {
-      response: t.Object({
-        id: t.String(),
-        fullname: t.String(),
-        email: t.String({ format: 'email' }),
-        telephone: t.String(),
-        employeeId: t.Union([t.String(), t.Null()]),
-        role: t.Union([t.Object({ id: t.String(), name: t.String() }), t.Null()]),
-        company: t.Union([
-          t.Object({
-            id: t.String(),
-            name: t.String(),
-            useAccounting: t.Boolean(),
-          }),
-          t.Null(),
-        ]),
-        branch: t.Union([
-          t.Object({
-            id: t.String(),
-            name: t.String(),
-            type: t.Number(),
-          }),
-          t.Null(),
-        ]),
-        location: t.Union([
-          t.Object({
-            id: t.String(),
-            name: t.String(),
-          }),
-          t.Null(),
-        ]),
-        locationId: t.Union([t.String(), t.Null()]),
-        locationName: t.Union([t.String(), t.Null()]),
-        userType: t.Union([t.Number(), t.Null()]),
-        cashierType: t.Union([t.Number(), t.Null()]),
-      }),
-      beforeHandle: requireAuth(),
-      detail: {
-        tags: ['Auth'],
-        summary: 'Get current user profile',
-        operationId: 'getCurrentUserProfile',
-        security: [{ bearerAuth: [] }],
+    .get(
+      '/me/profile',
+      async ({ user }) => currentUserProfileCtrl(user!.sub, user!.switchedBranchScope),
+      {
+        response: CurrentUserProfileResponse,
+        beforeHandle: requireAuth(),
+        detail: {
+          tags: ['Auth'],
+          summary: 'Get current user profile',
+          operationId: 'getCurrentUserProfile',
+          security: [{ bearerAuth: [] }],
+        },
       },
-    })
+    )
     .patch(
       '/me/profile',
       async ({ user, body }) => {
-        return updateCurrentUserProfileCtrl(user!.sub, {
-          fullname: body.fullname,
-          telephone: body.telephone,
-        });
+        return updateCurrentUserProfileCtrl(
+          user!.sub,
+          {
+            fullname: body.fullname,
+            telephone: body.telephone,
+          },
+          user!.switchedBranchScope,
+        );
       },
       {
         body: t.Object({

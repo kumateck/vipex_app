@@ -13,7 +13,8 @@ export async function verifyDesktopDeviceAccess(
 
   const renewed = await refresh();
   if (renewed.status === 'invalid') return 'denied';
-  if (renewed.status === 'unavailable') return 'unavailable';
+  if (renewed.status === 'unavailable' || renewed.status === 'switch-rejected')
+    return 'unavailable';
   if (renewed.status === 'superseded') return 'superseded';
 
   const second = await check(renewed.accessToken);

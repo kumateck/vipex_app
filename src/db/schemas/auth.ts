@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, varchar, index, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
-import { companies, users } from './core';
+import { branches, companies, locations, users } from './core';
 import { createId } from '@paralleldrive/cuid2';
 
 // Refresh tokens
@@ -13,6 +13,8 @@ export const refreshTokens = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     deviceId: varchar('device_id', { length: 25 }).references(() => registeredDevices.id),
+    activeBranchId: varchar('active_branch_id', { length: 25 }).references(() => branches.id),
+    activeLocationId: varchar('active_location_id', { length: 25 }).references(() => locations.id),
     tokenHash: varchar('token_hash', { length: 64 }).notNull(),
     expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),

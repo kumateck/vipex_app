@@ -1,3 +1,7 @@
+import {
+  getSwitchedSessionScope,
+  type BranchSessionScope,
+} from '@/server/features/auth/branch-session.service';
 import type { Elysia } from 'elysia';
 import { BranchType } from '@/db/schemas/enums';
 import {
@@ -27,6 +31,7 @@ export type AuthUser = {
   userType?: number | null;
   cashierType?: number | null;
   permissions?: string[];
+  switchedBranchScope?: BranchSessionScope;
   iat?: number;
   exp?: number;
 };
@@ -75,6 +80,21 @@ export const authPlugin = (app: Elysia) =>
             return { user: null as AuthUser | null };
           }
         }
+        const switched = refreshTokenRow.activeBranchId
+          ? await getSwitchedSessionScope(payload.sub, {
+              branchId: refreshTokenRow.activeBranchId,
+              locationId: refreshTokenRow.activeLocationId,
+            })
+          : null;
+        if (
+          refreshTokenRow.activeBranchId &&
+          (!switched ||
+            switched.account.companyId !== payload.companyId ||
+            switched.account.roleId !== payload.roleId ||
+            switched.scope.branch.id !== payload.branchId ||
+            (switched.scope.location?.id ?? null) !== (payload.locationId ?? null))
+        )
+          return { user: null as AuthUser | null };
         return {
           user: {
             sub: payload.sub,
@@ -83,13 +103,16 @@ export const authPlugin = (app: Elysia) =>
             roleId: payload.roleId ?? null,
             companyId: payload.companyId ?? null,
             branchId: payload.branchId ?? null,
-            branchType: payload.branchType ?? null,
+            branchType: switched?.scope.branch.type ?? payload.branchType ?? null,
             locationId: payload.locationId ?? null,
             userType: payload.userType ?? null,
             cashierType: payload.cashierType ?? null,
-            permissions: Array.isArray(refreshTokenRow.permissionsSnapshot)
-              ? refreshTokenRow.permissionsSnapshot
-              : [],
+            switchedBranchScope: switched?.scope,
+            permissions:
+              switched?.permissions ??
+              (Array.isArray(refreshTokenRow.permissionsSnapshot)
+                ? refreshTokenRow.permissionsSnapshot
+                : []),
             iat: payload.iat,
             exp: payload.exp,
           } satisfies AuthUser,
