@@ -1,6 +1,6 @@
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, notExists, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { locations, receivingOffices } from '@/db/schemas';
+import { locations, parcels, receivingOffices } from '@/db/schemas';
 import type { DbExecutor } from '../../shipments/parcel-repositories/parcel-repository.types';
 
 const fields = {
@@ -57,4 +57,32 @@ export function findOfficeNameRepo(locationId: string, name: string, tx: DbExecu
       ),
     )
     .limit(1);
+}
+
+export async function deleteUnusedOfficeRepo(locationId: string, officeId: string, tx: DbExecutor) {
+  const officeScope = and(
+    eq(receivingOffices.locationId, locationId),
+    eq(receivingOffices.id, officeId),
+  );
+  const [deleted] = await tx
+    .delete(receivingOffices)
+    .where(
+      and(
+        officeScope,
+        notExists(
+          tx
+            .select({ id: parcels.id })
+            .from(parcels)
+            .where(eq(parcels.receivingOfficeId, officeId)),
+        ),
+      ),
+    )
+    .returning({ id: receivingOffices.id });
+  if (deleted) return 'deleted';
+
+  const [office] = await tx
+    .select({ id: receivingOffices.id })
+    .from(receivingOffices)
+    .where(officeScope);
+  return office ? 'referenced' : 'missing';
 }

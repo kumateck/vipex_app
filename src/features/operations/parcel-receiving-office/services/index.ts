@@ -23,6 +23,17 @@ const receivingOfficesApi = api.injectEndpoints({
       invalidatesTags: (_result, error) =>
         error ? [] : [{ type: 'Locations', id: 'RECEIVING_OFFICES' }, 'Bookings'],
     }),
+    deleteLocationOffice: builder.mutation<
+      { success: boolean },
+      { locationId: string; officeId: string }
+    >({
+      query: ({ locationId, officeId }) => ({
+        url: `/locations/${locationId}/receiving-offices/${officeId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, error) =>
+        error ? [] : [{ type: 'Locations', id: 'RECEIVING_OFFICES' }],
+    }),
     assignParcelReceivingOffice: builder.mutation<
       { receivingOfficeId: string; receivingOfficeName: string },
       { parcelId: string; receivingOfficeId: string }
@@ -47,5 +58,6 @@ export const {
   useReceivingOfficeOptionsQuery,
   useLocationReceivingOfficesQuery,
   useSaveLocationOfficeMutation,
+  useDeleteLocationOfficeMutation,
   useAssignParcelReceivingOfficeMutation,
 } = receivingOfficesApi;

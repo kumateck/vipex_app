@@ -335,6 +335,9 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   receiving location in the caller's company. Requires `CanUpdateLocations`. Writes take
   `{ name }` and return `{ id, name }`. Invalid names return 400 or 422, duplicate
   case-insensitive names return 409, and unavailable locations or office IDs return 404.
+- `DELETE /locations/:id/receiving-offices/:officeId` requires `CanUpdateLocations` and removes
+  an unused office from a receiving location in the caller's company. Returns `{ success: true }`
+  on deletion, 404 for a missing or out-of-scope office, and 409 if any parcel references it.
 - `PATCH /shipments/parcels/:id/receiving-office` takes `{ receivingOfficeId }` and returns
   `{ receivingOfficeId, receivingOfficeName }`. Requires `CanReadParcelIncoming` or
   `CanReadParcelScan` and the parcel's company and destination branch. Returns 400 for an

@@ -357,6 +357,10 @@ unchanged and no duplicate customer or premature booking should be created.
 - In web or desktop **Locations**, open Anloga Junction and verify four offices are available.
   Rename one and add another. Check that a case-insensitive duplicate is rejected. Open a
   different receiving location and confirm it has its own office.
+- On web or desktop, delete an unused office and confirm it disappears from mobile receiving
+  options after reopening the picker. Try deleting an office linked to an active or delivered
+  parcel and confirm the office remains. Delete the last unused office at a test location, save
+  an unrelated location edit and confirm the office stays deleted.
 - Receive a parcel at a single-office location on mobile without selecting an office. Search by
   booking code and verify the automatically assigned location and office in Super Search,
   parcel details and Waiting for Pickup when ready.
