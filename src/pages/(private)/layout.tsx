@@ -3,6 +3,7 @@ import { AuthenticatedLayout } from '@/components/layouts/auth';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useBreadcrumbSync } from '@/hooks/useBreadcrumbSync';
 import { useEffect, useMemo } from 'react';
+import { useSyncBranchContext } from '@/features/auth/branch-switch';
 import { useGetCurrentUserProfileQuery } from '@/features/auth/api';
 import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -29,6 +30,7 @@ function normalizeModuleRows(payload: unknown): ModuleState[] {
 
 const MainLayout = () => {
   useBreadcrumbSync();
+  useSyncBranchContext();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const userPermissions = useAuthStore((state) => state.user?.permissions ?? []);

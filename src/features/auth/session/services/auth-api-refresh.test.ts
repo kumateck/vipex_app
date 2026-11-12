@@ -42,3 +42,46 @@ test('manual refresh signs out only after a confirmed invalid session', async ()
   expect(result.error).toMatchObject({ status: 401 });
   expect(useAuthStore.getState().isAuthenticated).toBe(false);
 });
+
+test('a mutation from the previous branch cannot retry with the new branch token', async () => {
+  const source = { ...staff, branch: { id: 'source', name: 'Source' } };
+  const destination = { ...staff, branch: { id: 'target', name: 'Target' } };
+  useAuthStore.getState().setAuth({
+    user: source,
+    accessToken: 'old-access',
+    refreshToken: 'old-refresh',
+  });
+  const operations = authApi.injectEndpoints({
+    endpoints: (builder) => ({
+      branchMutation: builder.mutation<void, void>({
+        query: () => ({ url: 'https://example.test/branch-operation', method: 'POST' }),
+      }),
+    }),
+  });
+  let start!: () => void;
+  const requestStarted = new Promise<void>((resolve) => {
+    start = resolve;
+  });
+  let respond!: (response: Response) => void;
+  const pending = new Promise<Response>((resolve) => {
+    respond = resolve;
+  });
+  let requests = 0;
+  globalThis.fetch = (async () => {
+    requests += 1;
+    start();
+    return pending;
+  }) as unknown as typeof fetch;
+
+  const mutation = store.dispatch(operations.endpoints.branchMutation.initiate());
+  await requestStarted;
+  useAuthStore.getState().setAuth({
+    user: destination,
+    accessToken: 'new-access',
+    refreshToken: 'new-refresh',
+  });
+  respond(new Response(null, { status: 401 }));
+  expect(await mutation).toMatchObject({ error: { status: 'CUSTOM_ERROR' } });
+  expect(requests).toBe(1);
+  expect(useAuthStore.getState().user?.branch?.id).toBe('target');
+});

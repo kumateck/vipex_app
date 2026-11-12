@@ -13,6 +13,7 @@ const catalog = [
   ['CanSetRolePermissions', 'Set role permissions', 'RBAC'],
 
   // Branches / Locations / Customers / Cards
+  ['CanSwitchBranch', 'Switch active branch', 'Branches'],
   ['CanReadBranches', 'List and view branches', 'Branches'],
   ['CanCreateBranches', 'Create branches', 'Branches'],
   ['CanUpdateBranches', 'Update branches', 'Branches'],

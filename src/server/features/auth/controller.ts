@@ -1,3 +1,5 @@
+import type { BranchSwitchChoice } from '@/shared/auth/branch-switch';
+import type { BranchSessionScope } from './branch-session.service';
 import {
   changePasswordSvc,
   forgotPasswordSvc,
@@ -39,12 +41,13 @@ export async function refreshCtrl(
   refreshToken: string,
   deviceCredential?: DeviceCredential | null,
   client?: 'mobile' | 'desktop' | null,
+  switchBranch?: BranchSwitchChoice,
 ) {
   const {
     accessToken,
     refreshToken: nextRefreshToken,
     user,
-  } = await refreshSvc(refreshToken, deviceCredential, client);
+  } = await refreshSvc(refreshToken, deviceCredential, client, switchBranch);
   return {
     tokens: {
       accessToken,
@@ -94,13 +97,14 @@ export async function currentUserReadOnlyPermissionsCtrl(userId: string) {
   return { readOnlyPermissions: result.readOnlyPermissions };
 }
 
-export async function currentUserProfileCtrl(userId: string) {
-  return getCurrentUserProfileSvc(userId);
+export async function currentUserProfileCtrl(userId: string, scope?: BranchSessionScope) {
+  return getCurrentUserProfileSvc(userId, scope);
 }
 
 export async function updateCurrentUserProfileCtrl(
   userId: string,
   patch: { fullname?: string; telephone?: string },
+  scope?: BranchSessionScope,
 ) {
-  return updateCurrentUserProfileSvc(userId, patch);
+  return updateCurrentUserProfileSvc(userId, patch, scope);
 }

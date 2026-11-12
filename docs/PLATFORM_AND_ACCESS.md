@@ -41,6 +41,34 @@ constraints are defined in [Native Device Registration](DEVICE_REGISTRATION.md).
 head-office review page uses `CanUpdateUsers`; device gating complements, but does not replace,
 account status, role permissions, or company scope.
 
+## Switch Branch
+
+Grant **Switch active branch** (`CanSwitchBranch`) on the user's role. Staff sign in
+again after receiving the grant. Web and desktop users open the branch control in
+the header. Mobile users open **Profile → Switch branch**.
+The selector lists active branches in the user's company. Only staff assigned to head
+office can select a head-office branch. Staff returning to their assigned branch use
+their assigned location. Other branches require an active location when one is listed.
+
+The selected branch and location apply to the current sign-in and persist through token
+renewal. The app returns to its home screen and reloads branch data. Web tabs sharing the
+sign-in also reload. A separate sign-in starts at the user's assigned branch. Any cashier
+session continues to belong to its original branch. Existing actions that require an active
+cashier session or a specific staff assignment still check those requirements.
+
+The server checks the user's current role, the target branch, and the location. It rotates
+the access and refresh tokens and records the actor, previous scope, and new scope in
+`AUTH_BRANCH_SWITCHED`. Migration `0099_active_session_branch` adds the selected scope
+to refresh sessions. Existing sessions start with their assigned branch. Removing the
+grant or deactivating the selected branch or location ends access through the switched
+session. Sign in again to return to the assigned branch.
+
+QA: test a role with and without the grant. Switch to a second branch with a location,
+check that branch-scoped screens load the new branch, renew the session, and switch back.
+Verify that foreign-company and deleted branches, head-office targets for agency staff,
+and locations from another branch are rejected. Check that the old token cannot make
+requests after switching and that removing the grant invalidates the switched session.
+
 ## Company Modules
 
 Company modules determine which product areas are enabled for a tenant. A disabled module should be absent from navigation and denied by the server. Module availability must not override a missing user permission.

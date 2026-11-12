@@ -1,6 +1,7 @@
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import { db } from '../../../db/config';
 import {
+  auditLogs,
   branches,
   companies,
   locations,
@@ -127,28 +128,44 @@ export async function getUserDevicePolicyContextRepo(userId: string) {
   return user ?? null;
 }
 
-export async function rotateRefreshTokenRepo(
-  prevHash: string,
-  nextHash: string,
-  nextExpires: Date,
-  permissionsSnapshot: string[],
-  bindDeviceId?: string | null,
-) {
+export async function rotateRefreshTokenRepo(input: {
+  previousHash: string;
+  nextHash: string;
+  expiresAt: Date;
+  permissions: string[];
+  deviceId?: string;
+  activeBranchId: string | null;
+  activeLocationId: string | null;
+  audit?: typeof auditLogs.$inferInsert;
+}) {
   return db.transaction(async (tx) => {
+    const now = new Date();
     const [previous] = await tx
       .update(refreshTokens)
-      .set({ revokedAt: new Date(), replacedByHash: nextHash })
-      .where(and(eq(refreshTokens.tokenHash, prevHash), isNull(refreshTokens.revokedAt)))
+      .set({ revokedAt: now, replacedByHash: input.nextHash })
+      .where(
+        and(
+          eq(refreshTokens.tokenHash, input.previousHash),
+          isNull(refreshTokens.revokedAt),
+          gt(refreshTokens.expiresAt, now),
+        ),
+      )
       .returning({ userId: refreshTokens.userId, deviceId: refreshTokens.deviceId });
-    if (!previous) return false;
-    await tx.insert(refreshTokens).values({
-      userId: previous.userId,
-      deviceId: previous.deviceId ?? bindDeviceId ?? null,
-      tokenHash: nextHash,
-      expiresAt: nextExpires,
-      permissionsSnapshot,
-    });
-    return true;
+    if (!previous) return null;
+    const [next] = await tx
+      .insert(refreshTokens)
+      .values({
+        userId: previous.userId,
+        deviceId: previous.deviceId ?? input.deviceId ?? null,
+        tokenHash: input.nextHash,
+        expiresAt: input.expiresAt,
+        permissionsSnapshot: input.permissions,
+        activeBranchId: input.activeBranchId,
+        activeLocationId: input.activeLocationId,
+      })
+      .returning({ id: refreshTokens.id });
+    if (input.audit) await tx.insert(auditLogs).values(input.audit);
+    return next ?? null;
   });
 }
 
