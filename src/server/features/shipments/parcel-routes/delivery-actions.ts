@@ -37,6 +37,7 @@ export const routes = new Elysia({ name: 'parcel-delivery-actions' })
         cardNumber: t.Union([t.String({ maxLength: 255 }), t.Null()]),
         secondCardId: t.Union([UUID, t.Null()]),
         secondCardNumber: t.Union([t.String({ maxLength: 255 }), t.Null()]),
+        otpAuthorizationId: t.Optional(UUID),
         receiverOtpVerificationToken: t.Optional(t.String({ minLength: 1 })),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCompleteOfficePickup)],

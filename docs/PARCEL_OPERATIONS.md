@@ -647,8 +647,16 @@ database with `RECEIVING_WORKFLOW_TEST=1`; its fixture refuses remote/other data
 ### Receiving offices
 
 A receiving office belongs to a pickup location. Under **Locations → Edit location → Receiving
-offices**, location editors can add and rename offices. Names are trimmed and must be unique within
-the location, ignoring case. A sending-only or deleted location cannot be used for receiving offices.
+offices**, location editors can add, rename and delete offices. Names are trimmed and must be
+unique within the location, ignoring case. A sending-only or deleted location cannot be used
+for receiving offices.
+
+Use the trash button and confirm **Delete office** to permanently remove an unused office. A
+parcel that still references the office blocks deletion, including a delivered, cancelled or
+soft-deleted parcel. When the only unused office is removed, receiving records the pickup
+location without an office until one is added. Migration `0098_receiving_office_deletion`
+indexes parcel office references and keeps ordinary location saves from recreating a deleted
+office. Enabling a location for receiving can seed its default offices again.
 
 Migration `0097_receiving_offices` creates the office table and adds a nullable
 `parcels.receiving_office_id` foreign key. It creates **Office 1–4** for the Anloga Junction
@@ -682,7 +690,7 @@ current office. Public tracking shows the location and office names while the pa
 
 QA scenarios are in [Mobile QA](MOBILE_QA_SMOKE_CHECKLIST.md#receiving-office-qa). The receiving
 workflow integration suite covers single-office defaults, multi-office validation and rollback,
-reassignment, search and details, and office management.
+reassignment, search and details, office management, and concurrent receipt and office deletion.
 
 The web **In Transit (Receiving Branch)** list has optional Send Date, Source Branch, and
 Consignment Number filters. Apply Filters combines them with the destination branch and in-transit
@@ -786,6 +794,27 @@ clears the alert permanently and keeps the instruction on the record.
   Pickup now offers the same optional channel choice; SMS remains the default and fallback.
   See [WhatsApp messaging](WHATSAPP_MESSAGING.md#pickup-otp-over-whatsapp).
 - OTP codes are generated with `crypto.randomInt`.
+
+### Admin approval without OTP
+
+- A staff member with `CanAuthorizePickupWithoutOtp` opens **Parcel Details → Overview →
+  Authorize pickup without OTP** on web or desktop. Select Receiver Cashier or Waiting for
+  Pickup, select the linked collector, verify their identity, and enter a 10–500 character
+  reason. Active destination-branch staff and head-office staff with this grant can approve
+  eligible parcels in their own company. The parcel must be Awaiting Pickup, with OTP
+  required for the selected workflow and no pending signature.
+- The operator selects the same collector and uses **Check admin approval** in the matching
+  workflow. Receiver Cashier is on web and desktop. Waiting for Pickup also supports the
+  approval in the mobile app. Waiting for Pickup requires a collector signature when
+  using the approval. Receiver Cashier follows the destination branch’s signature setting.
+- Approval is valid for 10 minutes and applies to one parcel, workflow, branch, and collector.
+  The latest approval for a workflow replaces earlier approvals for that parcel. Payment,
+  outstanding balance, queue, reconciliation, and signature checks still apply. Issuance and
+  use are separate parcel audit events. Successful payment or handover consumes the approval
+  in the same transaction. The audit records the approver and the staff member who used it.
+- QA: approve as one staff member and complete as a cashier without the approval grant.
+  Check that stale, reused, wrong-workflow, and wrong-collector approvals fail, and that an
+  unsuccessful payment leaves the approval available while valid.
 
 ## Digital Receipt Delivery
 

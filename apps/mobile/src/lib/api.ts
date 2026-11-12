@@ -1,3 +1,4 @@
+import { sessionBranchKey, type BranchSwitchChoice } from '@/shared/auth/branch-switch';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { ENV } from '@mobile/lib/env';
 import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
@@ -380,11 +381,12 @@ export async function login(email: string, password: string): Promise<SessionSta
 
 export async function refreshToken(
   refreshTokenValue: string,
+  switchBranch?: BranchSwitchChoice,
 ): Promise<TokenPair & { user?: SessionState['user'] }> {
   const data = await request<{ tokens: TokenPair; user?: SessionState['user'] }>({
     path: '/auth/refresh',
     method: 'POST',
-    body: { refreshToken: refreshTokenValue },
+    body: { refreshToken: refreshTokenValue, switchBranch },
   });
 
   return {
@@ -401,13 +403,14 @@ const inFlightRefreshByToken = new Map<
 
 async function refreshTokenOnce(
   refreshTokenValue: string,
+  switchBranch?: BranchSwitchChoice,
 ): Promise<TokenPair & { user?: SessionState['user'] }> {
   const existing = inFlightRefreshByToken.get(refreshTokenValue);
   if (existing) {
     return existing;
   }
 
-  const promise = refreshToken(refreshTokenValue).finally(() => {
+  const promise = refreshToken(refreshTokenValue, switchBranch).finally(() => {
     if (inFlightRefreshByToken.get(refreshTokenValue) === promise) {
       inFlightRefreshByToken.delete(refreshTokenValue);
     }
@@ -415,6 +418,13 @@ async function refreshTokenOnce(
   inFlightRefreshByToken.set(refreshTokenValue, promise);
 
   return promise;
+}
+
+export function switchMobileSessionBranch(refreshTokenValue: string, choice: BranchSwitchChoice) {
+  if (inFlightRefreshByToken.has(refreshTokenValue)) {
+    throw new Error('Your session is renewing. Try again.');
+  }
+  return refreshTokenOnce(refreshTokenValue, choice);
 }
 
 export async function forgotPassword(email: string): Promise<void> {
@@ -1217,6 +1227,9 @@ export async function authorizedRequestWithRefresh<T>(
       accessToken: refreshed.accessToken,
       refreshToken: refreshed.refreshToken,
     };
+    if (sessionBranchKey(next.user) !== sessionBranchKey(session.user)) {
+      throw new Error('Branch changed. Reopen the screen and try again.');
+    }
     await updateSession(next);
     return run(next.accessToken!);
   }

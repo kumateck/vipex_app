@@ -201,6 +201,16 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   `failed: { parcelId, message }[]` explains parcels that were stale, out of scope, missing a
   completed return, or held by an open reconciliation case. Every successful parcel gets its own
   audit entry and rider assignment notification.
+- `POST /shipments/parcels/:id/otp-authorization` accepts `workflow` (`receiver_cashier`
+  or `office_pickup`), `handoverTarget` (`main` or `second`), `expectedReceiverId`,
+  `expectedCollectorId`, and `reason`. Returns `{ id, expiresAt, handoverTarget }`.
+  The reason must be 10–500 characters after trimming. Unauthorized staff receive 403,
+  unknown parcels receive 404, and stale parcel or collector state receives 409.
+- `GET /shipments/parcels/:id/otp-authorization` takes `workflow` and `handoverTarget`.
+  Returns `{ approval }` with the active approval or `null`, without the reason or actor details.
+  Receiver Cashier payment and signed office pickup accept `otpAuthorizationId` in place
+  of the OTP verification token. An expired, superseded, mismatched, or consumed approval
+  returns 409. Issuance and use are stored in `audit_logs`. No migration is required.
 - `POST /payments/collect-receiver-and-deliver`: returns separate principal `payment` and ageing
   `storagePayment` records when collected. When storage is collected, `receiptTaxBreakdown` is
   calculated from the sum of both collected amounts using the company tax profile or default
@@ -335,6 +345,9 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   receiving location in the caller's company. Requires `CanUpdateLocations`. Writes take
   `{ name }` and return `{ id, name }`. Invalid names return 400 or 422, duplicate
   case-insensitive names return 409, and unavailable locations or office IDs return 404.
+- `DELETE /locations/:id/receiving-offices/:officeId` requires `CanUpdateLocations` and removes
+  an unused office from a receiving location in the caller's company. Returns `{ success: true }`
+  on deletion, 404 for a missing or out-of-scope office, and 409 if any parcel references it.
 - `PATCH /shipments/parcels/:id/receiving-office` takes `{ receivingOfficeId }` and returns
   `{ receivingOfficeId, receivingOfficeName }`. Requires `CanReadParcelIncoming` or
   `CanReadParcelScan` and the parcel's company and destination branch. Returns 400 for an

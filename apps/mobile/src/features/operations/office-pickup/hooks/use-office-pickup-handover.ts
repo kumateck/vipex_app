@@ -13,6 +13,7 @@ import {
 import type { PhoneSlot, PickupContext, PickupParcel, PickupResources } from '../types';
 import { getConfirmBlocker, getCurrentDayPickupQueue, resolveShelfPickerStaffId } from '../utils';
 import { usePickupHandoverForm } from './use-pickup-handover-form';
+import { usePickupOtpApproval } from './use-pickup-otp-approval';
 import { usePickupOtp } from './use-pickup-otp';
 
 export type CompletedPickup = { parcel: PickupParcel; collectedBy: string };
@@ -42,6 +43,8 @@ export function useOfficePickupHandover(input: {
     onPhoneSlotRestored: setPhoneSlotState,
   });
   const form = usePickupHandoverForm();
+  const approval = usePickupOtpApproval(parcel?.id, form.handoverTarget);
+  const { reset: resetApproval } = approval;
   const { reset: resetOtp, restore: restoreOtp } = otp;
   const { resetFor, setPickerStaffId, setSignatureImage } = form;
 
@@ -55,6 +58,7 @@ export function useOfficePickupHandover(input: {
       void restoreOtp(next.id);
       resetFor(next);
       setPhoneSlotState('primary');
+      resetApproval();
       setCompleted(null);
       setParcel(next);
       setResources(null);
@@ -78,20 +82,32 @@ export function useOfficePickupHandover(input: {
         if (id === loadRequest.current) setLoading(false);
       }
     },
-    [context, isPickupQueueEnabled, resetFor, restoreOtp, setPickerStaffId, withAuth],
+    [
+      context,
+      isPickupQueueEnabled,
+      resetApproval,
+      resetFor,
+      restoreOtp,
+      setPickerStaffId,
+      withAuth,
+    ],
   );
 
   const close = useCallback(() => {
     loadRequest.current += 1;
     resetOtp();
+    resetApproval();
     setSignatureImage('');
     setParcel(null);
     setResources(null);
     setCompleted(null);
-  }, [resetOtp, setSignatureImage]);
+  }, [resetApproval, resetOtp, setSignatureImage]);
 
   const hasPickupQueue = Boolean(resources && getCurrentDayPickupQueue(resources.details));
+  const showOtpException = isPickupOtpRequired && !otp.verified;
+  const otpAuthorizationId = showOtpException ? approval.approval?.id : undefined;
   const confirmBlocker = getConfirmBlocker({
+    otpAuthorizationId,
     pickerStaffId: form.pickerStaffId,
     isPickupOtpRequired,
     otpVerified: otp.verified,
@@ -120,6 +136,7 @@ export function useOfficePickupHandover(input: {
             secondNewPhone: form.secondNewPhone,
             isPickupOtpRequired,
             otpVerified: otp.verified,
+            otpAuthorizationId,
             verificationToken: otp.verificationToken,
             isPickupQueueEnabled,
             hasPickupQueue,
@@ -156,6 +173,7 @@ export function useOfficePickupHandover(input: {
     isPickupQueueEnabled,
     onFinished,
     otp,
+    otpAuthorizationId,
     parcel,
     resetOtp,
     setSignatureImage,
@@ -196,6 +214,8 @@ export function useOfficePickupHandover(input: {
     setPhoneSlot,
     hasPickupQueue,
     confirmBlocker,
+    showOtpException,
+    approval,
     open,
     close,
     retry: () => (parcel ? open(parcel) : undefined),

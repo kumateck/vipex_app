@@ -154,6 +154,61 @@ writes nothing; apply fills both sole-location and Kumasi cases; existing, delet
 rows remain untouched; statuses remain unchanged; audit metadata is a JSON object; rerun is a no-op;
 ambiguous configuration blocks writes; and an audit insert failure rolls back parcel changes.
 
+### Move Sunyani → Accra pickup parcels (operator CLI)
+
+`scripts/move-sunyani-accra-parcels.ts` changes the pickup location from **Circle Kumasi
+office** to **Circle Sunyani Old Office** for existing parcels whose sending branch is Sunyani
+and destination is Accra. Pass the company ID and an environment file with `DATABASE_URL`.
+The script resolves both branch names and both Accra locations within that company. It requires
+a unique match for each and a receiving-enabled, active target. The database must have the
+receiving offices migration (`0097`).
+
+```sh
+bun scripts/move-sunyani-accra-parcels.ts --company-id <company-id> --env-file <path>
+bun scripts/move-sunyani-accra-parcels.ts --company-id <company-id> --env-file <path> --apply --expected-count <reviewed-count>
+```
+
+The first command previews in a read-only transaction. The preview counts parcels by current
+pickup location and status. It identifies missing and different pickup locations, parcels
+already at the target, and receiving-office assignments that a move would clear. The scope
+includes historical statuses such as delivered parcels. Soft-deleted parcels and records with a
+different or missing pickup location are outside the move.
+
+A later apply locks the selected parcels before checking today's or future unended pickup
+tickets for a branch or location conflict. Conflicting tickets and pending receiver handovers
+stop the transaction. The preview also reports physical custody recorded elsewhere. The
+move updates the parcel's pickup location and clears its former receiving office so receiving
+staff can record the correct office. It preserves recorded custody, existing tickets,
+parcel status, receipt and handover times, and payments. Booking defaults continue to use
+the existing booking workflow.
+
+Each move and its `PARCEL_PICKUP_LOCATION_MOVED` audit entry commit together. The audit records
+the old pickup location and receiving office, the new location, and the run ID. If a write or
+audit count differs from the locked parcel count, the transaction rolls back.
+`--expected-count` optionally checks the total against the reviewed preview. A rerun skips parcels already at
+the target. Changes appear through the shared
+parcel records on web, desktop and mobile. This script runs only when invoked and introduces
+no migration or scheduled job.
+
+QA: run `bun test scripts/sunyani-accra-pickup-location.test.ts`. A fixture preview should
+count the intended route and old location, distinguish missing and already-moved rows, and
+report conflicting live tickets. The preview must leave parcel and audit rows untouched.
+
+### One-off receiver OTP repair
+
+`scripts/verify-kn4341391n-receiver-otp.sql` targets KN4341391N on `vipex_live_db`.
+The operator runs it after obtaining approval from the named staff member. It checks
+that the parcel is awaiting pickup and marks the latest matching main-receiver OTP
+request verified for 10 minutes. The original cashier reopens the parcel in Receiver
+Cashier before the expiry printed by the script. The live UI uses its normal **Verified**
+state. The audit log identifies the manual verification, database operator, and named
+approver. The script rolls back if the matching parcel or cashier request is missing,
+or if the latest matching request was already verified. It records no payment or delivery.
+
+QA: on a disposable database, seed two requests for the target parcel and a request
+for another parcel. Confirm that only the latest matching request is verified, that
+the parcel remains Awaiting Pickup, and that a repeat run adds no second audit entry.
+
 ## Workflow
 
 1. Select a script. Enter its parameters, if any.

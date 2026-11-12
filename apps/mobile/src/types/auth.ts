@@ -18,6 +18,7 @@ export type AuthUser = {
   } | null;
   branchType?: number | null;
   location?: { id: string; name: string } | null;
+  locationId?: string | null;
   company?: { id: string; name: string } | null;
   role?: { id?: string; name?: string } | null;
   permissions?: string[];

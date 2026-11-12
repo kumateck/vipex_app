@@ -1,5 +1,11 @@
 # Route Permission Matrix
 
+`GET /v1/auth/me/branch-options` and `POST /v1/auth/refresh` with `switchBranch`
+require the current `CanSwitchBranch` grant on an active account. Selection is limited
+to active branches and their locations in the same company. Head-office selection
+requires a head-office assignment. The normal refresh request keeps its existing permissions.
+See [Switch Branch](PLATFORM_AND_ACCESS.md#switch-branch).
+
 `PATCH /v1/shipments/parcels/:id/handover-note` requires `CanUpdateParcelHandoverNote` and
 the parcel’s source or destination branch. The matching `GET` accepts existing parcel workflow
 grants within company and branch scope. The mobile Assignment and Shelf Picker note views use
@@ -40,6 +46,12 @@ Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverride
 
 `GET /v1/payments/receiver-otp/session` accepts `CanCreateReceiverPayments` or
 `CanCompleteOfficePickup` and checks the authenticated company and destination branch.
+
+The POST at `/v1/shipments/parcels/:id/otp-authorization` requires the current
+`CanAuthorizePickupWithoutOtp` grant for active staff at the destination branch or
+head office in the parcel’s company. The GET requires `CanCreateReceiverPayments`
+for Receiver Cashier or `CanCompleteOfficePickup` for Waiting for Pickup, and uses
+the authenticated company and destination branch. No role receives the approval grant by default.
 
 Mobile `/(app)/office-pickup` (native screen `OfficePickup`), its sidebar item and Operations Hub card require
 `CanCompleteOfficePickup`, matching web/desktop `/parcels/waiting-pickup`. Helper API reads
@@ -143,8 +155,8 @@ parcel state/location guards. See [Arrival consistency](PARCEL_OPERATIONS.md#pic
 company scope. Head office users cannot book. Sender registration stays under Customer
 Management permissions.
 
-**Locations → Edit location → Receiving offices** uses `CanUpdateLocations` for list, add
-and rename, scoped to the location's company. Receiving-office options and parcel office
+**Locations → Edit location → Receiving offices** uses `CanUpdateLocations` to list, add,
+rename or delete unused offices, scoped to the location's company. Receiving-office options and parcel office
 reassignment require `CanReadParcelIncoming` or `CanReadParcelScan` and use the authenticated
 company and destination branch. Display in parcel search and details uses each screen's
 existing read permission. See [Receiving offices](PARCEL_OPERATIONS.md#receiving-offices).

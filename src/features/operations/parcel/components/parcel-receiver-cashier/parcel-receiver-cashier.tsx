@@ -119,7 +119,11 @@ export function ParcelReceiverCashier() {
           </Card>
         </ScrollableWrapper>
 
-        <ReceiverPaymentDeliveryDialog context={context} dialog={dialog} />
+        <ReceiverPaymentDeliveryDialog
+          key={dialog.selectedParcel?.id ?? 'closed'}
+          context={context}
+          dialog={dialog}
+        />
 
         <EditIncomingTransitParcelDialog
           open={Boolean(edit.editingParcel)}

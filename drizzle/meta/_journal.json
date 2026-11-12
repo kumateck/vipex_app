@@ -687,6 +687,20 @@
       "when": 1794488400000,
       "tag": "0097_receiving_offices",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1794492000000,
+      "tag": "0098_receiving_office_deletion",
+      "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1794506400000,
+      "tag": "0099_active_session_branch",
+      "breakpoints": true
     }
   ]
 }

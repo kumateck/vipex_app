@@ -73,6 +73,7 @@ export type ConfirmGate = {
   pickerStaffId: string;
   isPickupOtpRequired: boolean;
   otpVerified: boolean;
+  otpAuthorizationId?: string;
   verificationToken: string;
   isPickupQueueEnabled: boolean;
   hasPickupQueue: boolean;
@@ -87,7 +88,11 @@ export function getConfirmBlocker(gate: ConfirmGate): string | null {
     return 'Create a pickup queue ticket for this parcel before handover';
   }
   if (!gate.pickerStaffId) return 'Select shelf picker staff';
-  if (gate.isPickupOtpRequired && (!gate.otpVerified || !gate.verificationToken)) {
+  if (
+    gate.isPickupOtpRequired &&
+    (!gate.otpVerified || !gate.verificationToken) &&
+    !gate.otpAuthorizationId
+  ) {
     return 'Verify the customer collection OTP before confirming delivery';
   }
   if (!gate.signatureImage.trim()) return 'Capture the collector’s signature';
@@ -103,6 +108,7 @@ export function buildSignedPickupConfirmation(input: {
   secondCard: { cardId: string; cardNumber: string } | null;
   isPickupOtpRequired: boolean;
   verificationToken: string;
+  otpAuthorizationId?: string;
   signatureImage: string;
   expectedMainReceiverId: string;
   expectedSecondReceiverId: string | null;
@@ -122,7 +128,8 @@ export function buildSignedPickupConfirmation(input: {
   };
   // The OTP always proves the main receiver's presence, whoever collects.
   if (input.isPickupOtpRequired) {
-    patch.receiverOtpVerificationToken = input.verificationToken;
+    if (input.otpAuthorizationId) patch.otpAuthorizationId = input.otpAuthorizationId;
+    else patch.receiverOtpVerificationToken = input.verificationToken;
   }
   return patch;
 }

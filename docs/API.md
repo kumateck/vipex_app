@@ -1,5 +1,16 @@
 # API Documentation Index
 
+`GET /v1/auth/me/branch-options` returns `{ current, branches }` for the signed-in user.
+`current` contains `branchId` and nullable `locationId`. Each branch has `id`, `name`,
+`type`, and an array of available `locations` with `id` and `name`.
+`POST /v1/auth/refresh` accepts `{ refreshToken, switchBranch: { branchId, locationId } }`
+to change the branch for that sign-in. It returns the normal token pair and user response
+with the new branch and location, and revokes the old token pair. Both actions check
+`CanSwitchBranch`. A missing grant returns 403, an unavailable branch returns 404, and
+a location outside the selected branch returns 400. Invalid or revoked sessions return 401.
+Device approval requirements still apply to native clients. Normal refresh requests
+preserve the chosen branch without repeating `switchBranch`.
+
 Internal parcel responses expose handover note indicators. The scoped
 `GET/PATCH /v1/shipments/parcels/:id/handover-note` endpoints return or update the note itself.
 `GET /v1/shipments/parcels/receiver-cashier-queue` lists parcels requiring collection at the

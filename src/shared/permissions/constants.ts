@@ -13,6 +13,7 @@ const catalog = [
   ['CanSetRolePermissions', 'Set role permissions', 'RBAC'],
 
   // Branches / Locations / Customers / Cards
+  ['CanSwitchBranch', 'Switch active branch', 'Branches'],
   ['CanReadBranches', 'List and view branches', 'Branches'],
   ['CanCreateBranches', 'Create branches', 'Branches'],
   ['CanUpdateBranches', 'Update branches', 'Branches'],
@@ -126,6 +127,7 @@ const catalog = [
   ['CanReadCallCenterParcelStatus', 'View call center parcel status', 'Deliveries'],
   ['CanReadRiderCurrentParcels', 'View rider current parcels', 'Deliveries'],
   ['CanReadRiderHistory', 'View rider parcel history', 'Deliveries'],
+  ['CanAuthorizePickupWithoutOtp', 'Authorize parcel confirmation without OTP', 'Deliveries'],
   ['CanCompleteOfficePickup', 'Complete office pickup', 'Deliveries'],
   ['CanMarkDoorstepCalled', 'Mark doorstep called', 'Deliveries'],
   ['CanAssignDoorstepRider', 'Assign doorstep rider', 'Deliveries'],
