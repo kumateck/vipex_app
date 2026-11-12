@@ -5,7 +5,7 @@ import { markIncomingParcelsArrivedSvc } from '../parcel-bulk-receiving.service'
 
 export async function markParcelReceivedSvc(
   id: string,
-  input: { receivedBy: string; receivedAt?: string; status?: number },
+  input: { receivedBy: string; receivedAt?: string; status?: number; receivingOfficeId?: string },
 ) {
   if (input.status !== undefined && input.status !== ParcelStatus.ARRIVED_AT_DESTINATION)
     throw BadRequest('Receiving must set Arrived at Destination');
@@ -17,6 +17,7 @@ export async function markParcelReceivedSvc(
     companyId: actor.companyId,
     branchId: actor.branchId,
     actorUserId: actor.id,
+    receivingOfficeId: input.receivingOfficeId,
     receivedAt: input.receivedAt ? new Date(input.receivedAt) : undefined,
   });
   return { id, receivedAt: result.receivedAt };

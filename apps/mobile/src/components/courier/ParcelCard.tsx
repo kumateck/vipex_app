@@ -1,3 +1,4 @@
+import { PickupOfficeText } from '@mobile/features/operations/parcel-receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
 import { StyleSheet, Text } from 'react-native';
@@ -16,6 +17,8 @@ type ParcelCardData = ParcelHandoverNoteIndicator & {
   receiverPhone?: string | null;
   status: string | number;
   isDeleted?: boolean;
+  pickupLocationName?: string | null;
+  receivingOfficeName?: string | null;
 };
 
 type ParcelCardProps = {
@@ -43,6 +46,11 @@ export function ParcelCard({ parcel, onPress, actionLabel = 'Open Parcel' }: Par
         Receiver: {parcel.receiverName ?? '-'} ({parcel.receiverPhone ?? '-'})
       </Text>
       <Text style={[styles.body, { color: theme.colors.textSubtle }]}>{parcel.parcelDetails}</Text>
+      <PickupOfficeText
+        location={parcel.pickupLocationName}
+        office={parcel.receivingOfficeName}
+        style={[styles.route, { color: theme.colors.textMuted }]}
+      />
       <AppStatusChip label={parcel.status} />
       {parcel.id ? (
         <ParcelHandoverNoteAction

@@ -38,6 +38,7 @@ Parcel, cashier, and human-capital route overrides.
 | `/parcels/home-delivery/address`        | `CanMarkDoorstepCalled`            |
 | `/parcels/rider/current`                | `CanReadRiderCurrentParcels`       |
 | `/parcels/rider/history`                | `CanReadRiderHistory`              |
+| `/parcels/create-other`                 | `CanCreateBookingWithParcels`      |
 | `/parcels/edit/:id`                     | `CanCreateBookingWithParcels`      |
 | `/parcels/self-service`                 | `CanReadSelfServiceBookings`       |
 | `/parcels/self-service/:id`             | `CanCompleteSelfServiceBookings`   |

@@ -860,6 +860,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/parcels/home-delivery/address': PermissionKeys.CanMarkDoorstepCalled,
   '/parcels/rider/current': PermissionKeys.CanReadRiderCurrentParcels,
   '/parcels/rider/history': PermissionKeys.CanReadRiderHistory,
+  '/parcels/create-other': PermissionKeys.CanCreateBookingWithParcels,
   '/parcels/edit/:id': PermissionKeys.CanCreateBookingWithParcels,
   '/parcels/self-service': PermissionKeys.CanReadSelfServiceBookings,
   '/parcels/self-service/:id': PermissionKeys.CanCompleteSelfServiceBookings,

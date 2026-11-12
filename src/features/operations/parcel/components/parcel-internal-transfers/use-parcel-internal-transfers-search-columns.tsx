@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -31,6 +32,14 @@ export function useParcelInternalTransfersSearchColumns({
         cell: ({ row }) => (
           <div className="space-y-1">
             <span>{row.original.bookingCode}</span>
+            {row.original.receivingOfficeName ? (
+              <span className="text-xs text-muted-foreground">
+                {pickupOfficeLabel(
+                  row.original.pickupLocationName,
+                  row.original.receivingOfficeName,
+                )}
+              </span>
+            ) : null}
             <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
           </div>
         ),

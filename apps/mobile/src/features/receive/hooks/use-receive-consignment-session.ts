@@ -1,3 +1,4 @@
+import { useReceivingOfficeChoice } from '@mobile/features/operations/parcel-receiving-office';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from '@mobile/navigation/router-compat';
@@ -5,15 +6,17 @@ import {
   ApiRequestError,
   closeConsignment,
   getConsignmentDetail,
-  listConsignmentItems,
-  receiveConsignmentItem,
   type ConsignmentDetail,
-  type ConsignmentItem,
 } from '@mobile/lib/api';
 import { hapticError, hapticSuccess, hapticWarning } from '@mobile/lib/haptics';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
 import { canMarkParcelArrived } from '@mobile/lib/permissions';
 import { useAuth } from '@mobile/providers/auth-provider';
+import {
+  listReceivingConsignmentItems,
+  receiveConsignmentParcel,
+  type ReceivingConsignmentItem,
+} from '../services';
 import { formatConsignmentDate } from '../utils/format-consignment-date';
 
 const OPEN_CONSIGNMENT_STATUS = 0;
@@ -24,7 +27,7 @@ export function useReceiveConsignmentSession() {
   const router = useRouter();
   const { consignmentId } = useLocalSearchParams<{ consignmentId: string }>();
   const [consignment, setConsignment] = useState<ConsignmentDetail | null>(null);
-  const [items, setItems] = useState<ConsignmentItem[]>([]);
+  const [items, setItems] = useState<ReceivingConsignmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [manualCode, setManualCode] = useState('');
   const [scanBusy, setScanBusy] = useState(false);
@@ -32,6 +35,11 @@ export function useReceiveConsignmentSession() {
   const [reasonModalOpen, setReasonModalOpen] = useState(false);
   const [missingCount, setMissingCount] = useState(0);
   const [exceptionReason, setExceptionReason] = useState('');
+  const office = useReceivingOfficeChoice({
+    enabled: canReceive && consignment?.status === OPEN_CONSIGNMENT_STATUS,
+    allLocations: true,
+  });
+  const { officeId } = office;
 
   const load = useCallback(async () => {
     if (!consignmentId) return;
@@ -40,7 +48,7 @@ export function useReceiveConsignmentSession() {
       const [detail, itemRows] = await withAuth((token) =>
         Promise.all([
           getConsignmentDetail(token, consignmentId),
-          listConsignmentItems(token, consignmentId),
+          listReceivingConsignmentItems(token, consignmentId),
         ]),
       );
       setConsignment(detail);
@@ -67,7 +75,7 @@ export function useReceiveConsignmentSession() {
       setScanBusy(true);
       try {
         const result = await withAuth((token) =>
-          receiveConsignmentItem(token, consignmentId, code),
+          receiveConsignmentParcel(token, consignmentId, code, officeId || undefined),
         );
         if (result.outcome === 'RECEIVED') {
           notifySuccess(`Received ${result.bookingCode} (${result.arrived} of ${result.total})`);
@@ -102,7 +110,7 @@ export function useReceiveConsignmentSession() {
         setScanBusy(false);
       }
     },
-    [canReceive, consignment?.status, consignmentId, load, withAuth],
+    [canReceive, consignment?.status, consignmentId, load, officeId, withAuth],
   );
 
   const closeConsignmentSession = useCallback(async () => {
@@ -171,6 +179,7 @@ export function useReceiveConsignmentSession() {
 
   return {
     canReceive,
+    office,
     closeBusy,
     closeConsignmentSession,
     confirmCloseWithExceptions,

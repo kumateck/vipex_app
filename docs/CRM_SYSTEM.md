@@ -143,6 +143,7 @@ Credit:
 - `GET /:id/credit/summary`
 - `GET /:id/credit/transactions`
 - `GET /:id/credit/open-items`
+- `GET /:id/credit/outstanding-statement`
 - `POST /:id/credit/payments`
 
 ## Context Enforcement
@@ -185,8 +186,10 @@ Current UI capabilities:
   - `Transactions`: sending parcels + statuses
   - `Payments`: parcel/credit payments + debt pay action
   - `Statements`: unified ledger
-  - `Credits`: credit summary + credit ledger + open credit items
-- Each tab sends `customerId` and date range (`dateFrom`, `dateTo`) to backend.
+  - `Credits`: credit summary and credit ledger
+  - `Outstanding Debt`: all open parcel credit and a printable customer statement
+- Transactions, Payments, Statements, and Credits accept a date range. Outstanding Debt loads
+  across all dates.
 
 Frontend API alignment:
 
@@ -252,6 +255,36 @@ Notes:
 - Date range is optional but supports ad-hoc ISO datetime filtering.
 - Results are merged into a single descending timeline for CRM review.
 - Limit is clamped server-side (max 1000).
+
+## Outstanding Debt
+
+Open a customer profile and select **Outstanding Debt**. The tab lists every parcel with unpaid
+credit for that customer, including delivery credit, oldest parcel creation time first. Each row
+shows its original creation date and time in Ghana time (GMT), booking code, tracking code, parcel
+description, contents, and remaining balance. Settled parcels leave the list. The list uses the
+same open parcel balances as **Settle parcel debt**.
+
+The summary shows the open parcel count, oldest open parcel time, parcel subtotal, and net
+credit account amount due. Any difference between the parcel subtotal and the ledger balance
+appears as **Other credit account activity**. This includes amounts such as payments still
+awaiting allocation. A negative net balance is shown as **Account credit**. Ordinary To Be Paid
+amounts remain in parcel collection workflows until posted to the credit ledger.
+
+Select **Refresh** to load the latest balances. **Print statement** creates a customer-facing
+A4 copy with company branding, customer contact details, a balance timestamp, the summary and
+every open parcel. Web uses the browser print dialog, which can save to PDF. Desktop uses
+its configured report printer with browser printing as fallback. The tab and print action are
+available in web and desktop CRM.
+
+The API returns an empty parcel list for a customer with no open parcel balances and uses
+`CanReadCustomers` and the authenticated company. A missing, deleted, or out-of-company
+customer returns 404. A request failure shows a retry action and disables printing.
+
+QA: verify oldest-first ordering using parcel creation times that differ from ledger posting
+times, then settle a parcel and refresh the statement. Verify partial allocations, unallocated
+payments and zero or credit balances. Print a customer with enough outstanding parcels to span
+multiple pages and verify the last row and repeated headings. Automated API cases run with
+`CUSTOMER_CREDIT_TEST=1` on the isolated local `vipex_customer_credit_test` database.
 
 ## Debt Payment Allocation
 

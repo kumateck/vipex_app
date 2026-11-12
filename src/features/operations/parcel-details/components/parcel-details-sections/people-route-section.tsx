@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { memo } from 'react';
 import type { ParcelFullDetails } from '@/features/operations/parcel/api/parcel.api';
 import { formatWhen, joinPhones } from '../../utils/parcel-details-format';
@@ -21,7 +22,7 @@ export const PeopleRouteSection = memo(function PeopleRouteSection({
   );
   const destination = place(
     summary?.destinationName ?? branchNameById.get(parcel.destinationId),
-    summary?.pickupLocationName,
+    pickupOfficeLabel(summary?.pickupLocationName, parcel.receivingOfficeName),
   );
 
   return (

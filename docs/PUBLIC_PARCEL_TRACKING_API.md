@@ -76,3 +76,7 @@ lookup quota so that tracking codes cannot be guessed at the global rate:
    not verify which image is currently serving production.
 8. Return a dispatched parcel from its rider and verify tracking shows **Returned by rider to
    office**; after pickup reprocessing or redispatch, verify the current status changes.
+
+When a parcel is Awaiting Pickup and has a current receiving office, the response also includes
+`pickupLocation` and `receivingOffice` as display names. These keys are omitted until the parcel
+is ready for pickup, if no office is assigned, or after custody leaves the pickup location.

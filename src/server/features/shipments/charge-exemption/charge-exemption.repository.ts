@@ -3,12 +3,16 @@ import { db } from '@/db/config';
 import { customers, employees, branches } from '@/db/schemas';
 import { EmploymentStatus } from '@/db/schemas/enums';
 import { BadRequest, Conflict, NotFound } from '@/server/utils/http-error';
-import { resolveParcelExemptionType } from '@/shared/customers/customer-types';
+import {
+  isNonIndividualCustomerType,
+  resolveParcelExemptionType,
+} from '@/shared/customers/customer-types';
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Booking = {
   companyId: string;
   senderId: string;
+  nonIndividualSender?: boolean;
   parcels: ReadonlyArray<{ receiverId: string; chargeExemptCustomerType?: number | null }>;
 };
 
@@ -32,9 +36,12 @@ export async function resolveBookingExemptions(
   const rows = await (lock ? query.for('share') : query);
   const types = new Map(rows.map((row) => [row.id, row.customerType]));
   if (types.size !== ids.length) throw NotFound('Sender or receiver not found in your company');
-  return input.parcels.map((p) =>
-    resolveParcelExemptionType(types.get(input.senderId), types.get(p.receiverId)),
-  );
+  const senderType = types.get(input.senderId);
+  if (input.nonIndividualSender && !isNonIndividualCustomerType(senderType)) {
+    if (lock) throw Conflict('Sender category changed during booking. Refresh and try again.');
+    throw BadRequest('Select a Business, Family, Friends, Director, or Staff sender.');
+  }
+  return input.parcels.map((p) => resolveParcelExemptionType(senderType, types.get(p.receiverId)));
 }
 
 export async function assertBookingExemptionsUnchanged(input: Booking, executor: Executor) {

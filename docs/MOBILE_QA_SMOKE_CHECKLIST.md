@@ -351,3 +351,36 @@ and numbers stay unchanged, both roles refresh if the same customer is selected,
 processed parcel/sticker uses the saved name. Test failed updates, blank/overlong names, repeated
 Save taps, Cancel and missing `CanUpdateCustomers`. Existing parcel name snapshots must remain
 unchanged and no duplicate customer or premature booking should be created.
+
+## Receiving office QA
+
+- In web or desktop **Locations**, open Anloga Junction and verify four offices are available.
+  Rename one and add another. Check that a case-insensitive duplicate is rejected. Open a
+  different receiving location and confirm it has its own office.
+- Receive a parcel at a single-office location on mobile without selecting an office. Search by
+  booking code and verify the automatically assigned location and office in Super Search,
+  parcel details and Waiting for Pickup when ready.
+- At Anloga Junction, verify mobile Confirm Arrived requires an office. Select Office 3, then
+  repeat by web manual receive, web bulk receive and web/mobile consignment scan. Verify the
+  saved office and receipt. Test an invalid office ID and confirm neither the parcel nor the
+  consignment checklist advances.
+- From Super Search, open a parcel's Overview and change Office 3 to Office 4. Return to the
+  results and verify Office 4 appears. Check queue and pickup search results for the same parcel.
+  Verify the original receipt date. Try the same change from a different branch and after handover.
+- Search for a pre-existing parcel at Anloga Junction whose office has not been verified. Confirm
+  the location is visible and staff can add the office once confirmed. Public tracking should
+  show the assigned location and office for Awaiting Pickup and omit them after handover.
+
+## Other Customer Booking
+
+- With booking permission, open **Other Customer Booking** from both the Operations Hub and
+  the drawer. Check the web **Booking & Shipping** link and direct route. Without booking
+  permission, verify the entries are hidden and direct access is denied.
+- Look up each eligible sender category by primary or secondary phone. Confirm the name and
+  category appear. Look up an Individual-only number and an unknown number, and verify the
+  form cannot save. Change the number after selecting a sender and verify selection clears.
+- Book with an Individual recipient. Check a normal Business charge, a Family or Friends
+  zero-charge booking and a Staff booking that requires an active receiving employee.
+- Change the sender profile to Individual after selecting it. Saving the stale selection
+  must fail without creating a booking. The regular Parcel Create flow can still book for
+  an Individual sender.

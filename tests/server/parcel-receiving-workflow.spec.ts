@@ -5,6 +5,8 @@ import { registerArrivalCases } from '../utils/receiving-workflow-cases/arrival'
 import { registerLocationCases } from '../utils/receiving-workflow-cases/location';
 import { registerConsignmentCases } from '../utils/receiving-workflow-cases/consignment';
 
+import { registerReceivingOfficeCases } from '../utils/receiving-workflow-cases/receiving-office';
+
 describe.skipIf(process.env.RECEIVING_WORKFLOW_TEST !== '1')(
   'receiving workflow regression protection',
   () => {
@@ -21,6 +23,7 @@ describe.skipIf(process.env.RECEIVING_WORKFLOW_TEST !== '1')(
     });
     const current = () => fixture;
     registerArrivalCases(current);
+    registerReceivingOfficeCases(current);
     registerLocationCases(current);
     registerConsignmentCases(current);
   },

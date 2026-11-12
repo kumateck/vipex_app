@@ -120,6 +120,7 @@ export async function createBookingWithParcelsSvc(
 
   const input: CreateBookingWithParcelsInput = {
     senderId: body.senderId,
+    nonIndividualSender: body.nonIndividualSender,
     companyId: body.companyId,
     sourceId: body.sourceId,
     sourceLocationId: body.sourceLocationId ?? null,

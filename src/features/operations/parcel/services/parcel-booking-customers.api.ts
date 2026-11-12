@@ -9,8 +9,12 @@ export type BookingCustomer = {
 };
 const bookingCustomersApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    lookupBookingCustomers: builder.query<BookingCustomer[], { telephone: string }>({
-      query: ({ telephone }) => ({
+    lookupBookingCustomers: builder.query<
+      BookingCustomer[],
+      { telephone: string; nonIndividualOnly?: boolean }
+    >({
+      query: ({ telephone, nonIndividualOnly }) => ({
+        params: nonIndividualOnly ? { nonIndividualOnly: true } : undefined,
         url: `/customers/lookup/booking-by-telephone/${encodeURIComponent(telephone)}`,
       }),
       providesTags: (rows) => [

@@ -9,7 +9,8 @@ describe('ParcelTransitRouteCell', () => {
       sourceName: 'Asafo',
       sourceLocationName: 'Main Office',
       destinationName: 'Circle',
-      pickupLocationName: 'VIP Station',
+      pickupLocationName: 'Anloga Junction',
+      receivingOfficeName: 'Office 3',
     } as ParcelSearchRow;
 
     const markup = renderToStaticMarkup(<ParcelTransitRouteCell parcel={parcel} />);
@@ -19,6 +20,6 @@ describe('ParcelTransitRouteCell', () => {
     expect(markup).toContain('Main Office');
     expect(markup).toContain('To:');
     expect(markup).toContain('Circle');
-    expect(markup).toContain('VIP Station');
+    expect(markup).toContain('Anloga Junction → Office 3');
   });
 });

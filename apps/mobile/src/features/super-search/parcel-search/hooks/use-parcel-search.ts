@@ -1,5 +1,6 @@
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { hapticError, hapticTap } from '@mobile/lib/haptics';
 import { notifyError } from '@mobile/lib/notify';
 import { router } from '@mobile/navigation/router-compat';
@@ -15,15 +16,17 @@ export function useParcelSearch(): ParcelSearchState {
   const [searchBusy, setSearchBusy] = useState(false);
   const [rows, setRows] = useState<ParcelSearchRow[]>([]);
   const [searched, setSearched] = useState(false);
+  const lastSearch = useRef('');
 
   const runSearch = useCallback(async () => {
     const trimmed = query.trim();
     if (!trimmed || !companyId || searchBusy) return;
+    lastSearch.current = trimmed;
     setSearchBusy(true);
     setSearched(true);
     try {
       const response = await withAuth((token) => findParcels(token, { query: trimmed, companyId }));
-      setRows(response.data ?? []);
+      if (lastSearch.current === trimmed) setRows(response.data ?? []);
       void hapticTap();
     } catch (error) {
       notifyError(
@@ -36,7 +39,30 @@ export function useParcelSearch(): ParcelSearchState {
     }
   }, [companyId, query, searchBusy, withAuth]);
 
+  useFocusEffect(
+    useCallback(() => {
+      const term = lastSearch.current;
+      if (!term || !companyId) return;
+      let focused = true;
+      void withAuth((token) => findParcels(token, { query: term, companyId })).then(
+        (result) => {
+          if (focused && lastSearch.current === term) setRows(result.data ?? []);
+        },
+        () => {
+          if (focused && lastSearch.current === term) {
+            setRows([]);
+            notifyError('Refresh failed', 'Search again to get the current pickup office.');
+          }
+        },
+      );
+      return () => {
+        focused = false;
+      };
+    }, [companyId, withAuth]),
+  );
+
   const clearSearch = useCallback(() => {
+    lastSearch.current = '';
     setQuery('');
     setRows([]);
     setSearched(false);

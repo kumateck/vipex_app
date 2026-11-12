@@ -1,3 +1,5 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
+import { ReceivingOfficeField } from '@mobile/features/operations/parcel-receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
@@ -23,6 +25,8 @@ export function ReceiveProcessScreen() {
     canView,
     canEdit,
     canConfirmArrival,
+    office,
+    needsOffice,
     router,
     busy,
     parcel,
@@ -81,6 +85,12 @@ export function ReceiveProcessScreen() {
           </View>
           <View style={styles.detailList}>
             <DetailRow first label="Booking" value={parcel.bookingCode} />
+            <DetailRow
+              label="Pickup location"
+              value={
+                pickupOfficeLabel(parcel.pickupLocationName, parcel.receivingOfficeName) || '-'
+              }
+            />
             <ParcelHandoverNoteAction
               parcelId={parcel.id}
               hasHandoverNote={parcel.hasHandoverNote}
@@ -137,6 +147,13 @@ export function ReceiveProcessScreen() {
             keyboardType="number-pad"
             maxLength={PHONE_DIGITS}
           />
+          {canEdit && canConfirmArrival ? (
+            <ReceivingOfficeField
+              {...office}
+              allowAutomatic={office.options.length <= 1}
+              disabled={arriveBusy}
+            />
+          ) : null}
           {!canEdit ? (
             <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
               You have view-only access. Editing and arrival confirmation are disabled.
@@ -173,7 +190,16 @@ export function ReceiveProcessScreen() {
           <AppButton
             title={arriveBusy ? 'Updating...' : 'Confirm Arrived'}
             onPress={() => void markArrived()}
-            disabled={busy || saveBusy || arriveBusy || !canEdit || !canConfirmArrival}
+            disabled={
+              busy ||
+              saveBusy ||
+              arriveBusy ||
+              !canEdit ||
+              !canConfirmArrival ||
+              office.isLoading ||
+              office.isError ||
+              needsOffice
+            }
             variant="secondary"
           />
         </View>

@@ -106,6 +106,8 @@ export type ConsignmentDetail = Omit<IncomingConsignmentRow, 'sourceName' | 'arr
 };
 
 export type ConsignmentItemRow = ParcelHandoverNoteIndicator & {
+  pickupLocationName?: string | null;
+  receivingOfficeName?: string | null;
   parcelId: string;
   trackingCode: string;
   bookingCode: string;

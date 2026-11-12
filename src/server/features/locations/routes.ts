@@ -7,8 +7,11 @@ import { getLocationByIdCtrl, listLocationOptionsCtrl, listLocationsCtrl } from 
 
 import { createLocationSvc, deleteLocationSvc, updateLocationSvc } from './service';
 
+import { receivingOfficeRoutes } from './receiving-offices';
+
 export const locationsRoutes = new Elysia({ name: 'locations' })
   .use(authPlugin)
+  .use(receivingOfficeRoutes)
   .get(
     '/options',
     async ({ query }) =>

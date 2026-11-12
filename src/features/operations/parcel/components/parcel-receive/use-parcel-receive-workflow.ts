@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { ServerListQuery } from '@/services/rtk-query';
+import { useReceivingOfficeChoice } from '@/features/operations/parcel-receiving-office';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type ParcelSearchRow,
@@ -10,6 +11,7 @@ import {
   useMarkParcelReceivedMutation,
   useSearchParcelsQuery,
 } from '../../api/parcel.api';
+import { useScanSuccessFeedback } from './use-scan-success-feedback';
 import { extractScannedCode } from '../../utils/scan-code';
 
 export function useParcelReceiveWorkflow() {
@@ -18,6 +20,11 @@ export function useParcelReceiveWorkflow() {
   const branchId = user?.branch?.id ?? null;
   const branchName = user?.branch?.name ?? '-';
 
+  const office = useReceivingOfficeChoice({
+    enabled: Boolean(companyId && branchId),
+    allLocations: true,
+  });
+  const { officeId } = office;
   const [scannerEnabled, setScannerEnabled] = useState(true);
   const [criticalParcel, setCriticalParcel] = useState<ParcelSearchRow | null>(null);
   const reviewRequired = useRef(false);
@@ -26,7 +33,7 @@ export function useParcelReceiveWorkflow() {
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
   const [manualSearchInput, setManualSearchInput] = useState('');
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [scanSuccessFlash, setScanSuccessFlash] = useState(false);
+  const { scanSuccessFlash, triggerScanSuccessFeedback } = useScanSuccessFeedback();
   const manualServerFilters = useMemo(
     () => ({
       companyId,
@@ -49,49 +56,9 @@ export function useParcelReceiveWorkflow() {
 
   const autoReceiveTimerRef = useRef<number | null>(null);
   const autoReceiveCountdownIntervalRef = useRef<number | null>(null);
-  const flashTimeoutRef = useRef<number | null>(null);
 
   const [searchParcelsTrigger] = useLazySearchParcelsQuery();
   const [markParcelReceived, { isLoading: isUpdating }] = useMarkParcelReceivedMutation();
-
-  const playSuccessBeep = useCallback(() => {
-    const AudioCtx =
-      window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-
-    try {
-      const context = new AudioCtx();
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-
-      oscillator.type = 'sine';
-      oscillator.frequency.value = 880;
-      gain.gain.value = 0.08;
-
-      oscillator.connect(gain);
-      gain.connect(context.destination);
-
-      oscillator.start();
-      oscillator.stop(context.currentTime + 0.12);
-      oscillator.onended = () => {
-        void context.close();
-      };
-    } catch {
-      // Ignore audio playback errors.
-    }
-  }, []);
-
-  const triggerScanSuccessFeedback = useCallback(() => {
-    playSuccessBeep();
-    setScanSuccessFlash(true);
-    if (flashTimeoutRef.current !== null) {
-      window.clearTimeout(flashTimeoutRef.current);
-    }
-    flashTimeoutRef.current = window.setTimeout(() => {
-      setScanSuccessFlash(false);
-    }, 700);
-  }, [playSuccessBeep]);
 
   useEffect(() => {
     setManualQuery((prev) => ({
@@ -133,7 +100,6 @@ export function useParcelReceiveWorkflow() {
       if (autoReceiveTimerRef.current !== null) window.clearTimeout(autoReceiveTimerRef.current);
       if (autoReceiveCountdownIntervalRef.current !== null)
         window.clearInterval(autoReceiveCountdownIntervalRef.current);
-      if (flashTimeoutRef.current !== null) window.clearTimeout(flashTimeoutRef.current);
     };
   }, []);
 
@@ -172,6 +138,7 @@ export function useParcelReceiveWorkflow() {
       await markParcelReceived({
         id: parcel.id,
         receivedBy: user.id,
+        receivingOfficeId: officeId || undefined,
         status: ParcelStatus.ARRIVED_AT_DESTINATION,
       }).unwrap();
 
@@ -185,7 +152,7 @@ export function useParcelReceiveWorkflow() {
         await refetchManual();
       }
     },
-    [manualQuery.search, markParcelReceived, refetchManual, user?.id],
+    [manualQuery.search, markParcelReceived, officeId, refetchManual, user?.id],
   );
 
   const handleDetectedByScanner = useCallback(
@@ -272,6 +239,7 @@ export function useParcelReceiveWorkflow() {
   };
   return {
     branchName,
+    office,
     scannerEnabled,
     setScannerEnabled,
     lastScannedCode,

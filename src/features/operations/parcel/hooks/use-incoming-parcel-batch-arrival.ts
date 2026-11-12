@@ -79,20 +79,26 @@ export function useIncomingParcelBatchArrival(input: {
   }, []);
   const isSelected = useCallback((parcelId: string) => selectedById.has(parcelId), [selectedById]);
 
-  const confirmArrival = useCallback(async () => {
-    if (selectedIds.length === 0) return;
-    try {
-      const result = await markParcelsReceived({ parcelIds: selectedIds }).unwrap();
-      setSelectedById(new Map());
-      setIsConfirmationOpen(false);
-      toast.success(
-        `${result.updatedCount} ${result.updatedCount === 1 ? 'parcel' : 'parcels'} marked as arrived`,
-      );
-      await onArrived();
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    }
-  }, [markParcelsReceived, onArrived, selectedIds]);
+  const confirmArrival = useCallback(
+    async (receivingOfficeId?: string) => {
+      if (selectedIds.length === 0) return;
+      try {
+        const result = await markParcelsReceived({
+          parcelIds: selectedIds,
+          receivingOfficeId,
+        }).unwrap();
+        setSelectedById(new Map());
+        setIsConfirmationOpen(false);
+        toast.success(
+          `${result.updatedCount} ${result.updatedCount === 1 ? 'parcel' : 'parcels'} marked as arrived`,
+        );
+        await onArrived();
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+      }
+    },
+    [markParcelsReceived, onArrived, selectedIds],
+  );
 
   return {
     allOnPageSelected,

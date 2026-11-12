@@ -20,6 +20,7 @@ export type LocationOption = {
 
 export type CreateBookingWithParcelsInput = {
   senderId: string;
+  nonIndividualSender?: boolean;
   status: number;
   deferSenderCashierCompletion?: boolean;
   completeToBePaid?: boolean;

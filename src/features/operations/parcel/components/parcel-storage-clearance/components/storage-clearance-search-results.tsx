@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { Button } from '@/components/ui/button';
 import { formatStorageMoney } from '../utils';
 import type { StorageClearanceCreateState as State } from '../types';
@@ -20,6 +21,11 @@ export function StorageClearanceSearchResults({ state }: { state: State }) {
               onClick={() => state.setSelected(parcel)}
             >
               <strong>{parcel.bookingCode}</strong> · {parcel.trackingCode}
+              {parcel.receivingOfficeName ? (
+                <p className="text-sm">
+                  {pickupOfficeLabel(parcel.pickupLocationName, parcel.receivingOfficeName)}
+                </p>
+              ) : null}
               <p className="text-sm text-muted-foreground">
                 Accrued storage: {parcel.storageChargeDays ?? 0} days ·{' '}
                 {formatStorageMoney(parcel.storageChargePsw)}

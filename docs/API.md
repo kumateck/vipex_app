@@ -13,6 +13,14 @@ and a handover/delivery cutoff. Its lookup/save contracts and failure cases are 
 
 Base URL: `/v1`
 
+Customer CRM can fetch a printable, all-dates debt snapshot through
+`GET /customers/:id/credit/outstanding-statement`. See
+[Outstanding Debt](CRM_SYSTEM.md#outstanding-debt) for balances and permission scope.
+
+Parcel search and details return the current receiving office at the pickup location. The
+receiving office setup, arrival and reassignment endpoints are documented under
+[Identity and operations](api/IDENTITY_AND_OPERATIONS.md).
+
 `GET /shipments/parcels` accepts optional `parcelCode` for an exact, case-sensitive tracking
 or booking code match before pagination. It takes 1–255 characters, trims surrounding
 whitespace, and combines with the other filters. Mobile Waiting for Pickup uses it for

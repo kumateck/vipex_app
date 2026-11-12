@@ -1,7 +1,18 @@
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
-import { auditLogs, branches, consignmentItems, consignments, parcels } from '@/db/schemas';
+import {
+  auditLogs,
+  branches,
+  consignmentItems,
+  consignments,
+  locations,
+  parcels,
+  ParcelStatus,
+  receivingOffices,
+} from '@/db/schemas';
+
+import { receivingOfficeJoin } from '../shipments/parcel-receiving-office/projection';
 
 export async function getPublicParcelByTrackingRepo(trackingCode: string) {
   const sourceBranch = alias(branches, 'public_tracking_source_branch');
@@ -23,9 +34,16 @@ export async function getPublicParcelByTrackingRepo(trackingCode: string) {
       receivedAt: parcels.receivedAt,
       sourceBranchName: sourceBranch.name,
       destinationBranchName: destinationBranch.name,
+      pickupLocationName: locations.name,
+      receivingOfficeName: receivingOffices.name,
       sentAt: consignments.createdAt,
     })
     .from(parcels)
+    .leftJoin(
+      receivingOffices,
+      and(receivingOfficeJoin, eq(parcels.status, ParcelStatus.AWAITING_PICKUP)),
+    )
+    .leftJoin(locations, eq(locations.id, receivingOffices.locationId))
     .innerJoin(sourceBranch, eq(sourceBranch.id, parcels.sourceId))
     .innerJoin(destinationBranch, eq(destinationBranch.id, parcels.destinationId))
     .leftJoin(

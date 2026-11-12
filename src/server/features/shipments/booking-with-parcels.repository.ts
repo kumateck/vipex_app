@@ -35,6 +35,7 @@ export type CreatedPaymentRef = { id: string };
 export type CreateBookingWithParcelsInput = {
   // booking header
   senderId: string;
+  nonIndividualSender?: boolean;
   companyId: string;
   sourceId: string;
   sourceLocationId?: string | null;

@@ -138,6 +138,17 @@ Only undeleted/unconfirmed, unreceived In Transit parcels are eligible. Bulk rec
 `CanReadParcelIncoming`; consignment receiving retains its existing permission with the same
 parcel state/location guards. See [Arrival consistency](PARCEL_OPERATIONS.md#pickup-location-and-arrival-consistency).
 
+**Other Customer Booking** at `/parcels/create-other` and its mobile counterpart require
+`CanCreateBookingWithParcels`. The sender lookup and booking API use the same permission and
+company scope. Head office users cannot book. Sender registration stays under Customer
+Management permissions.
+
+**Locations → Edit location → Receiving offices** uses `CanUpdateLocations` for list, add
+and rename, scoped to the location's company. Receiving-office options and parcel office
+reassignment require `CanReadParcelIncoming` or `CanReadParcelScan` and use the authenticated
+company and destination branch. Display in parcel search and details uses each screen's
+existing read permission. See [Receiving offices](PARCEL_OPERATIONS.md#receiving-offices).
+
 Delivery Cashier's upcoming handovers section uses `CanManageParcelSecondReceiver` for
 `PUT/DELETE /shipments/parcels/:id/second-receiver`, scoped to the destination branch. The
 editable states now include Address Collected and Dispatched until rider handover. Mobile rider

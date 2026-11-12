@@ -50,6 +50,8 @@ export type ParcelRow = ParcelHandoverNoteIndicator & {
   secondCardId: string | null;
   secondCardNumber: string | null;
   pickupLocationId: string | null;
+  receivingOfficeId?: string | null;
+  receivingOfficeName?: string | null;
   plannedToBePaidPsw: number;
   method: number;
   shelfPickerStaffId: string | null;

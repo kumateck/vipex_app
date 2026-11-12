@@ -14,7 +14,7 @@ import {
   postCustomerCreditPaymentCtrl,
 } from '../controller';
 
-import { listCreditParcelsSvc } from '../credit-settlement';
+import { getOutstandingDebtStatement, listCreditParcelsSvc } from '../credit-settlement';
 
 export const customersRoutes2 = new Elysia({ name: 'customers-2' })
   .use(authPlugin)
@@ -94,6 +94,20 @@ export const customersRoutes2 = new Elysia({ name: 'customers-2' })
       detail: {
         tags: ['Customers'],
         summary: 'List all outstanding credit parcels for settlement',
+      },
+    },
+  )
+
+  .get(
+    '/:id/credit/outstanding-statement',
+    ({ params, user }) =>
+      getOutstandingDebtStatement({ customerId: params.id, companyId: user!.companyId! }),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: {
+        tags: ['Customers'],
+        summary: 'Get all outstanding parcel credit and the net account balance',
       },
     },
   )
