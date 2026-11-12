@@ -24,6 +24,12 @@ import { useWaitingPickupDialogState } from './use-waiting-pickup-dialog-state';
 import { useWaitingPickUpEdit } from './use-waiting-pickup-edit';
 import { getQueueFilterBySearch, type WaitingPickupQuery } from './waiting-pickup-types';
 
+import { submitWaitingPickupHandover } from './submit-waiting-pickup-handover';
+import {
+  useConfirmSignedOfficePickupMutation,
+  type PickupOtpException,
+} from './use-confirm-signed-office-pickup';
+
 export function useWaitingPickupWorkflow() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
@@ -53,6 +59,8 @@ export function useWaitingPickupWorkflow() {
   const dialog = useWaitingPickupDialogState();
   const selectedParcel = dialog.selectedParcel;
 
+  const [confirmSignedOfficePickup, { isLoading: isConfirmingException }] =
+    useConfirmSignedOfficePickupMutation();
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [addCustomerCard, { isLoading: isAddingCard }] = useAddCustomerCardMutation();
   const [resolveSecondReceiver, { isLoading: isCreatingCustomer }] =
@@ -129,7 +137,12 @@ export function useWaitingPickupWorkflow() {
     setInitializedParcelId(selectedParcel.id);
   }, [dialogLoadState.hasError, dialogLoadState.isLoading, parcelDetails, selectedParcel]);
 
-  const isSaving = isUpdatingParcel || isAddingCard || isCreatingCustomer || edit.isSaving;
+  const isSaving =
+    isConfirmingException ||
+    isUpdatingParcel ||
+    isAddingCard ||
+    isCreatingCustomer ||
+    edit.isSaving;
 
   const handleSearchSubmit = () => {
     const term = searchInput.trim();
@@ -161,10 +174,14 @@ export function useWaitingPickupWorkflow() {
     }
   };
 
-  const handleConfirmDelivered = async () => {
+  const handleConfirmDelivered = async (exception?: PickupOtpException) => {
     if (!selectedParcel) return;
     if (!dialog.pickerStaffId) throw new Error('Select shelf picker staff');
-    if (isPickupOtpRequired && (!dialog.otp.otpVerified || !dialog.otp.verificationToken)) {
+    if (
+      isPickupOtpRequired &&
+      !exception &&
+      (!dialog.otp.otpVerified || !dialog.otp.verificationToken)
+    ) {
       throw new Error('Verify the customer collection OTP before confirming delivery');
     }
 
@@ -202,18 +219,24 @@ export function useWaitingPickupWorkflow() {
       });
     }
 
-    await updateParcel({
+    const handover = {
       id: selectedParcel.id,
-      status: ParcelStatus.DELIVERED_BY_OFFICE,
       confirmedBy: dialog.pickerStaffId,
       cardId: mainCard?.cardId ?? null,
       cardNumber: mainCard?.cardNumber ?? null,
       secondReceiverId: secondReceiverId ?? null,
       secondCardId: secondCard?.cardId ?? null,
       secondCardNumber: secondCard?.cardNumber ?? null,
-      receiverOtpVerificationToken: isPickupOtpRequired ? dialog.otp.verificationToken : undefined,
-      receiverOtpTarget: isPickupOtpRequired ? 'main' : undefined,
-    }).unwrap();
+    };
+    await submitWaitingPickupHandover({
+      parcel: selectedParcel,
+      handover,
+      handoverTarget: dialog.handoverTarget,
+      exception,
+      verificationToken: isPickupOtpRequired ? dialog.otp.verificationToken : undefined,
+      confirmSignedOfficePickup,
+      updateParcel,
+    });
 
     toast.success('Parcel marked as DELIVERED_BY_OFFICE');
     dialog.closeParcelDialog();

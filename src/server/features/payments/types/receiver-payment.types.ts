@@ -1,6 +1,8 @@
 import type { PaymentMethod } from '@/db/schemas/enums';
 
-export type ReceiverPaymentInput = {
+import type { ReceiverOtpExceptionInput } from '../../parcel-receiver-otp/exception';
+
+export type ReceiverPaymentInput = ReceiverOtpExceptionInput & {
   companyId: string;
   branchId: string;
   parcelId: string;
@@ -14,7 +16,6 @@ export type ReceiverPaymentInput = {
   secondCardNumber?: string | null;
   amountCedis?: number | string | null;
   storageAmountCedis?: number | string | null;
-  receiverOtpVerificationToken?: string;
   receiverOtpTarget?: 'main' | 'second';
   momoTransactionId?: string | null;
   requestSignature?: boolean;

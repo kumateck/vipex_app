@@ -113,6 +113,7 @@ export function ParcelWaitingPickupPage() {
       </ScrollableWrapper>
 
       <PickupVerificationDialog
+        key={dialog.selectedParcel?.id ?? 'closed'}
         open={Boolean(dialog.selectedParcel)}
         parcel={dialog.selectedParcel}
         onClose={dialog.closeParcelDialog}

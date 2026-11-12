@@ -126,6 +126,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
           amountCedis?: number | string | null;
           storageAmountCedis?: number | string | null;
           receiverOtpVerificationToken?: string;
+          otpAuthorizationId?: string;
           receiverOtpTarget?: 'main' | 'second';
           requestSignature?: boolean;
           expectedReceiverId?: string;
@@ -154,6 +155,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         expectedReceiverId: t.Optional(UUID),
         expectedSecondReceiverId: t.Optional(t.Union([UUID, t.Null()])),
         handoverTarget: t.Optional(t.Union([t.Literal('main'), t.Literal('second')])),
+        otpAuthorizationId: t.Optional(UUID),
         receiverOtpVerificationToken: t.Optional(t.String({ minLength: 1 })),
         receiverOtpTarget: t.Optional(t.Union([t.Literal('main'), t.Literal('second')])),
         momoTransactionId: t.Optional(t.Union([UUID, t.Null()])),

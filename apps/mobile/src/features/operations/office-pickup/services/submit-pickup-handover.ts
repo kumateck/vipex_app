@@ -92,6 +92,7 @@ export async function submitPickupHandover(input: PickupHandoverInput, api: Pick
     secondCard,
     isPickupOtpRequired: input.isPickupOtpRequired,
     verificationToken: input.verificationToken,
+    otpAuthorizationId: input.otpAuthorizationId,
     signatureImage: input.signatureImage,
     expectedMainReceiverId: parcel.receiverId,
     expectedSecondReceiverId: parcel.secondReceiverId ?? null,

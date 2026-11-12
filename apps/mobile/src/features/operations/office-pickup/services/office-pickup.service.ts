@@ -2,6 +2,10 @@ import { getParcelDetails, mobileApiGet, mobileApiPatch, mobileApiPost } from '@
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import type { ReceiverOtpSession } from '@/shared/shipments/receiver-otp-session';
 import type {
+  OtpAuthorizationTarget,
+  PickupOtpAuthorization,
+} from '@/shared/shipments/receiver-otp-exception';
+import type {
   BranchPickupSettings,
   SignedPickupConfirmation,
   OtpChannel,
@@ -93,6 +97,18 @@ export function getPickupOtpSession(token: string, parcelId: string) {
     path: '/payments/receiver-otp/session',
     token,
     query: { parcelId, targetReceiver: 'main' },
+  });
+}
+
+export function getPickupOtpApproval(
+  token: string,
+  parcelId: string,
+  handoverTarget: OtpAuthorizationTarget,
+) {
+  return mobileApiGet<{ approval: PickupOtpAuthorization | null }>({
+    path: `/shipments/parcels/${parcelId}/otp-authorization`,
+    query: { workflow: 'office_pickup', handoverTarget },
+    token,
   });
 }
 
