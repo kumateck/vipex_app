@@ -167,6 +167,9 @@ export const parcels = pgTable(
     byReceiver: index('parcels_receiver_idx').on(t.receiverId),
     byStatus: index('parcels_status_idx').on(t.status),
     byCashierSession: index('parcels_cashier_session_idx').on(t.cashierSessionId),
+    byReceivingOffice: index('parcels_receiving_office_idx')
+      .on(t.receivingOfficeId)
+      .where(sql`${t.receivingOfficeId} is not null`),
     byCompanyDestinationStatus: index('parcels_company_destination_status_idx').on(
       t.companyId,
       t.destinationId,

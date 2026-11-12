@@ -8,7 +8,12 @@ import {
 } from '@/server/plugins/auth';
 import { UUID } from '@/server/schemas/common';
 import { PermissionKeys } from '@/shared/permissions/constants';
-import { getLocationOffices, getReceivingOfficeOptions, saveReceivingOffice } from './service';
+import {
+  deleteReceivingOffice,
+  getLocationOffices,
+  getReceivingOfficeOptions,
+  saveReceivingOffice,
+} from './service';
 
 const canReceive = requireAnyPermissions(
   PermissionKeys.CanReadParcelIncoming,
@@ -62,5 +67,19 @@ export const receivingOfficeRoutes = new Elysia({ name: 'receiving-offices' })
       params: t.Object({ id: UUID, officeId: UUID }),
       body: officeBody,
       beforeHandle: [requireAuth(), canManage],
+    },
+  )
+  .delete(
+    '/:id/receiving-offices/:officeId',
+    ({ params, user }) =>
+      deleteReceivingOffice({
+        companyId: (user as AuthUser).companyId ?? '',
+        locationId: params.id,
+        officeId: params.officeId,
+      }),
+    {
+      params: t.Object({ id: UUID, officeId: UUID }),
+      beforeHandle: [requireAuth(), canManage],
+      detail: { tags: ['Locations'], summary: 'Delete an unused receiving office' },
     },
   );

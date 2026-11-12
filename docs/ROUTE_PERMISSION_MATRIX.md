@@ -143,8 +143,8 @@ parcel state/location guards. See [Arrival consistency](PARCEL_OPERATIONS.md#pic
 company scope. Head office users cannot book. Sender registration stays under Customer
 Management permissions.
 
-**Locations → Edit location → Receiving offices** uses `CanUpdateLocations` for list, add
-and rename, scoped to the location's company. Receiving-office options and parcel office
+**Locations → Edit location → Receiving offices** uses `CanUpdateLocations` to list, add,
+rename or delete unused offices, scoped to the location's company. Receiving-office options and parcel office
 reassignment require `CanReadParcelIncoming` or `CanReadParcelScan` and use the authenticated
 company and destination branch. Display in parcel search and details uses each screen's
 existing read permission. See [Receiving offices](PARCEL_OPERATIONS.md#receiving-offices).
