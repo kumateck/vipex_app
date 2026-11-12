@@ -647,8 +647,16 @@ database with `RECEIVING_WORKFLOW_TEST=1`; its fixture refuses remote/other data
 ### Receiving offices
 
 A receiving office belongs to a pickup location. Under **Locations → Edit location → Receiving
-offices**, location editors can add and rename offices. Names are trimmed and must be unique within
-the location, ignoring case. A sending-only or deleted location cannot be used for receiving offices.
+offices**, location editors can add, rename and delete offices. Names are trimmed and must be
+unique within the location, ignoring case. A sending-only or deleted location cannot be used
+for receiving offices.
+
+Use the trash button and confirm **Delete office** to permanently remove an unused office. A
+parcel that still references the office blocks deletion, including a delivered, cancelled or
+soft-deleted parcel. When the only unused office is removed, receiving records the pickup
+location without an office until one is added. Migration `0098_receiving_office_deletion`
+indexes parcel office references and keeps ordinary location saves from recreating a deleted
+office. Enabling a location for receiving can seed its default offices again.
 
 Migration `0097_receiving_offices` creates the office table and adds a nullable
 `parcels.receiving_office_id` foreign key. It creates **Office 1–4** for the Anloga Junction
@@ -682,7 +690,7 @@ current office. Public tracking shows the location and office names while the pa
 
 QA scenarios are in [Mobile QA](MOBILE_QA_SMOKE_CHECKLIST.md#receiving-office-qa). The receiving
 workflow integration suite covers single-office defaults, multi-office validation and rollback,
-reassignment, search and details, and office management.
+reassignment, search and details, office management, and concurrent receipt and office deletion.
 
 The web **In Transit (Receiving Branch)** list has optional Send Date, Source Branch, and
 Consignment Number filters. Apply Filters combines them with the destination branch and in-transit

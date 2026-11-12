@@ -3,7 +3,7 @@ import { db } from '@/db/config';
 import { locations, receivingOffices } from '@/db/schemas';
 import { BadRequest, Conflict, Forbidden, NotFound } from '@/server/utils/http-error';
 import type { DbExecutor } from '../../shipments/parcel-repositories/parcel-repository.types';
-import { findOfficeNameRepo, listReceivingOfficesRepo } from './repository';
+import { deleteUnusedOfficeRepo, findOfficeNameRepo, listReceivingOfficesRepo } from './repository';
 
 async function assertLocation(
   companyId: string,
@@ -69,5 +69,21 @@ export async function saveReceivingOffice(input: {
           .returning(selection);
     if (!office) throw NotFound('Receiving office not found');
     return office;
+  });
+}
+
+export function deleteReceivingOffice(input: {
+  companyId: string;
+  locationId: string;
+  officeId: string;
+}) {
+  return db.transaction(async (tx) => {
+    // Receiving and office reassignment share-lock this location before assigning an office.
+    await assertLocation(input.companyId, input.locationId, tx, 'update');
+    const result = await deleteUnusedOfficeRepo(input.locationId, input.officeId, tx);
+    if (result === 'missing') throw NotFound('Receiving office not found');
+    if (result === 'referenced')
+      throw Conflict('This receiving office is linked to a parcel and cannot be deleted');
+    return { success: true };
   });
 }
