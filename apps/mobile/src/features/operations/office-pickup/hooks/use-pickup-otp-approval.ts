@@ -1,5 +1,4 @@
 import { useCallback, useRef, useState } from 'react';
-import { mobileApiGet } from '@mobile/lib/api';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -7,6 +6,7 @@ import type {
   OtpAuthorizationTarget,
   PickupOtpAuthorization,
 } from '@/shared/shipments/receiver-otp-exception';
+import { getPickupOtpApproval } from '../services';
 
 export function usePickupOtpApproval(parcelId: string | undefined, target: OtpAuthorizationTarget) {
   const { withAuth } = useAuth();
@@ -33,14 +33,10 @@ export function usePickupOtpApproval(parcelId: string | undefined, target: OtpAu
       const id = ++requestId.current;
       setChecking(true);
       try {
-        const response = await withAuth((token) =>
-          mobileApiGet<{ approval: PickupOtpAuthorization | null }>({
-            path: `/shipments/parcels/${parcelId}/otp-authorization`,
-            query: { workflow: 'office_pickup', handoverTarget: target },
-            token,
-          }),
+        const { approval } = await withAuth((token) =>
+          getPickupOtpApproval(token, parcelId, target),
         );
-        if (id === requestId.current) setResult({ key, approval: response.approval });
+        if (id === requestId.current) setResult({ key, approval });
       } catch (error) {
         if (id !== requestId.current) return;
         setResult(null);
