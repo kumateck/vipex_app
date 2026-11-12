@@ -25,6 +25,7 @@ mock.module('@mobile/providers/auth-provider', () => ({ useAuth: () => ({ withAu
 mock.module('@mobile/lib/notify', () => ({ notifyError: () => {}, notifySuccess: () => {} }));
 mock.module('@mobile/features/operations/office-pickup/services', () => ({
   getPickupOtpSession: (_token: string, parcelId: string) => loadSession(parcelId),
+  getPickupOtpApproval: async () => ({ approval: null }),
   requestPickupOtp: (_token: string, input: Parameters<typeof sendOtp>[0]) => sendOtp(input),
   verifyPickupOtp: (_token: string, input: Parameters<typeof verifyOtp>[0]) => verifyOtp(input),
   loadPickupResources: async () => ({

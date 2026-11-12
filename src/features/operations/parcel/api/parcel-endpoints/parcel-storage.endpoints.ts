@@ -153,6 +153,7 @@ export const parcelApiPart2 = api.injectEndpoints({
         secondCardId?: string | null;
         secondCardNumber?: string | null;
         receiverOtpVerificationToken?: string;
+        otpAuthorizationId?: string;
         receiverOtpTarget?: 'main' | 'second';
         momoTransactionId?: string | null;
       }

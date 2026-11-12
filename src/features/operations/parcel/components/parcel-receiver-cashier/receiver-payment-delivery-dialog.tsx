@@ -1,4 +1,6 @@
 import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
+import { skipToken } from '@reduxjs/toolkit/query';
+import { OtpApprovalStatus, useParcelOtpAuthorizationQuery } from '../receiver-otp-exception';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,6 +42,19 @@ export function ReceiverPaymentDeliveryDialog({
 }: ReceiverPaymentDeliveryDialogProps) {
   const parcel = dialog.selectedParcel;
   const pending = dialog.pendingHandover;
+  const checkApproval = Boolean(
+    parcel && !pending && context.isReceiverOtpRequired && !dialog.otpVerified,
+  );
+  const approvalQuery = useParcelOtpAuthorizationQuery(
+    checkApproval && parcel
+      ? { id: parcel.id, workflow: 'receiver_cashier', handoverTarget: dialog.handoverTarget }
+      : skipToken,
+    { refetchOnMountOrArgChange: true },
+  );
+  const approval =
+    approvalQuery.isError || approvalQuery.isFetching
+      ? null
+      : (approvalQuery.currentData?.approval ?? null);
 
   return (
     <Dialog
@@ -171,6 +186,15 @@ export function ReceiverPaymentDeliveryDialog({
                     </div>
                   )}
 
+                  {checkApproval ? (
+                    <OtpApprovalStatus
+                      approval={approval}
+                      onCheck={approvalQuery.refetch}
+                      checking={approvalQuery.isFetching}
+                      error={approvalQuery.isError}
+                      disabled={dialog.isSaving}
+                    />
+                  ) : null}
                   {!context.requireSignature &&
                   (dialog.receiverDuePsw > 0 || dialog.storageOutstandingPsw > 0) ? (
                     <ReceiptDeliveryPicker
@@ -193,7 +217,7 @@ export function ReceiverPaymentDeliveryDialog({
               <Button
                 onClick={async () => {
                   try {
-                    const awaitingSignature = await dialog.handleConfirmDelivered();
+                    const awaitingSignature = await dialog.handleConfirmDelivered(approval?.id);
                     if (awaitingSignature === undefined) return;
                     toast.success(
                       awaitingSignature
@@ -210,7 +234,7 @@ export function ReceiverPaymentDeliveryDialog({
                   dialog.isLoading ||
                   dialog.hasLoadError ||
                   dialog.isSaving ||
-                  (context.isReceiverOtpRequired && !dialog.otpVerified) ||
+                  (context.isReceiverOtpRequired && !dialog.otpVerified && !approval) ||
                   (dialog.paymentMethod === String(PaymentMethod.MTN) &&
                     !dialog.momoTransactionId) ||
                   (context.isPickupQueueEnabled && !dialog.hasPickupQueue)
@@ -220,9 +244,11 @@ export function ReceiverPaymentDeliveryDialog({
                   ? 'Loading...'
                   : dialog.isSaving
                     ? 'Processing...'
-                    : context.requireSignature
-                      ? 'Receive Payment + Request Signature'
-                      : 'Receive Payment + Deliver'}
+                    : approval
+                      ? 'Continue with Admin Approval'
+                      : context.requireSignature
+                        ? 'Receive Payment + Request Signature'
+                        : 'Receive Payment + Deliver'}
               </Button>
             </DialogFooter>
           </>
