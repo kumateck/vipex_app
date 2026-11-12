@@ -76,7 +76,7 @@ export function useParcelTransitWorkflow(view: InTransitView) {
   }, [serverFilters]);
 
   const handleMarkAsArrived = useCallback(
-    async (parcel: ParcelSearchRow) => {
+    async (parcel: ParcelSearchRow, receivingOfficeId?: string) => {
       if (!user?.id) {
         toast.error('Your user account could not be identified');
         return;
@@ -84,6 +84,7 @@ export function useParcelTransitWorkflow(view: InTransitView) {
       await markParcelReceived({
         id: parcel.id,
         receivedBy: user.id,
+        receivingOfficeId,
         status: ParcelStatus.ARRIVED_AT_DESTINATION,
       }).unwrap();
       toast.success(`Received ${parcel.bookingCode}`);
@@ -157,17 +158,20 @@ export function useParcelTransitWorkflow(view: InTransitView) {
     { companyId },
     { skip: !companyId },
   );
-  const handleConfirmMarkAsArrived = useCallback(async () => {
-    if (!arrivalConfirmationParcel) return;
-    try {
-      await handleMarkAsArrived(arrivalConfirmationParcel);
-      batchArrival.removeSelection(arrivalConfirmationParcel.id);
-      await refetch();
-      setArrivalConfirmationParcel(null);
-    } catch (error) {
-      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update parcel status');
-    }
-  }, [arrivalConfirmationParcel, batchArrival, handleMarkAsArrived, refetch]);
+  const handleConfirmMarkAsArrived = useCallback(
+    async (receivingOfficeId?: string) => {
+      if (!arrivalConfirmationParcel) return;
+      try {
+        await handleMarkAsArrived(arrivalConfirmationParcel, receivingOfficeId);
+        batchArrival.removeSelection(arrivalConfirmationParcel.id);
+        await refetch();
+        setArrivalConfirmationParcel(null);
+      } catch (error) {
+        toast.error(getApplicationErrorMessage(error, '') || 'Failed to update parcel status');
+      }
+    },
+    [arrivalConfirmationParcel, batchArrival, handleMarkAsArrived, refetch],
+  );
   const branchNameById = useMemo(
     () => new Map(branchOptions.map((branch) => [branch.id, branch.name])),
     [branchOptions],

@@ -36,6 +36,8 @@ export type ParcelFullDetails = {
     cardNumber: string | null;
     secondCardId: string | null;
     secondCardNumber: string | null;
+    receivingOfficeId?: string | null;
+    receivingOfficeName?: string | null;
     pickupLocationId: string | null;
     plannedToBePaidPsw: number;
     method: number;

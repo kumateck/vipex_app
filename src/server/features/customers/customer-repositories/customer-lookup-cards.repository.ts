@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, ilike, ne, or } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, ne, or } from 'drizzle-orm';
+import { NON_INDIVIDUAL_CUSTOMER_TYPES } from '@/shared/customers/customer-types';
 import { db } from '@/db/config';
 import { cards, customerCards, customers } from '@/db/schemas';
 import { type DbExecutor, type CustomerRow } from './customer-profile.repository';
@@ -7,6 +8,7 @@ export async function findCustomersByTelephoneRepo(input: {
   companyId: string;
   telephone: string;
   limit?: number;
+  nonIndividualOnly?: boolean;
 }): Promise<CustomerRow[]> {
   const term = input.telephone.trim();
   const limit = input.limit ?? 10;
@@ -38,6 +40,9 @@ export async function findCustomersByTelephoneRepo(input: {
       and(
         eq(customers.companyId, input.companyId),
         eq(customers.isDeleted, false),
+        input.nonIndividualOnly
+          ? inArray(customers.customerType, NON_INDIVIDUAL_CUSTOMER_TYPES)
+          : undefined,
         /^\d{10}$/.test(term)
           ? or(eq(customers.telephone, term), eq(customers.telephone2, term))
           : or(ilike(customers.telephone, `%${term}%`), ilike(customers.telephone2, `%${term}%`)),

@@ -12,6 +12,7 @@ import {
   CustomerTransactionsTab,
   type CustomerDetailsTabKey,
 } from '@/features/customers/components/details';
+import { OutstandingDebtTab } from '@/features/customers/outstanding-debt';
 import { useCustomerProfile } from '../../hooks';
 
 export function CustomerDetailsPage() {
@@ -113,7 +114,7 @@ export function CustomerDetailsPage() {
           className="h-[calc(100vh-12rem)] min-h-[34rem] space-y-4"
         >
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <TabsList>
+            <TabsList className="w-full justify-start overflow-x-auto lg:w-auto">
               <TabsTrigger value="transactions" className={ACTIVE_TAB_TRIGGER_CLASS}>
                 Transactions
               </TabsTrigger>
@@ -125,6 +126,9 @@ export function CustomerDetailsPage() {
               </TabsTrigger>
               <TabsTrigger value="credits" className={ACTIVE_TAB_TRIGGER_CLASS}>
                 Credits
+              </TabsTrigger>
+              <TabsTrigger value="outstanding-debt" className={ACTIVE_TAB_TRIGGER_CLASS}>
+                Outstanding Debt
               </TabsTrigger>
               <TabsTrigger value="cards" className={ACTIVE_TAB_TRIGGER_CLASS}>
                 Cards
@@ -178,6 +182,14 @@ export function CustomerDetailsPage() {
             <CustomerCreditsTab
               creditSummary={creditSummary}
               creditTransactions={creditTransactions}
+            />
+          </TabsContent>
+
+          <TabsContent value="outstanding-debt" className="h-[calc(100%-2.75rem)] min-h-0">
+            <OutstandingDebtTab
+              key={customer.id}
+              customer={customer}
+              onViewParcel={openParcelDetails}
             />
           </TabsContent>
 

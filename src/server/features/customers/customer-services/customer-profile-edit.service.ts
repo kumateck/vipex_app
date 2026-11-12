@@ -148,6 +148,7 @@ export async function findCustomersByTelephoneSvc(input: {
   companyId: string;
   telephone: string;
   limit?: number;
+  nonIndividualOnly?: boolean;
 }): Promise<CustomerRow[]> {
   if (!input.companyId) throw BadRequest('Company is required');
   if (!input.telephone || input.telephone.trim().length < 6) {

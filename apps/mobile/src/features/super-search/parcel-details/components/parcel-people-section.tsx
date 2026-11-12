@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import type { ParcelFullDetails, ParcelSearchRow } from '@mobile/types/parcels';
 import { branchLocationLabel, formatDate, joinPhones, personName } from '../utils';
 import { ParcelDetailCard } from './parcel-detail-card';
@@ -38,7 +39,13 @@ export function ParcelPeopleSection({
         title="Route"
         rows={[
           ['From', branchLocationLabel(summary?.sourceName, summary?.sourceLocationName)],
-          ['To', branchLocationLabel(summary?.destinationName, summary?.pickupLocationName)],
+          [
+            'To',
+            branchLocationLabel(
+              summary?.destinationName,
+              pickupOfficeLabel(summary?.pickupLocationName, summary?.receivingOfficeName),
+            ),
+          ],
           ['Dropoff Address', extras?.dropoffAddress ?? delivery?.dropoffAddress],
           ['Call Center Agent', summary?.callCenterAssignedToUserName],
           ['Customer Called At', formatDate(summary?.callCenterCalledAt)],

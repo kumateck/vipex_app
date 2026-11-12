@@ -1,3 +1,4 @@
+import { customerTypeLabel } from '@/shared/customers/customer-types';
 import { CustomerNameEditAction } from './components/customer-name-edit-action';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
@@ -66,6 +67,9 @@ export function CustomerLookupCard({ title, lookup }: CustomerLookupCardProps) {
               >
                 <Text style={[styles.matchName, { color: theme.colors.text }]}>
                   {match.fullname}
+                  {lookup.nonIndividualOnly
+                    ? ` · ${customerTypeLabel(match.customerType ?? -1)}`
+                    : ''}
                 </Text>
                 <Text style={[styles.matchPhone, { color: theme.colors.textSubtle }]}>
                   {match.telephone}
@@ -79,11 +83,13 @@ export function CustomerLookupCard({ title, lookup }: CustomerLookupCardProps) {
 
       {lookup.hasLookedUp && lookup.matches.length === 0 ? (
         <Text style={[styles.helper, { color: theme.colors.textSubtle }]}>
-          No match found. A new customer will be created.
+          {lookup.nonIndividualOnly
+            ? 'No eligible sender found. Check the number or set up the sender in Customer Management.'
+            : 'No match found. A new customer will be created.'}
         </Text>
       ) : null}
 
-      {lookup.hasLookedUp ? (
+      {lookup.hasLookedUp && (!lookup.nonIndividualOnly || lookup.isExistingCustomer) ? (
         <>
           <AppLabel>Full name</AppLabel>
           <AppInput

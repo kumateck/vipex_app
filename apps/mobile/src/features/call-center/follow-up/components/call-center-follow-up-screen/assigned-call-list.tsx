@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppCard, AppInput, AppSkeletonCard } from '@mobile/components/ui';
@@ -72,7 +73,9 @@ export function AssignedCallList(props: Props) {
               </Text>
               <Text style={[styles.caption, { color: theme.colors.textSubtle }]}>
                 {parcel.sourceLocationName ?? parcel.sourceName ?? '-'} →{' '}
-                {parcel.pickupLocationName ?? parcel.destinationName ?? '-'}
+                {pickupOfficeLabel(parcel.pickupLocationName, parcel.receivingOfficeName) ||
+                  parcel.destinationName ||
+                  '-'}
               </Text>
             </View>
             <View style={styles.metaRow}>

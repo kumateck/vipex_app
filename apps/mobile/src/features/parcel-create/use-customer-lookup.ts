@@ -1,14 +1,22 @@
+import { isNonIndividualCustomerType } from '@/shared/customers/customer-types';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { findCustomersByTelephone } from '@mobile/lib/api';
 import { notifyError } from '@mobile/lib/notify';
 import type { CustomerLookupResult } from '@mobile/types/booking';
+import { findNonIndividualSenders } from './services';
 import { isTenDigitPhone, limitPhoneDigits } from './phone-utils';
 export { isTenDigitPhone, limitPhoneDigits, normalizePhoneDigits } from './phone-utils';
 
 type WithAuth = <T>(run: (accessToken: string) => Promise<T>) => Promise<T>;
 
-export function useCustomerLookup(withAuth: WithAuth) {
+function otherTelephone(match: CustomerLookupResult, phone: string, nonIndividualOnly: boolean) {
+  return (
+    (nonIndividualOnly && match.telephone2 === phone ? match.telephone : match.telephone2) ?? ''
+  );
+}
+
+export function useCustomerLookup(withAuth: WithAuth, nonIndividualOnly = false) {
   const [telephone, setTelephoneRaw] = useState('');
   const [telephone2, setTelephone2Raw] = useState('');
   const [fullname, setFullname] = useState('');
@@ -29,6 +37,7 @@ export function useCustomerLookup(withAuth: WithAuth) {
   const setTelephone = (value: string) => {
     lookupVersion.current += 1;
     setTelephoneRaw(limitPhoneDigits(value));
+    setIsLookingUp(false);
     setFullname('');
     setTelephone2Raw('');
     clearMatch();
@@ -44,7 +53,7 @@ export function useCustomerLookup(withAuth: WithAuth) {
     setCustomerId(match.id);
     setFullname(match.fullname);
     if ([match.telephone, match.telephone2].includes(telephone)) {
-      setTelephone2Raw(match.telephone2 ?? '');
+      setTelephone2Raw(otherTelephone(match, telephone, nonIndividualOnly));
     }
   };
 
@@ -56,10 +65,17 @@ export function useCustomerLookup(withAuth: WithAuth) {
       const phones = [telephone, telephone2].filter(isTenDigitPhone);
       const found = await Promise.all(
         phones.map((phone) =>
-          withAuth((token) => findCustomersByTelephone(token, { telephone: phone })),
+          withAuth((token) =>
+            nonIndividualOnly
+              ? findNonIndividualSenders(token, phone)
+              : findCustomersByTelephone(token, { telephone: phone }),
+          ),
         ),
       );
-      const results = [...new Map(found.flat().map((match) => [match.id, match])).values()];
+      const eligible = found
+        .flat()
+        .filter((match) => !nonIndividualOnly || isNonIndividualCustomerType(match.customerType));
+      const results = [...new Map(eligible.map((match) => [match.id, match])).values()];
       if (version !== lookupVersion.current) return;
       setMatches(results);
       setHasLookedUp(true);
@@ -68,7 +84,7 @@ export function useCustomerLookup(withAuth: WithAuth) {
         setCustomerId(results[0].id);
         setFullname(results[0].fullname);
         if ([results[0].telephone, results[0].telephone2].includes(telephone)) {
-          setTelephone2Raw(results[0].telephone2 ?? '');
+          setTelephone2Raw(otherTelephone(results[0], telephone, nonIndividualOnly));
         }
       } else if (results.some((match) => match.id === selectedCustomerId.current)) {
         // Preserve an explicit selection when both numbers return multiple people.
@@ -85,7 +101,7 @@ export function useCustomerLookup(withAuth: WithAuth) {
     } finally {
       if (version === lookupVersion.current) setIsLookingUp(false);
     }
-  }, [telephone, telephone2, withAuth]);
+  }, [nonIndividualOnly, telephone, telephone2, withAuth]);
 
   useEffect(() => {
     if (!isTenDigitPhone(telephone)) return;
@@ -112,9 +128,10 @@ export function useCustomerLookup(withAuth: WithAuth) {
   };
 
   const isExistingCustomer = Boolean(customerId);
-  const isNewCustomer = hasLookedUp && !isExistingCustomer;
+  const isNewCustomer = !nonIndividualOnly && hasLookedUp && !isExistingCustomer;
 
   return {
+    nonIndividualOnly,
     telephone,
     setTelephone,
     telephone2,

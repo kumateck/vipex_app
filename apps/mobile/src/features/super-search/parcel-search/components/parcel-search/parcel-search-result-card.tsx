@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -18,6 +19,7 @@ export function ParcelSearchResultCard({
   const { theme } = useAppearance();
   const cancelled = parcel.status === ParcelStatus.CANCELLED;
   const route = `${parcel.sourceName ?? 'Source'} → ${parcel.destinationName ?? 'Destination'}`;
+  const pickup = pickupOfficeLabel(parcel.pickupLocationName, parcel.receivingOfficeName);
   const rider = getParcelRiderLine(parcel.status, parcel.riderName);
 
   return (
@@ -53,6 +55,10 @@ export function ParcelSearchResultCard({
           {route}
         </Text>
       </View>
+
+      {pickup ? (
+        <Text style={[styles.routeText, { color: theme.colors.text }]}>Pickup: {pickup}</Text>
+      ) : null}
 
       <View style={styles.personRow}>
         <Ionicons name="arrow-up-circle-outline" size={18} color={theme.colors.primary} />

@@ -1,13 +1,14 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { StyleSheet, Text, View } from 'react-native';
-import type { ConsignmentItem } from '@mobile/lib/api';
+import type { ReceivingConsignmentItem } from '../../services';
 import { AppCard } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 type ConsignmentChecklistCardProps = {
-  items: (ConsignmentItem & ParcelHandoverNoteIndicator)[];
+  items: (ReceivingConsignmentItem & ParcelHandoverNoteIndicator)[];
   loading: boolean;
 };
 
@@ -41,6 +42,11 @@ export function ConsignmentChecklistCard({ items, loading }: ConsignmentChecklis
                 <Text style={[styles.meta, { color: theme.colors.textSubtle }]}>
                   {item.receiverName}
                 </Text>
+                {item.receivingOfficeName ? (
+                  <Text style={[styles.meta, { color: theme.colors.text }]}>
+                    {pickupOfficeLabel(item.pickupLocationName, item.receivingOfficeName)}
+                  </Text>
+                ) : null}
               </View>
               <Text
                 style={[

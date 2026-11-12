@@ -10,10 +10,18 @@ All paths are relative to `/v1`.
 - `/rbac`: roles, permissions, and permission assignment.
 - `/branches`: branch master data and pickup/receiver OTP controls.
 - `/locations`: operational locations.
+
 - `/warehouses`: branch-owned warehouse options and CRUD.
 - `/customers`: customer master, CRM, statements, transactions, payments, and credit views.
 - `/cards`: card reference and customer-card operations.
 - `/uploads`: model-linked upload, list, delete, and object proxy.
+
+`GET /customers/:id/credit/outstanding-statement` requires `CanReadCustomers` and returns all
+open parcel credit grouped by parcel, ordered by original creation date and ID. Each row
+includes the booking and tracking codes, parcel description, contents and remaining balance.
+The response includes `generatedAt` and a `summary` with parcel count, oldest parcel creation
+time, parcel subtotal, other credit activity and the net account balance. Amounts are in
+pesewas. Missing, deleted or out-of-company customers return 404.
 
 `PATCH /users/:id` accepts partial user updates and requires `CanUpdateUsers`. `{ "status": 0 }` activates a user without changing or validating an omitted cashier type. Changing a user's type to cashier requires a cashier type, either in the request or already stored on the user. Setting a cashier's type to null returns `400`. Switching to a non-cashier type clears cashier type. This contract applies to web, mobile, and desktop callers.
 
@@ -52,6 +60,18 @@ System Admin password assignment revokes the target user's active sessions and w
 staff authentication and return an array of `{ id, fullname }` for active users in the caller's
 company and source branch. Client-supplied company/branch values cannot widen the scope. A missing
 company/branch or head-office context returns 403; `CanReadUsers` is not required.
+
+Other Customer Booking uses `GET /customers/lookup/booking-by-telephone/:telephone?nonIndividualOnly=true`
+to return Business, Family, Friends, Director and Staff matches in the authenticated company.
+The category filter is applied before the lookup limit. The response uses the normal booking
+lookup fields and returns an empty array when there are no eligible matches.
+
+`POST /shipments/bookings/create-with-parcels` accepts optional `nonIndividualSender: true`.
+The server requires a saved sender in one of the five eligible categories and returns 400 for
+an Individual sender, 404 for a missing or out-of-company customer, and 409 if the sender's
+classification changes to Individual during booking. Both endpoints require
+`CanCreateBookingWithParcels`. Recipients follow the existing booking rules. Requests without
+the option retain the existing contract.
 
 Each parcel in `POST /shipments/bookings/create-with-parcels` may include optional nullable
 `chargeAgentUserId`; `POST /self-service/drafts/:id/complete` accepts the same field for its parcel.
@@ -291,7 +311,7 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   failures return the standard API error and do not update assignments. QA: paginate through
   mixed assigned and unassigned parcels, search for both kinds, and verify the payment amounts.
 - `POST /shipments/parcels/bulk-mark-received`: atomically mark 1–100 authenticated-branch incoming
-  parcels as arrived. The body contains only unique `parcelIds`; company, branch, and receiving user
+  parcels as arrived. The body accepts unique `parcelIds` and optional `receivingOfficeId`. Company, branch and receiving user
   are taken from authentication. Any missing, out-of-scope, deleted, already-received, non-transit,
   or concurrently changed parcel rejects the entire batch.
   Pickup locations are resolved/validated inside the same transaction; a missing location uses
@@ -302,8 +322,27 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   Only unreceived, undeleted/unconfirmed In Transit parcels at that user's current company and
   destination branch are eligible. Status-only legacy `PATCH /shipments/parcels/:id` with status 3
   follows the same permission, scope, location and receipt checks; mixed edits are rejected.
-  Receipt writes are atomic; repeat/progressed requests return 409 and cannot regress pickup or
-  delivery. Consignment receiving shares the guard and rolls back its item update on failure.
+  Receipt writes are atomic. Repeat or progressed requests return 409. Single, bulk and
+  `POST /shipments/consignments/:id/receive` accept `receivingOfficeId`. The office must belong to
+  the resolved pickup location for each parcel in the request. A sole office is automatic. An
+  omitted office at a multi-office location or an office from another location returns 400.
+  Consignment receiving rolls back its checklist update on failure.
+- `GET /locations/receiving-offices/options`: list `{ id, name, locationId, locationName }`
+  for active receiving locations at the authenticated company and branch. Requires
+  `CanReadParcelIncoming` or `CanReadParcelScan`.
+- `GET/POST /locations/:id/receiving-offices` and
+  `PATCH /locations/:id/receiving-offices/:officeId` list, add or rename offices under a
+  receiving location in the caller's company. Requires `CanUpdateLocations`. Writes take
+  `{ name }` and return `{ id, name }`. Invalid names return 400 or 422, duplicate
+  case-insensitive names return 409, and unavailable locations or office IDs return 404.
+- `PATCH /shipments/parcels/:id/receiving-office` takes `{ receivingOfficeId }` and returns
+  `{ receivingOfficeId, receivingOfficeName }`. Requires `CanReadParcelIncoming` or
+  `CanReadParcelScan` and the parcel's company and destination branch. Returns 400 for an
+  invalid pickup location or office, 404 for unavailable parcels, and 409 when the parcel is
+  no longer held at the pickup location. Receipt date, status and queue are preserved.
+- Parcel search and detail responses include nullable `receivingOfficeId` and
+  `receivingOfficeName` alongside pickup location fields. Pickup queue cards and consignment
+  checklist rows include the location and office names.
 - `GET /shipments/parcels/delivery-reversal-candidates`: list office- and home-delivered parcels
   for the authenticated company and destination branch, with search and pagination. Requires
   `CanReverseParcelDelivery`.

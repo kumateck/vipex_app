@@ -1,3 +1,4 @@
+import { ReceivingOfficeField } from '@mobile/features/operations/parcel-receiving-office';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
@@ -51,12 +52,19 @@ export function ReceiveConsignmentSession() {
         </View>
       </View>
       {isOpen && sessionState.canReceive ? (
-        <ConsignmentScannerCard
-          manualCode={sessionState.manualCode}
-          scanBusy={sessionState.scanBusy}
-          onChangeManualCode={sessionState.setManualCode}
-          onReceive={(code) => void sessionState.receiveByCode(code)}
-        />
+        <View style={styles.scanner}>
+          <ReceivingOfficeField
+            {...sessionState.office}
+            allowAutomatic
+            disabled={sessionState.scanBusy}
+          />
+          <ConsignmentScannerCard
+            manualCode={sessionState.manualCode}
+            scanBusy={sessionState.scanBusy}
+            onChangeManualCode={sessionState.setManualCode}
+            onReceive={(code) => void sessionState.receiveByCode(code)}
+          />
+        </View>
       ) : null}
       <ConsignmentChecklistCard items={sessionState.items} loading={sessionState.loading} />
       {isOpen ? (
@@ -103,6 +111,7 @@ export function ReceiveConsignmentSession() {
 }
 
 const styles = StyleSheet.create({
+  scanner: { gap: mobileSpacing.sm },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: mobileSpacing.sm },
   headerText: { flex: 1 },
   title: { ...mobileTextStyles.title1 },

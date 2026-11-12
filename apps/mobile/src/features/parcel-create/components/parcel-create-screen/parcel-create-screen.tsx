@@ -13,19 +13,30 @@ import { ParcelBookingFields } from './parcel-booking-fields';
 import { StickerRetryActions } from './sticker-retry-actions';
 
 export function ParcelCreateScreen() {
+  return <ParcelCreateBookingScreen />;
+}
+
+export function ParcelCreateBookingScreen({
+  nonIndividualSender = false,
+}: {
+  nonIndividualSender?: boolean;
+}) {
   const { payment } = useLocalSearchParams<{ payment?: string }>();
   const initialPaymentResponsibility = getInitialMobilePaymentResponsibility(payment);
   return (
     <ParcelCreateForm
       key={initialPaymentResponsibility}
+      nonIndividualSender={nonIndividualSender}
       initialPaymentResponsibility={initialPaymentResponsibility}
     />
   );
 }
 function ParcelCreateForm({
   initialPaymentResponsibility,
+  nonIndividualSender,
 }: {
   initialPaymentResponsibility: MobilePaymentResponsibility;
+  nonIndividualSender: boolean;
 }) {
   const {
     canCreate,
@@ -65,7 +76,7 @@ function ParcelCreateForm({
     handleSubmit,
     chargeAgent,
     exemption,
-  } = useParcelCreateWorkflow(initialPaymentResponsibility);
+  } = useParcelCreateWorkflow(initialPaymentResponsibility, nonIndividualSender);
   if (!canCreate || isHeadOffice) {
     return (
       <AppScreen scrollable={false}>
@@ -83,7 +94,10 @@ function ParcelCreateForm({
 
   return (
     <AppScreen>
-      <ParcelCreateHeader paymentResponsibility={paymentResponsibility} />
+      <ParcelCreateHeader
+        paymentResponsibility={paymentResponsibility}
+        nonIndividualSender={nonIndividualSender}
+      />
       <CustomerLookupCard title="Sender" lookup={sender} />
       <CustomerLookupCard title="Recipient" lookup={receiver} />
       <ParcelBookingFields
@@ -138,7 +152,11 @@ function ParcelCreateForm({
                 : 'Create TobePaid Booking'
         }
         onPress={() => void handleSubmit()}
-        disabled={isSubmitting || Boolean(pickupLocationError)}
+        disabled={
+          isSubmitting ||
+          Boolean(pickupLocationError) ||
+          (nonIndividualSender && !sender.customerId)
+        }
         loading={isSubmitting}
       />
       <StickerRetryActions

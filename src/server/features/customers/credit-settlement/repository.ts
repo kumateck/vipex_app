@@ -15,6 +15,8 @@ export type OpenParcelCharge = {
   bookingCode: string;
   trackingCode: string;
   createdAt: string;
+  parcelDetails: string;
+  parcelContent: string;
   chargeAmountPsw: number;
   allocatedAmountPsw: number;
   outstandingAmountPsw: number;
@@ -26,7 +28,8 @@ export async function listOpenParcelCharges(
   executor: CreditExecutor = db,
 ): Promise<OpenParcelCharge[]> {
   const rows = await executor.execute(sql`
-    SELECT cct.id, cct.source_type, p.id AS parcel_id, p.booking_code, p.tracking_code, p.created_at,
+    SELECT cct.id, cct.source_type, p.id AS parcel_id, p.booking_code, p.tracking_code,
+      p.created_at AT TIME ZONE 'UTC' AS created_at, p.parcel_details, p.parcel_content,
       ${effectiveChargeAmountSql()} AS charge_amount_psw,
       COALESCE(a.amount_psw, 0) AS allocated_amount_psw
     FROM customer_credit_transactions cct
@@ -50,6 +53,8 @@ export async function listOpenParcelCharges(
       bookingCode: String(row.booking_code),
       trackingCode: String(row.tracking_code),
       createdAt: new Date(row.created_at as string).toISOString(),
+      parcelDetails: String(row.parcel_details),
+      parcelContent: String(row.parcel_content),
       chargeAmountPsw: Number(row.charge_amount_psw),
       allocatedAmountPsw: Number(row.allocated_amount_psw),
       outstandingAmountPsw: Number(row.charge_amount_psw) - Number(row.allocated_amount_psw),

@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { ParcelReconciliationActionType, ParcelReconciliationCaseType } from '@/db/schemas/enums';
 import { formatDateTime } from '@/lib/dates';
 import type { ParcelSearchRow } from '../../api/parcel.api';
@@ -28,7 +29,8 @@ export function parcelSelectLabel(parcel: ParcelSearchRow) {
   const senderDisplay = [parcel.senderName, parcel.senderPhone ? `(${parcel.senderPhone})` : null]
     .filter(Boolean)
     .join(' ');
-  return `${parcel.bookingCode}${senderDisplay ? ` • ${senderDisplay}` : ''}`;
+  const pickup = pickupOfficeLabel(parcel.pickupLocationName, parcel.receivingOfficeName);
+  return [parcel.bookingCode, senderDisplay, pickup].filter(Boolean).join(' • ');
 }
 
 export async function toDataUrl(file: File): Promise<string> {

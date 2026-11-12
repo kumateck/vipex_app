@@ -154,6 +154,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanCreateBookingWithParcels,
           },
           {
+            title: 'Other Customer Booking',
+            url: '/parcels/create-other',
+            permissionKey: PermissionKeys.CanCreateBookingWithParcels,
+          },
+          {
             title: 'Sender Payments',
             url: '/parcels/sender-payments',
             permissionKey: PermissionKeys.CanCreateSenderPayments,

@@ -17,6 +17,8 @@ const trackingRow = {
   receivedAt: new Date('2026-01-02T09:00:00.000Z'),
   sourceBranchName: 'Accra',
   destinationBranchName: 'Sunyani',
+  pickupLocationName: null,
+  receivingOfficeName: null,
   sentAt: new Date('2026-01-01T12:00:00.000Z'),
   events: [
     {
@@ -42,6 +44,18 @@ describe('public parcel tracking response', () => {
     expect(response?.senderPaidCedis).toBe(0);
     expect(response?.status.label).toBe('Arrived at destination office');
     expect(response?.timeline).toHaveLength(4);
+  });
+
+  test('shows the confirmed pickup point while awaiting pickup', () => {
+    const row = {
+      ...trackingRow,
+      pickupLocationName: 'Anloga Junction',
+      receivingOfficeName: 'Office 3',
+    };
+    const ready = toPublicTrackingResponse({ ...row, status: ParcelStatus.AWAITING_PICKUP });
+    expect(ready?.pickupLocation).toBe('Anloga Junction');
+    expect(ready?.receivingOffice).toBe('Office 3');
+    expect(toPublicTrackingResponse(row)?.receivingOffice).toBeUndefined();
   });
 
   test('masks the receiver name and omits sender, contents, value and internal codes', () => {

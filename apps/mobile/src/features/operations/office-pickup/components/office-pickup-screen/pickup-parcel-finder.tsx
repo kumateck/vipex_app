@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -21,6 +22,7 @@ function ParcelRow({
   onOpen: () => void;
 }) {
   const { theme } = useAppearance();
+  const pickup = pickupOfficeLabel(parcel.pickupLocationName, parcel.receivingOfficeName);
   const queueNumber = getPickupQueueBadgeNumber(showQueueNumber, parcel);
   return (
     <AppCard>
@@ -44,6 +46,9 @@ function ParcelRow({
         <Text style={[pickupStyles.hint, { color: theme.colors.textSubtle }]} numberOfLines={1}>
           {parcel.bookingCode} · {parcel.parcelDetails}
         </Text>
+        {pickup ? (
+          <Text style={[pickupStyles.text, { color: theme.colors.textMuted }]}>{pickup}</Text>
+        ) : null}
       </Pressable>
       <ParcelHandoverNoteAction
         parcelId={parcel.id}

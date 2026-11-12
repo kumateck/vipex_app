@@ -40,6 +40,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
       }
       const payload = body as {
         senderId: string;
+        nonIndividualSender?: boolean;
         status: number;
         cashierSessionId?: string | null;
         bookingCode?: string | null;
@@ -78,6 +79,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
         : null;
       const createBody = {
         senderId: payload.senderId,
+        nonIndividualSender: payload.nonIndividualSender,
         companyId: authUser.companyId ?? '',
         sourceId: authUser.branchId ?? '',
         sourceLocationId: authUser.locationId ?? null,
@@ -102,6 +104,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
     {
       body: t.Object({
         senderId: UUID,
+        nonIndividualSender: t.Optional(t.Boolean()),
         status: t.Number(),
         deferSenderCashierCompletion: t.Optional(t.Boolean()),
         completeToBePaid: t.Optional(t.Boolean()),

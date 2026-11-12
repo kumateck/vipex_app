@@ -1,10 +1,10 @@
 import { mobileApiPost } from '@mobile/lib/api';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 
-export function receiveIncomingParcel(token: string, parcelId: string) {
+export function receiveIncomingParcel(token: string, parcelId: string, receivingOfficeId?: string) {
   return mobileApiPost<{ id: string; receivedAt: string }>({
     path: `/shipments/parcels/${parcelId}/mark-received`,
     token,
-    body: { status: ParcelStatus.ARRIVED_AT_DESTINATION },
+    body: { receivingOfficeId, status: ParcelStatus.ARRIVED_AT_DESTINATION },
   });
 }

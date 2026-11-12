@@ -2,6 +2,7 @@ import { ParcelStatus, PaymentMethod, PaymentResponsibility } from '@/db/schemas
 
 export type CreateBookingWithParcelsBody = {
   senderId: string;
+  nonIndividualSender?: boolean;
   companyId: string;
   sourceId: string;
   sourceLocationId?: string | null;

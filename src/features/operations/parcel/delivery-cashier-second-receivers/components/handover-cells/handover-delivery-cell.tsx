@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { Badge } from '@/components/ui/badge';
 import type { ParcelSearchRow } from '../../../api/parcel.api';
 import { HandoverField } from './handover-field';
@@ -20,7 +21,9 @@ export function HandoverDeliveryCell({
         <HandoverField label="From branch">{parcel.sourceName}</HandoverField>
         <HandoverField label="From location">{parcel.sourceLocationName}</HandoverField>
         <HandoverField label="To branch">{parcel.destinationName}</HandoverField>
-        <HandoverField label="Pickup location">{parcel.pickupLocationName}</HandoverField>
+        <HandoverField label="Pickup location">
+          {pickupOfficeLabel(parcel.pickupLocationName, parcel.receivingOfficeName)}
+        </HandoverField>
       </div>
     </div>
   );

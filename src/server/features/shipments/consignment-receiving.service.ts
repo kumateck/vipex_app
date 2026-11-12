@@ -54,9 +54,12 @@ export async function receiveConsignmentItemSvc(input: {
   code: string;
   actorUserId: string;
   actorBranchId?: string | null;
+  actorCompanyId?: string | null;
+  receivingOfficeId?: string;
 }): Promise<ReceiveConsignmentItemOutcome> {
   const consignment = await getConsignmentRepo(input.consignmentId);
-  if (!consignment) throw NotFound('Consignment not found');
+  if (!consignment || (input.actorCompanyId && consignment.companyId !== input.actorCompanyId))
+    throw NotFound('Consignment not found');
   if (input.actorBranchId && input.actorBranchId !== consignment.destinationId) {
     throw Forbidden(
       'You are not at the destination branch for this consignment, so you cannot receive its parcels.',
@@ -85,6 +88,7 @@ export async function receiveConsignmentItemSvc(input: {
         branchId: consignment.destinationId,
         actorUserId: input.actorUserId,
         receivedAt: arrivedAt,
+        receivingOfficeId: input.receivingOfficeId,
       });
     }
     return updated;
@@ -99,7 +103,11 @@ export async function receiveConsignmentItemSvc(input: {
       entityId: parcel.id,
       action: 'CONSIGNMENT_ITEM_RECEIVED',
       message: `Parcel ${parcel.trackingCode} received into consignment ${consignment.code}`,
-      metadata: { consignmentId: input.consignmentId, ...counts },
+      metadata: {
+        consignmentId: input.consignmentId,
+        receivingOfficeId: input.receivingOfficeId ?? null,
+        ...counts,
+      },
     });
     return {
       outcome: 'RECEIVED',

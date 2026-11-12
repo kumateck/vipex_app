@@ -1,3 +1,4 @@
+import { PickupOfficeText } from '@mobile/features/operations/parcel-receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppCard } from '@mobile/components/ui';
@@ -23,6 +24,11 @@ export function QueueCard({ card, onCopy, onShare }: QueueCardProps) {
       <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
         Booking: {card.bookingCode}
       </Text>
+      <PickupOfficeText
+        location={card.pickupLocationName}
+        office={card.receivingOfficeName}
+        style={[styles.meta, { color: theme.colors.textMuted }]}
+      />
       <ParcelHandoverNoteAction
         parcelId={card.parcelId}
         hasHandoverNote={card.hasHandoverNote}

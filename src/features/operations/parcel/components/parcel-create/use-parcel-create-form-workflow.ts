@@ -1,4 +1,7 @@
-import { resolveParcelExemptionType } from '@/shared/customers/customer-types';
+import {
+  isNonIndividualCustomerType,
+  resolveParcelExemptionType,
+} from '@/shared/customers/customer-types';
 import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
@@ -21,7 +24,7 @@ import { useParcelCreateSenderPayment } from './use-parcel-create-sender-payment
 import { sanitizeNumber } from '@/lib/utils';
 import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
 
-export function useParcelCreateFormWorkflow() {
+export function useParcelCreateFormWorkflow(nonIndividualSender = false) {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const userBranchId = user?.branch?.id ?? '';
@@ -123,18 +126,17 @@ export function useParcelCreateFormWorkflow() {
     }
 
     try {
+      const sender = values.sender;
+      if (
+        nonIndividualSender &&
+        (!sender.customerId || !isNonIndividualCustomerType(sender.customerType))
+      ) {
+        toast.error('Select an eligible sender from Customer Management.');
+        return;
+      }
       const customerCache = new Map<string, string>();
       const [resolvedSenderId, receiverIds] = await Promise.all([
-        resolveCustomerId(
-          {
-            customerId: values.sender.customerId,
-            fullname: values.sender.fullname,
-            telephone: values.sender.telephone,
-            telephone2: values.sender.telephone2,
-            label: 'Sender',
-          },
-          customerCache,
-        ),
+        resolveCustomerId({ ...sender, label: 'Sender' }, customerCache),
         Promise.all(
           values.parcels.map((parcel, index) =>
             resolveCustomerId(
@@ -201,6 +203,7 @@ export function useParcelCreateFormWorkflow() {
       const status = sanitizeNumber(values.status);
       const response = await createBookingWithParcels({
         senderId: resolvedSenderId,
+        nonIndividualSender: nonIndividualSender || undefined,
         status,
         parcels: values.parcels.map((parcel, index) => {
           const receiverId = receiverIds[index];
