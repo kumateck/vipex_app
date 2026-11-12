@@ -795,6 +795,27 @@ clears the alert permanently and keeps the instruction on the record.
   See [WhatsApp messaging](WHATSAPP_MESSAGING.md#pickup-otp-over-whatsapp).
 - OTP codes are generated with `crypto.randomInt`.
 
+### Admin approval without OTP
+
+- A staff member with `CanAuthorizePickupWithoutOtp` opens **Parcel Details → Overview →
+  Authorize pickup without OTP** on web or desktop. Select Receiver Cashier or Waiting for
+  Pickup, select the linked collector, verify their identity, and enter a 10–500 character
+  reason. Active destination-branch staff and head-office staff with this grant can approve
+  eligible parcels in their own company. The parcel must be Awaiting Pickup, with OTP
+  required for the selected workflow and no pending signature.
+- The operator selects the same collector and uses **Check admin approval** in the matching
+  workflow. Receiver Cashier is on web and desktop. Waiting for Pickup also supports the
+  approval in the mobile app. Waiting for Pickup requires a collector signature when
+  using the approval. Receiver Cashier follows the destination branch’s signature setting.
+- Approval is valid for 10 minutes and applies to one parcel, workflow, branch, and collector.
+  The latest approval for a workflow replaces earlier approvals for that parcel. Payment,
+  outstanding balance, queue, reconciliation, and signature checks still apply. Issuance and
+  use are separate parcel audit events. Successful payment or handover consumes the approval
+  in the same transaction. The audit records the approver and the staff member who used it.
+- QA: approve as one staff member and complete as a cashier without the approval grant.
+  Check that stale, reused, wrong-workflow, and wrong-collector approvals fail, and that an
+  unsuccessful payment leaves the approval available while valid.
+
 ## Digital Receipt Delivery
 
 With the `digital_receipts` module enabled, staff record how the customer wants the receipt

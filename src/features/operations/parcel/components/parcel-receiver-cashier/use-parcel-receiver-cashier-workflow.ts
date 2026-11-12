@@ -125,7 +125,7 @@ export function useParcelReceiverCashierWorkflow() {
     }
   };
 
-  const handleConfirmDelivered = async () => {
+  const handleConfirmDelivered = async (otpAuthorizationId?: string) => {
     if (!selectedParcel) return;
 
     const destinationBranchName =
@@ -160,6 +160,7 @@ export function useParcelReceiverCashierWorkflow() {
       isReceiverOtpRequired,
       requestSignature: requireSignature,
       receiverOtpVerificationToken: dialog.otpVerificationToken,
+      otpAuthorizationId,
       momoTransactionId: dialog.momoTransactionId || null,
       addCustomerCard: (args) => addCustomerCard(args).unwrap(),
       createCustomer: (args) => resolveSecondReceiver(args).unwrap(),

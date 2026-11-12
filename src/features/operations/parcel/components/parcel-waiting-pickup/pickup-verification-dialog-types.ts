@@ -1,3 +1,4 @@
+import type { PickupOtpException } from './use-confirm-signed-office-pickup';
 import type { ParcelFullDetails, ParcelSearchRow } from '../../api/parcel.api';
 import type { PickupOtpVerification } from './use-pickup-otp-verification';
 
@@ -50,5 +51,5 @@ export type PickupVerificationDialogProps = {
   isLoading: boolean;
   hasLoadError: boolean;
   onRequestHomeDelivery: () => Promise<void>;
-  onConfirmDelivered: () => Promise<void>;
+  onConfirmDelivered: (exception?: PickupOtpException) => Promise<void>;
 };

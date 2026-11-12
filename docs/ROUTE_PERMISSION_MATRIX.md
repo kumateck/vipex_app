@@ -41,6 +41,12 @@ Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverride
 `GET /v1/payments/receiver-otp/session` accepts `CanCreateReceiverPayments` or
 `CanCompleteOfficePickup` and checks the authenticated company and destination branch.
 
+The POST at `/v1/shipments/parcels/:id/otp-authorization` requires the current
+`CanAuthorizePickupWithoutOtp` grant for active staff at the destination branch or
+head office in the parcel’s company. The GET requires `CanCreateReceiverPayments`
+for Receiver Cashier or `CanCompleteOfficePickup` for Waiting for Pickup, and uses
+the authenticated company and destination branch. No role receives the approval grant by default.
+
 Mobile `/(app)/office-pickup` (native screen `OfficePickup`), its sidebar item and Operations Hub card require
 `CanCompleteOfficePickup`, matching web/desktop `/parcels/waiting-pickup`. Helper API reads
 still require parcel/customer/user permissions; new cards and new second receivers require

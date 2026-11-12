@@ -81,4 +81,5 @@ export type SignedPickupConfirmation = {
   secondCardId: string | null;
   secondCardNumber: string | null;
   receiverOtpVerificationToken?: string;
+  otpAuthorizationId?: string;
 };

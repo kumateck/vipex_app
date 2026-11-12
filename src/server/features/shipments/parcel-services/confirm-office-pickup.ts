@@ -13,6 +13,11 @@ import {
   getPickupQueueByParcelAndDateRepo,
   getPickupQueueByParcelRepo,
 } from '../../pickup-queues/repository';
+import {
+  recordReceiverOtpException,
+  resolveReceiverOtpException,
+  type ReceiverOtpExceptionInput,
+} from '../../parcel-receiver-otp/exception';
 import { getPickupQueueDate } from '../../pickup-queues/queue-date';
 import { endPickupQueueForParcelSvc } from '../../pickup-queues/service';
 import { assertNoOpenParcelReconciliationCaseForDelivery } from '../parcel-delivery-reconciliation-guard';
@@ -21,25 +26,26 @@ import { updateParcelRepo } from '../parcel-repositories/parcel-records.reposito
 import { assertNoOutstandingStorageForHandover } from '../storage-accrual-guards';
 import { getParcelStorageSettlementSvc } from './storage';
 
-export async function confirmOfficePickupSvc(input: {
-  parcelId: string;
-  companyId: string;
-  branchId: string;
-  locationId?: string | null;
-  actorUserId: string;
-  confirmedBy: string;
-  handoverTarget: 'main' | 'second';
-  signatureImage: string;
-  expectedMainReceiverId: string;
-  expectedSecondReceiverId: string | null;
-  secondReceiverId: string | null;
-  cardId: string | null;
-  cardNumber: string | null;
-  secondCardId: string | null;
-  secondCardNumber: string | null;
-  receiverOtpVerificationToken?: string;
-}) {
-  if (!isHandoverSignature(input.signatureImage))
+export async function confirmOfficePickupSvc(
+  input: {
+    parcelId: string;
+    companyId: string;
+    branchId: string;
+    locationId?: string | null;
+    actorUserId: string;
+    confirmedBy: string;
+    handoverTarget: 'main' | 'second';
+    signatureImage: string;
+    expectedMainReceiverId: string;
+    expectedSecondReceiverId: string | null;
+    secondReceiverId: string | null;
+    cardId: string | null;
+    cardNumber: string | null;
+    secondCardId: string | null;
+    secondCardNumber: string | null;
+  } & ReceiverOtpExceptionInput,
+) {
+  if (!isHandoverSignature(input.signatureImage, Boolean(input.otpAuthorizationId)))
     throw BadRequest('A valid collector signature is required');
   const { parcelId, companyId, branchId, handoverTarget } = input;
   const result = await db.transaction(async (tx) => {
@@ -134,7 +140,22 @@ export async function confirmOfficePickupSvc(input: {
     await assertParcelFullyPaid(parcelId, tx);
     const storage = await getParcelStorageSettlementSvc(parcelId, tx);
     assertNoOutstandingStorageForHandover(storage.outstandingPsw);
-    if (branch.requirePickupOtp) {
+    const approvalScope = {
+      companyId,
+      branchId,
+      parcelId,
+      handoverTarget,
+      workflow: 'office_pickup' as const,
+      receiverId: parcel.receiverId,
+      collectorId: customerId,
+    };
+    const approval = await resolveReceiverOtpException(
+      tx,
+      input,
+      branch.requirePickupOtp,
+      approvalScope,
+    );
+    if (branch.requirePickupOtp && !approval) {
       if (!input.receiverOtpVerificationToken)
         throw BadRequest('Verify the customer collection OTP before handover');
       const otp = await assertReceiverOtpVerifiedSvc(
@@ -187,6 +208,9 @@ export async function confirmOfficePickupSvc(input: {
       tx,
     );
     await endPickupQueueForParcelSvc({ parcelId, endedBy: input.actorUserId }, tx);
+    if (approval) {
+      await recordReceiverOtpException(tx, approvalScope, input.actorUserId, approval);
+    }
     return { trackingCode: parcel.trackingCode, customerId };
   });
 

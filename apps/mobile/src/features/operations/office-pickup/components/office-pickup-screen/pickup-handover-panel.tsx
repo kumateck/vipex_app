@@ -8,7 +8,7 @@ import { getCurrentDayPickupQueue } from '../../utils';
 import { PickupCardFields } from './pickup-card-fields';
 import { PickupCollectorFields } from './pickup-collector-fields';
 import { PickupOtpSection } from './pickup-otp-section';
-import { PickupSignatureSection } from './pickup-signature-section';
+import { PickupHandoverActions } from './pickup-handover-actions';
 import { PickupQueueNotice, PickupSummaryCard } from './pickup-summary-card';
 import { pickupStyles } from './office-pickup.styles';
 
@@ -55,7 +55,6 @@ export function PickupHandoverPanel(props: Props) {
   );
   const currentQueue = getCurrentDayPickupQueue(resources.details);
   const muted = { color: theme.colors.textMuted };
-  const collector = form.handoverTarget === 'second' ? 'Second receiver' : 'Main receiver';
 
   return (
     <>
@@ -111,27 +110,7 @@ export function PickupHandoverPanel(props: Props) {
           </Text>
         </View>
       )}
-      <PickupSignatureSection
-        collector={collector}
-        signed={Boolean(form.signatureImage)}
-        disabled={saving}
-        onSign={form.setSignatureImage}
-      />
-      <AppButton
-        title={saving ? 'Processing…' : 'Confirm delivered'}
-        loading={saving}
-        disabled={saving || Boolean(handover.confirmBlocker)}
-        onPress={() => void handover.confirm()}
-      />
-      {handover.confirmBlocker ? (
-        <Text style={[pickupStyles.hint, muted]}>{handover.confirmBlocker}</Text>
-      ) : null}
-      <AppButton
-        title="Request home delivery"
-        variant="secondary"
-        disabled={saving}
-        onPress={() => void handover.requestHomeDelivery()}
-      />
+      <PickupHandoverActions handover={handover} />
       {back}
     </>
   );

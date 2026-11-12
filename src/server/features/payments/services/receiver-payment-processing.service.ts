@@ -18,12 +18,17 @@ import {
   assertReceiverOtpVerifiedSvc,
   consumeReceiverOtpTokenSvc,
 } from '../../parcel-receiver-otp/service';
+import {
+  recordReceiverOtpException,
+  resolveReceiverOtpException,
+} from '../../parcel-receiver-otp/exception';
 import type { DeliveryConfirmationSnapshot } from '@/shared/shipments/delivery-confirmation-snapshot';
 import { signalReceiverHandoverChange } from './receiver-handover-changes';
 import { prepareReceiverHandover } from './prepare-receiver-handover';
 import type { ReceiverPaymentInput } from '../types/receiver-payment.types';
 import { settleReceiverPayments } from './settle-receiver-payments';
 import { debugPaymentServiceError } from '../utils/payment-diagnostics';
+import { validateExceptionCollector } from './validate-otp-exception-collector';
 import { auditPaymentCreated } from './payment-core.service';
 
 export async function collectReceiverPaymentAndDeliverSvc(input: ReceiverPaymentInput) {
@@ -77,6 +82,17 @@ export async function collectReceiverPaymentAndDeliverSvc(input: ReceiverPayment
         .for('share');
       if (!destinationBranch) throw BadRequest('Destination branch not found');
       const pendingSignature = destinationBranch.requireReceiverCashierSignature;
+      const approvalScope = input.otpAuthorizationId
+        ? await validateExceptionCollector(input, beforeDelivery, tx)
+        : null;
+      const approval = approvalScope
+        ? await resolveReceiverOtpException(
+            tx,
+            input,
+            destinationBranch.requireReceiverOtp,
+            approvalScope,
+          )
+        : null;
       if (pendingSignature !== Boolean(input.requestSignature)) {
         throw Conflict('Branch signature settings changed. Reopen Receiver Cashier and try again.');
       }
@@ -96,7 +112,7 @@ export async function collectReceiverPaymentAndDeliverSvc(input: ReceiverPayment
             input.expectedSecondReceiverId !== beforeDelivery.secondReceiverId))
       )
         throw Conflict('The receiver changed. Reopen the parcel before processing payment.');
-      if (destinationBranch.requireReceiverOtp) {
+      if (destinationBranch.requireReceiverOtp && !approval) {
         if (
           !input.receiverOtpVerificationToken ||
           !input.receiverOtpTarget ||
@@ -182,7 +198,7 @@ export async function collectReceiverPaymentAndDeliverSvc(input: ReceiverPayment
               receiverId: beforeDelivery.receiverId,
               secondReceiverId: handoverFields.secondReceiverId,
               storageAccruedPsw: storageAfter.accruedPsw,
-              otpVerified: destinationBranch.requireReceiverOtp,
+              otpVerified: destinationBranch.requireReceiverOtp && !approval,
               snapshot,
             },
             tx,
@@ -211,6 +227,9 @@ export async function collectReceiverPaymentAndDeliverSvc(input: ReceiverPayment
         );
       }
 
+      if (approvalScope && approval) {
+        await recordReceiverOtpException(tx, approvalScope, input.cashierUserId, approval);
+      }
       return { payment, storagePayment, storageAfter, receiptTaxBreakdown, pending };
     });
 

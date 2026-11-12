@@ -1,13 +1,12 @@
-import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { useState } from 'react';
+import { useHasPermission } from '@/components/permissions/permission-guard';
+import { PermissionKeys } from '@/shared/permissions/constants';
+import { skipToken } from '@reduxjs/toolkit/query';
+import { useParcelOtpAuthorizationQuery } from '../receiver-otp-exception';
+import { isHandoverSignature } from '@/shared/shipments/handover-signature';
+import { PickupVerificationActions } from './pickup-verification-actions';
+import { PickupOtpExceptionSection } from './pickup-otp-exception-section';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -69,6 +68,24 @@ export function PickupVerificationDialog({
   onRequestHomeDelivery,
   onConfirmDelivered,
 }: PickupVerificationDialogProps) {
+  const canComplete = useHasPermission(PermissionKeys.CanCompleteOfficePickup);
+  const showApproval = canComplete && open && isPickupOtpRequired && !otp.otpVerified;
+  const approvalQuery = useParcelOtpAuthorizationQuery(
+    showApproval && parcel
+      ? {
+          id: parcel.id,
+          workflow: 'office_pickup',
+          handoverTarget: handoverTarget === 'second' ? 'second' : 'main',
+        }
+      : skipToken,
+    { refetchOnMountOrArgChange: true },
+  );
+  const approval = approvalQuery.isError ? null : (approvalQuery.currentData?.approval ?? null);
+  const [signature, setSignature] = useState<{ approvalId: string; image: string } | null>(null);
+  const exception =
+    approval && signature?.approvalId === approval.id && isHandoverSignature(signature.image, true)
+      ? { id: approval.id, signatureImage: signature.image }
+      : undefined;
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : null)}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-7xl sm:max-w-7xl max-h-[85vh] overflow-y-auto">
@@ -184,7 +201,10 @@ export function PickupVerificationDialog({
               <PickupVerificationHandoverSection
                 parcelSecondReceiverId={parcel.secondReceiverId}
                 handoverTarget={handoverTarget}
-                onHandoverTargetChange={onHandoverTargetChange}
+                onHandoverTargetChange={(target) => {
+                  setSignature(null);
+                  onHandoverTargetChange(target);
+                }}
                 secondNewName={secondNewName}
                 onSecondNewNameChange={onSecondNewNameChange}
                 secondNewPhone={secondNewPhone}
@@ -216,6 +236,18 @@ export function PickupVerificationDialog({
                   </p>
                 </div>
               )}
+              {showApproval ? (
+                <PickupOtpExceptionSection
+                  approval={approval}
+                  onCheck={approvalQuery.refetch}
+                  checking={approvalQuery.isFetching}
+                  error={approvalQuery.isError}
+                  disabled={isSaving}
+                  onSignatureChange={(image) =>
+                    setSignature(approval ? { approvalId: approval.id, image } : null)
+                  }
+                />
+              ) : null}
               {parcelDetails ? (
                 <div className="rounded-md border p-3 text-sm">
                   <p>
@@ -229,44 +261,19 @@ export function PickupVerificationDialog({
             </div>
           </div>
         )}
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={onClose} disabled={isSaving}>
-            Cancel
-          </Button>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              try {
-                await onRequestHomeDelivery();
-              } catch (error) {
-                toast.error(
-                  getApplicationErrorMessage(error, '') || 'Failed to move parcel to home delivery',
-                );
-              }
-            }}
-            disabled={isLoading || hasLoadError || isSaving}
-          >
-            Request Home Delivery
-          </Button>
-          <Button
-            onClick={async () => {
-              try {
-                await onConfirmDelivered();
-              } catch (error) {
-                toast.error(getApplicationErrorMessage(error, '') || 'Failed to confirm delivery');
-              }
-            }}
-            disabled={
-              isLoading ||
-              hasLoadError ||
-              isSaving ||
-              (isPickupOtpRequired && !otp.otpVerified) ||
-              (isPickupQueueEnabled && !hasPickupQueue)
-            }
-          >
-            {isLoading ? 'Loading...' : isSaving ? 'Processing...' : 'Confirm Delivered'}
-          </Button>
-        </DialogFooter>
+        <PickupVerificationActions
+          onClose={onClose}
+          onRequestHomeDelivery={onRequestHomeDelivery}
+          onConfirmDelivered={onConfirmDelivered}
+          exception={exception}
+          isLoading={isLoading}
+          isSaving={isSaving}
+          hasLoadError={hasLoadError}
+          canConfirm={
+            (!isPickupOtpRequired || otp.otpVerified || Boolean(exception)) &&
+            (!isPickupQueueEnabled || hasPickupQueue)
+          }
+        />
       </DialogContent>
     </Dialog>
   );

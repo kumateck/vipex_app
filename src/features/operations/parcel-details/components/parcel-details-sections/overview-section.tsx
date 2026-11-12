@@ -1,3 +1,4 @@
+import { ParcelOtpApproval } from '@/features/operations/parcel/components/receiver-otp-exception';
 import { ParcelOfficeEditor } from '@/features/operations/parcel-receiving-office';
 import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { lazy, memo, Suspense } from 'react';
@@ -84,6 +85,7 @@ export const OverviewSection = memo(function OverviewSection({
           ]}
         />
         <ParcelOfficeEditor key={parcel.id} parcel={parcel} />
+        <ParcelOtpApproval key={`otp-${parcel.id}`} parcel={parcel} />
       </DetailCard>
       <Suspense
         fallback={
