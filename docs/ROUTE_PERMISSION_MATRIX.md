@@ -1,5 +1,11 @@
 # Route Permission Matrix
 
+`GET /v1/auth/me/branch-options` and `POST /v1/auth/refresh` with `switchBranch`
+require the current `CanSwitchBranch` grant on an active account. Selection is limited
+to active branches and their locations in the same company. Head-office selection
+requires a head-office assignment. The normal refresh request keeps its existing permissions.
+See [Switch Branch](PLATFORM_AND_ACCESS.md#switch-branch).
+
 `PATCH /v1/shipments/parcels/:id/handover-note` requires `CanUpdateParcelHandoverNote` and
 the parcel’s source or destination branch. The matching `GET` accepts existing parcel workflow
 grants within company and branch scope. The mobile Assignment and Shelf Picker note views use

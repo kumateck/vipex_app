@@ -1,10 +1,20 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { sessionBranchKey, type BranchSwitchChoice } from '@/shared/auth/branch-switch';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { PropsWithChildren } from 'react';
 import { clearSession, loadSession, saveSession } from '@mobile/lib/storage';
 import {
   authorizedRequestWithRefresh,
   getMobileDeviceAccess,
   login as loginRequest,
+  switchMobileSessionBranch,
 } from '@mobile/lib/api';
 import type { SessionState } from '@mobile/types/auth';
 
@@ -15,6 +25,7 @@ type AuthContextValue = {
   logout: () => Promise<void>;
   withAuth: <T>(run: (accessToken: string) => Promise<T>) => Promise<T>;
   setSession: (next: SessionState) => Promise<void>;
+  switchBranch: (choice: BranchSwitchChoice) => Promise<void>;
 };
 
 const EMPTY_SESSION: SessionState = {
@@ -43,29 +54,37 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: PropsWithChildren) {
   const [bootstrapped, setBootstrapped] = useState(false);
   const [session, setSessionState] = useState<SessionState>(EMPTY_SESSION);
+  const currentSession = useRef(EMPTY_SESSION);
+
+  const setSession = useCallback(async (next: SessionState) => {
+    currentSession.current = next;
+    setSessionState(next);
+    await saveSession(next);
+  }, []);
 
   useEffect(() => {
     loadSession()
       .then(async (stored) => {
+        let restored = stored;
         if (stored.accessToken || stored.refreshToken || stored.user) {
-          const allowed = stored.accessToken
-            ? await getMobileDeviceAccess(stored.accessToken).catch(() => false)
-            : false;
+          const allowed = await authorizedRequestWithRefresh(
+            stored,
+            getMobileDeviceAccess,
+            async (next) => {
+              restored = next;
+              await saveSession(next);
+            },
+          ).catch(() => false);
           if (!allowed) {
             await clearSession();
-            setSessionState(EMPTY_SESSION);
             return;
           }
         }
-        setSessionState(stored);
+        currentSession.current = restored;
+        setSessionState(restored);
       })
       .catch(() => setSessionState(EMPTY_SESSION))
       .finally(() => setBootstrapped(true));
-  }, []);
-
-  const setSession = useCallback(async (next: SessionState) => {
-    setSessionState(next);
-    await saveSession(next);
   }, []);
 
   const login = useCallback(
@@ -77,23 +96,58 @@ export function AuthProvider({ children }: PropsWithChildren) {
   );
 
   const logout = useCallback(async () => {
+    currentSession.current = EMPTY_SESSION;
     setSessionState(EMPTY_SESSION);
     await clearSession();
   }, []);
 
+  const activeBranchKey = sessionBranchKey(session.user);
   const withAuth = useCallback(
     async <T,>(run: (accessToken: string) => Promise<T>): Promise<T> => {
+      const started = currentSession.current;
+      if (sessionBranchKey(started.user) !== activeBranchKey) {
+        throw new Error('Session changed. Reopen the screen and try again.');
+      }
       try {
-        return await authorizedRequestWithRefresh<T>(session, run, setSession);
+        const result = await authorizedRequestWithRefresh<T>(started, run, async (next) => {
+          if (currentSession.current.refreshToken === started.refreshToken) {
+            await setSession(next);
+          } else if (currentSession.current.accessToken !== next.accessToken) {
+            throw new Error('Session changed. Reopen the screen and try again.');
+          }
+        });
+        return result;
       } catch (error) {
-        if (session.refreshToken && isSessionExpiredError(error)) {
+        if (
+          started.refreshToken &&
+          currentSession.current.refreshToken === started.refreshToken &&
+          isSessionExpiredError(error)
+        ) {
           await logout();
           throw new Error('Session expired. Please sign in again.');
         }
         throw error;
       }
     },
-    [logout, session, setSession],
+    [activeBranchKey, logout, setSession],
+  );
+
+  const switchBranch = useCallback(
+    async (choice: BranchSwitchChoice) => {
+      const previous = currentSession.current;
+      if (!previous.refreshToken || !previous.user)
+        throw new Error('Sign in again to switch branches.');
+      const next = await switchMobileSessionBranch(previous.refreshToken, choice);
+      if (
+        currentSession.current.refreshToken !== previous.refreshToken ||
+        next.user?.id !== previous.user.id ||
+        next.user.branch?.id !== choice.branchId ||
+        (next.user.location?.id ?? next.user.locationId ?? null) !== choice.locationId
+      )
+        throw new Error('Session changed. Reopen the screen and try again.');
+      await setSession({ ...next, user: next.user });
+    },
+    [setSession],
   );
 
   const value = useMemo<AuthContextValue>(
@@ -104,8 +158,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       logout,
       withAuth,
       setSession,
+      switchBranch,
     }),
-    [bootstrapped, login, logout, session, setSession, withAuth],
+    [bootstrapped, login, logout, session, setSession, switchBranch, withAuth],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

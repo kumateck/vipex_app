@@ -71,9 +71,10 @@ export const LoginResponse = t.Object({
 
 export const RefreshBody = t.Object({
   refreshToken: t.String(),
+  switchBranch: t.Optional(t.Object({ branchId: UUID, locationId: t.Union([UUID, t.Null()]) })),
 });
 
-export const LogoutBody = RefreshBody;
+export const LogoutBody = t.Object({ refreshToken: t.String() });
 
 export const ForgotPasswordBody = t.Object({
   email: t.String({ format: 'email' }),
@@ -108,4 +109,40 @@ export const CurrentUserPermissionsResponse = t.Object({
 
 export const CurrentUserReadOnlyPermissionsResponse = t.Object({
   readOnlyPermissions: t.Array(t.String()),
+});
+
+export const CurrentUserProfileResponse = t.Object({
+  id: t.String(),
+  fullname: t.String(),
+  email: t.String({ format: 'email' }),
+  telephone: t.String(),
+  employeeId: t.Union([t.String(), t.Null()]),
+  role: t.Union([t.Object({ id: t.String(), name: t.String() }), t.Null()]),
+  company: t.Union([
+    t.Object({
+      id: t.String(),
+      name: t.String(),
+      useAccounting: t.Boolean(),
+    }),
+    t.Null(),
+  ]),
+  branch: t.Union([
+    t.Object({
+      id: t.String(),
+      name: t.String(),
+      type: t.Number(),
+    }),
+    t.Null(),
+  ]),
+  location: t.Union([
+    t.Object({
+      id: t.String(),
+      name: t.String(),
+    }),
+    t.Null(),
+  ]),
+  locationId: t.Union([t.String(), t.Null()]),
+  locationName: t.Union([t.String(), t.Null()]),
+  userType: t.Union([t.Number(), t.Null()]),
+  cashierType: t.Union([t.Number(), t.Null()]),
 });

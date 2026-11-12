@@ -3,6 +3,7 @@ import { router } from '@mobile/navigation/router-compat';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import type { AppearanceMode } from '@mobile/lib/storage';
+import { BranchSwitchCard } from '@mobile/features/auth/branch-switch';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { AppButton, AppCard, AppPageHeader } from '@/components/ui/mobile';
@@ -102,6 +103,8 @@ export default function ProfileTabScreen() {
           ))}
         </View>
       </AppCard>
+
+      <BranchSwitchCard />
 
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Security</Text>

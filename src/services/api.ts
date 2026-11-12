@@ -9,6 +9,7 @@ import type {
 import { useAuthStore } from '@/stores/auth-store';
 import { TheAduseiErrorResponse } from '@/lib/TheAduseiErrorResponse';
 import { refreshAuthSession } from '@/features/auth/session';
+import { sessionBranchKey } from '@/shared/auth/branch-switch';
 
 type QueryMeta = FetchBaseQueryMeta;
 type QueryResult = QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
@@ -61,11 +62,14 @@ function safeSerialize(value: unknown): string {
   return String(value);
 }
 
+function requestScope() {
+  return sessionBranchKey(useAuthStore.getState().user);
+}
+
 function buildRequestKey(args: string | FetchArgs): string {
-  const authState = useAuthStore.getState();
-  const userId = authState.user?.id ?? 'anonymous';
+  const scope = requestScope();
   if (typeof args === 'string') {
-    return `GET|${args}||${userId}`;
+    return `GET|${args}||${scope}`;
   }
 
   const method = (args.method ?? 'GET').toUpperCase();
@@ -73,7 +77,7 @@ function buildRequestKey(args: string | FetchArgs): string {
   const params = safeSerialize(args.params);
   const body = safeSerialize(args.body);
   const headers = safeSerialize(args.headers);
-  return `${method}|${url}|${params}|${body}|${headers}|${userId}`;
+  return `${method}|${url}|${params}|${body}|${headers}|${scope}`;
 }
 
 function shouldDedupeRequest(args: string | FetchArgs): boolean {
@@ -102,12 +106,12 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   const runRequest = async (): Promise<QueryResult> => {
     const sentSession = useAuthStore.getState();
     const sentAccessToken = sentSession.accessToken;
-    const sentUserId = sentSession.user?.id;
+    const sentScope = requestScope();
     let result = await baseQuery(requestArgs, apiContext, extraOptions);
 
     // If we get a 401, try to refresh the token
     if (result.error && result.error.status === 401) {
-      if (sentUserId && useAuthStore.getState().user?.id !== sentUserId) {
+      if (requestScope() !== sentScope) {
         return {
           error: { status: 'CUSTOM_ERROR', error: 'Session changed. Please retry.' },
         };
@@ -117,10 +121,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
       } else {
         const refreshResult = await refreshAuthSession();
         if (refreshResult.status === 'refreshed' || refreshResult.status === 'superseded') {
-          if (
-            useAuthStore.getState().user?.id === sentUserId &&
-            useAuthStore.getState().accessToken
-          ) {
+          if (requestScope() === sentScope && useAuthStore.getState().accessToken) {
             result = await baseQuery(requestArgs, apiContext, extraOptions);
           }
         } else if (refreshResult.status === 'invalid') {
@@ -138,6 +139,10 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
           };
         }
       }
+    }
+
+    if (requestScope() !== sentScope) {
+      return { error: { status: 'CUSTOM_ERROR', error: 'Session changed. Please retry.' } };
     }
 
     // Query screens do not all own a toast boundary. Surface the normalized server

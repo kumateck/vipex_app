@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { sessionBranchKey } from '@/shared/auth/branch-switch';
 import { ActivityIndicator, StatusBar, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -65,7 +66,11 @@ function RootNavigator() {
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
       {session.accessToken ? (
-        <RootStack.Screen name="AppRoot" component={MobileAppDrawer} />
+        <RootStack.Screen
+          navigationKey={sessionBranchKey(session.user)}
+          name="AppRoot"
+          component={MobileAppDrawer}
+        />
       ) : (
         <RootStack.Screen name="AuthRoot" component={AuthNavigator} />
       )}

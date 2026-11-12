@@ -34,6 +34,8 @@ export interface AuthState {
   logout: () => void;
 }
 
+export const AUTH_STORAGE_KEY = 'vipex-auth-storage';
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -56,6 +58,6 @@ export const useAuthStore = create<AuthState>()(
       logout: () =>
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false }),
     }),
-    { name: 'vipex-auth-storage' },
+    { name: AUTH_STORAGE_KEY },
   ),
 );
