@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -44,6 +45,7 @@ export function ShelfPickupReassignmentForm({
             <p>
               <strong>Receiver:</strong> {parcel.receiverName ?? '-'}
             </p>
+            <ParcelPickupOffice parcel={parcel} />
             <p>
               <strong>Current shelf picker:</strong> {parcel.pickerStaffName ?? 'Assigned staff'}
             </p>

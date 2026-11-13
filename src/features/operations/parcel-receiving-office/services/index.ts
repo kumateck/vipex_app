@@ -36,12 +36,12 @@ const receivingOfficesApi = api.injectEndpoints({
     }),
     assignParcelReceivingOffice: builder.mutation<
       { receivingOfficeId: string; receivingOfficeName: string },
-      { parcelId: string; receivingOfficeId: string }
+      { parcelId: string; receivingOfficeId: string; expectedReceivingOfficeId: string | null }
     >({
-      query: ({ parcelId, receivingOfficeId }) => ({
+      query: ({ parcelId, ...body }) => ({
         url: `/shipments/parcels/${parcelId}/receiving-office`,
         method: 'PATCH',
-        body: { receivingOfficeId },
+        body,
       }),
       invalidatesTags: (_result, error, { parcelId }) =>
         error

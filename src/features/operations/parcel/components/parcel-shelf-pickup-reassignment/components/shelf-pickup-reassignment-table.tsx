@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { Button } from '@/components/ui/button';
 import { ParcelStorageFeeBadge } from '../../parcel-storage-fee-badge';
 import type { ShelfPickupParcel } from '../types';
@@ -30,6 +31,7 @@ export function ShelfPickupReassignmentTable({
               <td className="p-3">
                 <p className="font-medium">{parcel.bookingCode}</p>
                 <p className="text-xs text-muted-foreground">{parcel.trackingCode}</p>
+                <ParcelPickupOffice parcel={parcel} className="text-xs text-muted-foreground" />
                 <ParcelStorageFeeBadge storageChargePsw={parcel.storageChargePsw} />
               </td>
               <td className="p-3">

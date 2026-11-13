@@ -16,6 +16,7 @@ type ParcelDetailsTabsProps = {
   branchNameById: Map<string, string>;
   history: { events: ParcelHistoryEvent[]; isLoading: boolean; isError: boolean };
   actions?: ReactNode;
+  overviewExtra?: ReactNode;
 };
 
 export function ParcelDetailsTabs({
@@ -23,6 +24,7 @@ export function ParcelDetailsTabs({
   branchNameById,
   history,
   actions,
+  overviewExtra,
 }: ParcelDetailsTabsProps) {
   const [tab, setTab] = useState<ParcelDetailsTab>('overview');
   const tabs: Array<[ParcelDetailsTab, string]> = [
@@ -47,7 +49,7 @@ export function ParcelDetailsTabs({
         ))}
       </TabsList>
       <TabsContent value="overview">
-        <OverviewSection details={details} />
+        <OverviewSection details={details} extra={overviewExtra} />
       </TabsContent>
       <TabsContent value="people">
         <PeopleRouteSection details={details} branchNameById={branchNameById} />

@@ -837,6 +837,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/parcels/waiting-pickup': PermissionKeys.CanCompleteOfficePickup,
   '/parcels/pickup-queue/receiver': PermissionKeys.CanReadReceiverPickupQueue,
   '/parcels/receiver-cashier': PermissionKeys.CanCreateReceiverPayments,
+  '/parcels/otp-approvals': PermissionKeys.CanAuthorizePickupWithoutOtp,
   '/parcels/uncollected': PermissionKeys.CanViewReportParcelsUncollected,
   '/parcels/in-transit/outgoing': PermissionKeys.CanReadParcelOutgoing,
   '/parcels/in-transit/incoming': PermissionKeys.CanReadParcelIncoming,

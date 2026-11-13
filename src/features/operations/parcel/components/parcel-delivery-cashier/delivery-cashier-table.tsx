@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { DeliveryFeeEditButton } from '@/features/operations/delivery-fee';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -66,6 +67,7 @@ export function DeliveryCashierTable({
         cell: ({ row }) => (
           <div className="space-y-1">
             <span>{row.original.bookingCode}</span>
+            <ParcelPickupOffice parcel={row.original} className="text-xs text-muted-foreground" />
             <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
           </div>
         ),

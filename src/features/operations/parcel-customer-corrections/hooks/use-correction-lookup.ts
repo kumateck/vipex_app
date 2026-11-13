@@ -39,7 +39,7 @@ export function useCorrectionLookup() {
   };
   const saved = async (parcel: CorrectionParcel) => {
     if (activeCode.current.trim() !== parcel.bookingCode) return;
-    setParcels((rows) => rows.map((row) => (row.id === parcel.id ? parcel : row)));
+    setParcels((rows) => rows.map((row) => (row.id === parcel.id ? { ...row, ...parcel } : row)));
     const current = ++request.current;
     try {
       const rows = await lookup(parcel.bookingCode, false).unwrap();

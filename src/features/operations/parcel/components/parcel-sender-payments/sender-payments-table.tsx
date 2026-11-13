@@ -1,3 +1,4 @@
+import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical, RefreshCw } from 'lucide-react';
@@ -119,7 +120,11 @@ export function SenderPaymentsTable({
         cell: ({ row }) => (
           <div className="leading-tight">
             <p className="font-medium">
-              {row.original.pickupLocationName ?? row.original.pickupLocationId ?? '-'}
+              {pickupOfficeLabel(
+                row.original.pickupLocationName,
+                row.original.receivingOfficeName,
+              ) ||
+                (row.original.pickupLocationId ?? '-')}
             </p>
             <p className="text-muted-foreground text-xs">
               {row.original.destinationName ?? row.original.destinationId}

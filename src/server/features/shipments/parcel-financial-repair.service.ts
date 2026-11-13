@@ -1,8 +1,19 @@
 import { and, eq, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { parcels, payments, PaymentComponent, ParcelStatus } from '@/db/schemas';
+import {
+  locations,
+  parcels,
+  payments,
+  PaymentComponent,
+  ParcelStatus,
+  receivingOffices,
+} from '@/db/schemas';
 import { BadRequest, Conflict, NotFound } from '@/server/utils/http-error';
 import { recordAuditLog } from '../audit/logger';
+import {
+  receivingOfficeJoin,
+  receivingOfficeProjection,
+} from './parcel-receiving-office/projection';
 
 type RepairScope = { companyId: string; branchId: string; search: string };
 
@@ -14,6 +25,8 @@ async function findParcel(scope: RepairScope) {
       id: parcels.id,
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
+      pickupLocationName: locations.name,
+      ...receivingOfficeProjection,
       sourceId: parcels.sourceId,
       destinationId: parcels.destinationId,
       status: parcels.status,
@@ -22,6 +35,8 @@ async function findParcel(scope: RepairScope) {
       isDeleted: parcels.isDeleted,
     })
     .from(parcels)
+    .leftJoin(locations, eq(locations.id, parcels.pickupLocationId))
+    .leftJoin(receivingOffices, receivingOfficeJoin)
     .where(
       and(
         eq(parcels.companyId, scope.companyId),
@@ -63,6 +78,8 @@ async function getRepairView(scope: RepairScope) {
     id: parcel.id,
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
+    pickupLocationName: parcel.pickupLocationName,
+    receivingOfficeName: parcel.receivingOfficeName,
     status: parcel.status,
     chargePsw: parcel.chargePsw,
     activePrincipalPaidPsw: paidPrincipalPsw,

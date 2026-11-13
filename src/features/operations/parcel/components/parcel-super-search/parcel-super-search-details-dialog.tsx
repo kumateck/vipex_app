@@ -2,6 +2,7 @@ import { ParcelInformationEditAction } from '../../parcel-information-editor';
 import { useCallback } from 'react';
 import { SendReceiptAction } from '@/features/digital-receipts';
 import { ParcelDetailsDialog } from '@/features/operations/parcel-details';
+import { ParcelOfficeEditor } from '@/features/operations/parcel-receiving-office';
 import type { ParcelFullDetails, ParcelSearchRow } from '../../api/parcel.api';
 import { ParcelSuperSearchDispositionCard } from './parcel-super-search-disposition-card';
 import { ReturnToSourceAction } from './return-to-source-action';
@@ -16,7 +17,17 @@ type ParcelSuperSearchDetailsDialogProps = {
   branchId: string | null;
   onReturnToSource: (parcel: { id: string; bookingCode: string; sourceName: string }) => void;
   showReturnAvailability?: boolean;
+  allowReceivingOfficeEdit?: boolean;
 };
+
+function renderReceivingOfficeEditor({ parcel }: ParcelFullDetails) {
+  return (
+    <ParcelOfficeEditor
+      key={`${parcel.id}:${parcel.pickupLocationId}:${parcel.recordedReceivingOfficeId ?? parcel.receivingOfficeId}`}
+      parcel={parcel}
+    />
+  );
+}
 
 /** The shared parcel details view plus Super Search's return-to-source and disposition actions. */
 export function ParcelSuperSearchDetailsDialog({
@@ -28,6 +39,7 @@ export function ParcelSuperSearchDetailsDialog({
   branchId,
   onReturnToSource,
   showReturnAvailability = false,
+  allowReceivingOfficeEdit = false,
 }: ParcelSuperSearchDetailsDialogProps) {
   const renderBanner = useCallback(
     (details: ParcelFullDetails) => (
@@ -77,6 +89,7 @@ export function ParcelSuperSearchDetailsDialog({
       onClose={onClose}
       handoverNoteEditorBranchId={branchId}
       renderBanner={renderBanner}
+      renderOverview={allowReceivingOfficeEdit ? renderReceivingOfficeEditor : undefined}
       renderActions={renderActions}
     />
   );

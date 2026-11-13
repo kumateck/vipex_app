@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -116,6 +117,13 @@ export function useShelfPickerUpdateColumns({
           <div className="font-medium">{row.original.parcelDetails || '-'}</div>
           <div className="text-xs text-muted-foreground">{row.original.parcelContent || '-'}</div>
         </div>
+      ),
+    },
+    {
+      id: 'pickupLocation',
+      header: 'Pickup Location / Office',
+      cell: ({ row }) => (
+        <ParcelPickupOffice parcel={row.original} showLabel={false} fallback="-" />
       ),
     },
     {

@@ -675,18 +675,34 @@ locations and invalid receipt states leave the parcel and consignment checklist 
 Legacy clients can still receive at single-office locations. Receiving at a multi-office location
 requires a client that can send the office ID.
 
-When a parcel changes offices, receiving staff at the destination can open **Parcel details →
-Overview**, choose another office at the same pickup location and save it. The save keeps the
-original receipt and records who changed the office. A parcel with a missing pickup location needs
-that location set first. A dispatched, delivered, cancelled, deleted or warehouse-held parcel
-cannot be assigned an office through this action.
+When a parcel changes offices, receiving staff at the destination can open **Super Search →
+Parcel Details → Overview** on web, desktop or mobile, choose another office at the same
+pickup location and select **Save office**. This also corrects the recorded office on a parcel marked **Delivered by
+Office** or **Delivered at Home** if it already has an office. The save preserves the receipt and
+handover records and adds the previous office, new office and staff member to parcel history.
+If another staff member changes the office first, reopen the parcel before saving. A parcel
+needs a valid pickup location. New office assignments require the parcel to be held there in
+an eligible receiving status.
+
+QA: correct the office on an awaiting-pickup parcel and on a delivered parcel with an office.
+Verify the latest office and actor in Parcel History, the original receipt and handover records,
+and that the former office can be deleted once its last parcel reference is moved. Verify that
+an office at a different pickup location, a stale edit, and a new assignment on an already
+delivered parcel are rejected.
 
 Staff search results and parcel details show the location and office together, for example
-**Anloga Junction → Office 3**, on web, desktop and mobile. This includes pickup and receiving
-queues. Search continues to use the existing booking, tracking, name and phone fields. If the
-office is unknown or custody has moved away from the pickup location, the response has no
-current office. Public tracking shows the location and office names while the parcel is
-**Awaiting Pickup** and an office is recorded.
+**Anloga Junction → Office 3**, on web, desktop and mobile. This includes Shelf Picker Update,
+Waiting for Pickup, Receiver Cashier (including signatures), Parcel Assignment, Call Outcome,
+OTP Approvals, and pickup and receiving queues. Office labels outside Super Search are read-only.
+Select the initial office when recording receipt. Search continues to use the existing booking,
+tracking, name and phone fields. If the office is unknown or custody has moved away from the
+pickup location, the response has no current office. Public tracking shows the location and
+office names while the parcel is **Awaiting Pickup** and an office is recorded.
+
+QA: save an office change in Super Search, then look up the booking in Shelf Picker Update,
+Waiting for Pickup or Receiver Cashier as applicable, and Call Outcome. Verify that the result
+and workflow dialog show the current office. Open Full Details from a workflow queue and
+confirm the office is read-only there.
 
 QA scenarios are in [Mobile QA](MOBILE_QA_SMOKE_CHECKLIST.md#receiving-office-qa). The receiving
 workflow integration suite covers single-office defaults, multi-office validation and rollback,
@@ -797,12 +813,21 @@ clears the alert permanently and keeps the instruction on the record.
 
 ### Admin approval without OTP
 
-- A staff member with `CanAuthorizePickupWithoutOtp` opens **Parcel Details → Overview →
-  Authorize pickup without OTP** on web or desktop. Select Receiver Cashier or Waiting for
-  Pickup, select the linked collector, verify their identity, and enter a 10–500 character
-  reason. Active destination-branch staff and head-office staff with this grant can approve
-  eligible parcels in their own company. The parcel must be Awaiting Pickup, with OTP
-  required for the selected workflow and no pending signature.
+- On web and desktop, open **Operations → Pickup & Collection → OTP Approvals** with
+  `CanAuthorizePickupWithoutOtp`. Choose Receiver Cashier or Waiting for Pickup and search
+  by booking or tracking code. The queue shows the most recent unverified request per
+  parcel, including expired codes, where the request still matches a linked receiver.
+  The parcel must be Awaiting Pickup, with OTP required for the selected workflow and no
+  pending signature. Receiver OTP requests are shared by the two workflows, so select the
+  one the operator is using. A parcel with an active approval for that workflow drops out of the
+  queue. It can reappear after the approval expires if the request is still outstanding.
+- Select **Authorize without OTP**, verify the linked collector’s identity, and enter a
+  10–500 character reason. The queue rejects a request that changed after the dialog was
+  opened. **Parcel Details → Overview → Authorize pickup without OTP** is also available
+  for an eligible parcel, including when no OTP was requested. Active destination-branch
+  staff and head-office staff with this grant can approve parcels in their own company.
+  Mobile Waiting for Pickup supports using an approval during handover. Approvers use the
+  web or desktop page to issue one.
 - The operator selects the same collector and uses **Check admin approval** in the matching
   workflow. Receiver Cashier is on web and desktop. Waiting for Pickup also supports the
   approval in the mobile app. Waiting for Pickup requires a collector signature when
@@ -815,6 +840,11 @@ clears the alert permanently and keeps the instruction on the record.
 - QA: approve as one staff member and complete as a cashier without the approval grant.
   Check that stale, reused, wrong-workflow, and wrong-collector approvals fail, and that an
   unsuccessful payment leaves the approval available while valid.
+- QA: request an OTP and confirm it appears in the queue before and after code expiry.
+  Check that a verified request, a parcel with no request, and a different branch’s parcel
+  are hidden from a branch approver. Confirm the grant is required even for a cashier, head
+  office sees eligible parcels across the company, search matches the code, and only one of
+  two simultaneous approvals from the same queue entry succeeds.
 
 ## Digital Receipt Delivery
 

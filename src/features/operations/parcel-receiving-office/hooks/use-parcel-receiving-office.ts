@@ -1,20 +1,15 @@
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { PermissionKeys } from '@/shared/permissions/constants';
-import { canAssignReceivingOffice } from '@/shared/shipments/receiving-office';
+import {
+  editableParcelOffice,
+  type ParcelOfficeAssignment,
+} from '@/shared/shipments/receiving-office';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAssignParcelReceivingOfficeMutation } from '../services';
 import { useReceivingOfficeChoice } from './use-receiving-office-choice';
 
-export type ParcelOfficeEditorInput = {
-  id: string;
-  status: number;
-  destinationId: string;
-  pickupLocationId?: string | null;
-  receivingOfficeId?: string | null;
-  isDeleted?: boolean;
-  confirmedAt?: string | null;
-};
+export type ParcelOfficeEditorInput = ParcelOfficeAssignment;
 
 export function useParcelReceivingOffice(parcel: ParcelOfficeEditorInput) {
   const allowed = useAuthStore((state) => {
@@ -27,28 +22,28 @@ export function useParcelReceivingOffice(parcel: ParcelOfficeEditorInput) {
       )
     );
   });
-  const canEdit =
-    allowed &&
-    canAssignReceivingOffice(parcel.status) &&
-    Boolean(parcel.pickupLocationId) &&
-    !parcel.isDeleted &&
-    !parcel.confirmedAt;
+  const assignment = allowed ? editableParcelOffice(parcel) : null;
   const choice = useReceivingOfficeChoice({
-    enabled: canEdit,
+    enabled: Boolean(assignment),
     locationId: parcel.pickupLocationId,
-    initialOfficeId: parcel.receivingOfficeId,
+    initialOfficeId: assignment?.officeId,
   });
   const [assignOffice, { isLoading: saving }] = useAssignParcelReceivingOfficeMutation();
 
   async function save() {
-    if (!choice.officeId || saving || !canEdit) return;
+    if (!assignment || saving || !choice.officeId || choice.officeId === assignment.officeId)
+      return;
     try {
-      await assignOffice({ parcelId: parcel.id, receivingOfficeId: choice.officeId }).unwrap();
+      await assignOffice({
+        parcelId: parcel.id,
+        receivingOfficeId: choice.officeId,
+        expectedReceivingOfficeId: assignment.officeId,
+      }).unwrap();
       toast.success('Receiving office updated');
     } catch (error) {
       toast.error(getErrorMessage(error, 'Could not update receiving office'));
     }
   }
 
-  return { canEdit, choice, save, saving };
+  return { assignment, choice, save, saving };
 }

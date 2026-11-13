@@ -1,6 +1,9 @@
 import {
   receivingOfficeJoin,
   receivingOfficeProjection,
+  recordedOffice,
+  recordedOfficeJoin,
+  parcelAtPickupLocation,
 } from '../parcel-receiving-office/projection';
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -64,6 +67,9 @@ export async function getParcelRepo(
       secondCardNumber: parcels.secondCardNumber,
       pickupLocationId: parcels.pickupLocationId,
       ...receivingOfficeProjection,
+      recordedReceivingOfficeId: recordedOffice.id,
+      recordedReceivingOfficeName: recordedOffice.name,
+      atPickupLocation: parcelAtPickupLocation,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       method: parcels.method,
       shelfPickerStaffId: parcels.shelfPickerStaffId,
@@ -88,6 +94,7 @@ export async function getParcelRepo(
     .leftJoin(receiver, eq(parcels.receiverId, receiver.id))
     .leftJoin(secondReceiver, eq(parcels.secondReceiverId, secondReceiver.id))
     .leftJoin(receivingOffices, receivingOfficeJoin)
+    .leftJoin(recordedOffice, recordedOfficeJoin)
     .where(eq(parcels.id, id))
     .limit(1);
   return row ?? null;

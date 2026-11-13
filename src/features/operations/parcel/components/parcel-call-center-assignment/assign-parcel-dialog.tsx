@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -56,6 +57,7 @@ export function AssignParcelDialog({
               <p>
                 <strong>Booking:</strong> {parcel.bookingCode}
               </p>
+              <ParcelPickupOffice parcel={parcel} />
               <p>
                 <strong>Receiver:</strong> {parcel.receiverName ?? '-'} (
                 {parcel.receiverPhone ?? '-'})

@@ -6,3 +6,4 @@ export {
   useSaveLocationOfficeMutation,
 } from './services';
 export { ParcelOfficeEditor } from './components/parcel-receiving-office/parcel-office-editor';
+export { ParcelPickupOffice } from './components/parcel-receiving-office/parcel-pickup-office';
