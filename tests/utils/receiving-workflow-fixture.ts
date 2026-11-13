@@ -30,6 +30,11 @@ export async function createReceivingWorkflowFixture() {
             PermissionKeys.CanReadParcelIncoming,
             PermissionKeys.CanReadParcelScan,
             PermissionKeys.CanUpdateParcels,
+            PermissionKeys.CanReadShelfPickerUpdate,
+            PermissionKeys.CanCreateReceiverPayments,
+            PermissionKeys.CanReadCallCenterAssignment,
+            PermissionKeys.CanReadCallCenterParcelStatus,
+            PermissionKeys.CanRepairParcelFinancialState,
           ].map((permission) => ({ companyId: 'company', roleId: 'admin-role', permission })),
         );
     },

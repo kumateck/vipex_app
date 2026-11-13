@@ -1,3 +1,5 @@
+import type { ParcelReceivingOffice } from './receiving-office';
+
 export type CorrectionParty = 'sender' | 'receiver' | 'secondReceiver';
 export type CorrectionMode = 'profile' | 'relink';
 
@@ -9,7 +11,7 @@ export type CorrectionCustomer = {
   version: string;
 };
 
-export type CorrectionParcel = {
+export type CorrectionParcel = ParcelReceivingOffice & {
   id: string;
   bookingCode: string;
   trackingCode: string;

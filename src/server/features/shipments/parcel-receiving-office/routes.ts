@@ -18,6 +18,7 @@ export const parcelReceivingOfficeRoutes = new Elysia({ name: 'parcel-receiving-
       return assignReceivingOffice({
         parcelId: params.id,
         officeId: body.receivingOfficeId,
+        expectedReceivingOfficeId: body.expectedReceivingOfficeId,
         companyId: actor.companyId,
         branchId: actor.branchId,
         actorUserId: actor.sub,
@@ -25,7 +26,10 @@ export const parcelReceivingOfficeRoutes = new Elysia({ name: 'parcel-receiving-
     },
     {
       params: t.Object({ id: UUID }),
-      body: t.Object({ receivingOfficeId: UUID }),
+      body: t.Object({
+        receivingOfficeId: UUID,
+        expectedReceivingOfficeId: t.Optional(t.Union([UUID, t.Null()])),
+      }),
       beforeHandle: [
         requireAuth(),
         requireAnyPermissions(

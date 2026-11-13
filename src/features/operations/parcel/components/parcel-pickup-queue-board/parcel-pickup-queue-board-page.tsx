@@ -1,4 +1,5 @@
 import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -127,6 +128,7 @@ export function ParcelPickupQueueBoardPage({
                     />
                     <ViewParcelDetailsButton parcelId={card.parcelId} />
                   </p>
+                  <ParcelPickupOffice parcel={card} />
                   <p>
                     <strong>Parcel:</strong> {card.parcelDetails}
                   </p>

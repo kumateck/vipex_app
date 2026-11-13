@@ -3,15 +3,20 @@ import { useHasPermission } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { PermissionKeys } from '@/shared/permissions/constants';
-import { AuthorizePickupForm, type ApprovalParcel } from './authorize-pickup-form';
+import type { OtpApprovalParcel } from '@/shared/shipments/receiver-otp-exception';
+import { AuthorizePickupForm } from './authorize-pickup-form';
 
-export { useParcelOtpAuthorizationQuery } from './otp-authorization-api';
+export {
+  useParcelOtpAuthorizationQuery,
+  usePendingOtpApprovalsQuery,
+} from './otp-authorization-api';
 export { OtpApprovalStatus } from './otp-approval-status';
+export { AuthorizePickupForm } from './authorize-pickup-form';
 
 export function ParcelOtpApproval({
   parcel,
 }: {
-  parcel: ApprovalParcel & {
+  parcel: OtpApprovalParcel & {
     status: number;
     confirmedAt?: string | Date | null;
     isDeleted?: boolean;

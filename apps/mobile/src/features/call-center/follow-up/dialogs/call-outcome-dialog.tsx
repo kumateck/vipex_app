@@ -1,3 +1,4 @@
+import { PickupOfficeText } from '@mobile/features/operations/parcel-receiving-office';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -66,6 +67,11 @@ export function CallOutcomeDialog(props: Props) {
               <Text style={[styles.subtitle, { color: theme.colors.textMuted }]}>
                 Booking: {props.parcel?.bookingCode ?? ''}
               </Text>
+              <PickupOfficeText
+                location={props.parcel?.pickupLocationName}
+                office={props.parcel?.receivingOfficeName}
+                style={[styles.subtitle, { color: theme.colors.textMuted }]}
+              />
             </View>
             <Pressable
               accessibilityRole="button"

@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -76,7 +77,10 @@ export function ParcelBulkCallOutcomeDialog({
             <ul className="space-y-2 text-sm">
               {parcels?.map((parcel) => (
                 <li key={parcel.id} className="flex justify-between gap-3">
-                  <span className="font-medium">{parcel.bookingCode}</span>
+                  <div>
+                    <span className="font-medium">{parcel.bookingCode}</span>
+                    <ParcelPickupOffice parcel={parcel} className="text-xs text-muted-foreground" />
+                  </div>
                   <span className="text-muted-foreground">{parcel.receiverName ?? '-'}</span>
                 </li>
               ))}

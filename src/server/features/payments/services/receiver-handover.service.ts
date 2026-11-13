@@ -1,7 +1,15 @@
 import { handoverNoteProjection } from '../../shipments/handover-note/projection';
 import { and, desc, eq, lt, isNotNull, or, ilike, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { auditLogs, customers, parcels, ParcelStatus, pickupQueues } from '@/db/schemas';
+import {
+  auditLogs,
+  customers,
+  locations,
+  parcels,
+  ParcelStatus,
+  pickupQueues,
+  receivingOffices,
+} from '@/db/schemas';
 import { BadRequest, Conflict, NotFound } from '@/server/utils/http-error';
 import {
   isReceiverCashierSignature,
@@ -17,6 +25,10 @@ import { getParcelStorageSettlementSvc } from '../../shipments/parcels.service';
 import { listPaymentsForParcelRepo } from '../repository';
 import { signalReceiverHandoverChange } from './receiver-handover-changes';
 import type { DbExecutor } from '../../shipments/parcel-repositories/parcel-repository.types';
+import {
+  receivingOfficeJoin,
+  receivingOfficeProjection,
+} from '../../shipments/parcel-receiving-office/projection';
 
 type Scope = { companyId: string; branchId: string };
 type Action = Scope & { parcelId: string; handoverId: string; actorId: string };
@@ -46,6 +58,8 @@ export async function listReceiverHandovers(
       bookingCode: parcels.bookingCode,
       ...handoverNoteProjection,
       trackingCode: parcels.trackingCode,
+      pickupLocationName: locations.name,
+      ...receivingOfficeProjection,
       receiverId: parcels.receiverId,
       collectorName: sql<string>`${parcels.pendingReceiverHandover}->>'collectorName'`,
       associateName: sql<string>`${parcels.pendingReceiverHandover}->>'associateName'`,
@@ -53,6 +67,8 @@ export async function listReceiverHandovers(
       signedAt: sql<string | null>`${parcels.pendingReceiverHandover}->'capture'->>'capturedAt'`,
     })
     .from(parcels)
+    .leftJoin(locations, eq(locations.id, parcels.pickupLocationId))
+    .leftJoin(receivingOffices, receivingOfficeJoin)
     .where(
       and(
         parcelScope(scope),

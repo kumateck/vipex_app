@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
@@ -94,6 +95,13 @@ export function useCallCenterAssignmentColumns({
             </div>
           ) : null}
         </div>
+      ),
+    },
+    {
+      id: 'pickupLocation',
+      header: 'Pickup Location / Office',
+      cell: ({ row }) => (
+        <ParcelPickupOffice parcel={row.original} showLabel={false} fallback="-" />
       ),
     },
     {

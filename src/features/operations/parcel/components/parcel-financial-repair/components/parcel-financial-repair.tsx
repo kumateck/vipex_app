@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,10 @@ export function ParcelFinancialRepair() {
               <div>
                 <h2 className="font-semibold">{state.preview.bookingCode}</h2>
                 <p className="text-sm text-muted-foreground">{state.preview.trackingCode}</p>
+                <ParcelPickupOffice
+                  parcel={state.preview}
+                  className="text-sm text-muted-foreground"
+                />
               </div>
               <ViewParcelDetailsButton parcelId={state.preview.id} label="Full Details" />
             </div>

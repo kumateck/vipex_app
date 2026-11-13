@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,7 @@ export function ReceiverHandoverList({
               <p className="text-sm text-muted-foreground">
                 {row.collectorName} · Associate: {row.associateName}
               </p>
+              <ParcelPickupOffice parcel={row} className="text-sm text-muted-foreground" />
               <p className="text-sm" aria-live="polite">
                 {row.signedAt ? 'Ready to confirm' : 'Awaiting signature'}
               </p>

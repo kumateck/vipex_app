@@ -1,107 +1,122 @@
+import type { RefObject } from 'react';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select-searchable';
-import { selectBranch } from '@/shared/auth/branch-switch';
+import { BranchSwitchFields } from './branch-switch-fields';
+import { Spinner } from '@/components/ui/spinner';
 import { useBranchSwitch } from '../hooks/use-branch-switch';
 
-export function BranchSwitchDialog() {
-  const { options, selection, branch, canSwitch, saving, error, setChoice, submit } =
-    useBranchSwitch();
-  const data = options.data;
+type BranchSwitchDialogProps = {
+  currentRole: string;
+  currentBranch: string;
+  onClose: () => void;
+  returnFocus: RefObject<HTMLButtonElement | null>;
+};
+
+export function BranchSwitchDialog({
+  currentRole,
+  currentBranch,
+  onClose,
+  returnFocus,
+}: BranchSwitchDialogProps) {
+  const {
+    options,
+    selection,
+    branches,
+    branch,
+    canSwitch,
+    saving,
+    error,
+    chooseBranch,
+    chooseLocation,
+    submit,
+  } = useBranchSwitch();
+  const loading = options.isFetching && !options.data;
+
   return (
-    <DialogContent
-      className="sm:max-w-md"
-      showCloseButton={!saving}
-      onEscapeKeyDown={(event) => {
-        if (saving) event.preventDefault();
-      }}
-      onPointerDownOutside={(event) => {
-        if (saving) event.preventDefault();
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !saving) onClose();
       }}
     >
-      <DialogHeader>
-        <DialogTitle>Switch branch</DialogTitle>
-        <DialogDescription>Choose the branch and location for this sign-in.</DialogDescription>
-      </DialogHeader>
-      {options.isLoading ? <p role="status">Loading branches…</p> : null}
-      {options.isError ? (
-        <div className="space-y-2">
-          <p role="alert">Unable to load available branches.</p>
-          <Button variant="outline" onClick={() => void options.refetch()}>
-            Retry
-          </Button>
-        </div>
-      ) : null}
-      {data && !options.isError ? (
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="switch-branch">Branch</Label>
-            <Select
-              value={selection?.branchId ?? ''}
-              disabled={saving}
-              onValueChange={(id) => {
-                const next = data.branches.find((candidate) => candidate.id === id);
-                if (next) setChoice(selectBranch(next, data.current));
-              }}
-            >
-              <SelectTrigger id="switch-branch">
-                <SelectValue placeholder="Select branch" />
-              </SelectTrigger>
-              <SelectContent>
-                {data.branches.map(({ id, name }) => (
-                  <SelectItem key={id} value={id}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {branch?.locations.length ? (
-            <div className="grid gap-2">
-              <Label htmlFor="switch-location">Location</Label>
-              <Select
-                value={selection?.locationId ?? ''}
-                disabled={saving}
-                onValueChange={(locationId) => setChoice({ branchId: branch.id, locationId })}
-              >
-                <SelectTrigger id="switch-location">
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branch.locations.map(({ id, name }) => (
-                    <SelectItem key={id} value={id}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <DialogContent
+        className="sm:max-w-md"
+        showCloseButton={!saving}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          returnFocus.current?.focus();
+        }}
+      >
+        <DialogHeader className="text-left">
+          <DialogTitle>Switch branch</DialogTitle>
+          <DialogDescription>Choose the branch and location for this sign-in.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <dl className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
+            <div className="min-w-0">
+              <dt className="text-xs text-muted-foreground">Current role</dt>
+              <dd className="mt-1 font-medium wrap-break-word">{currentRole}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-xs text-muted-foreground">Current branch</dt>
+              <dd className="mt-1 font-medium wrap-break-word">{currentBranch}</dd>
+            </div>
+          </dl>
+          <BranchSwitchFields
+            branches={branches}
+            branch={branch}
+            selection={selection}
+            loading={loading}
+            saving={saving}
+            failed={options.isError}
+            chooseBranch={chooseBranch}
+            chooseLocation={chooseLocation}
+          />
+          {options.isError ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm text-destructive" role="alert">
+                Unable to load available branches.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => void options.refetch()}>
+                Retry
+              </Button>
             </div>
           ) : null}
+          {options.isSuccess && branches.length === 0 ? (
+            <p className="text-sm text-muted-foreground" role="status">
+              No other branches are available.
+            </p>
+          ) : null}
+          {error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
         </div>
-      ) : null}
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <DialogFooter>
-        <Button onClick={() => void submit()} disabled={!canSwitch || saving || options.isError}>
-          {saving ? 'Switching…' : 'Switch branch'}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+        <DialogFooter>
+          <Button variant="outline" disabled={saving} onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={() => void submit()} disabled={!canSwitch || saving || options.isError}>
+            {saving ? (
+              <>
+                <Spinner aria-hidden="true" /> Switching…
+              </>
+            ) : branch ? (
+              `Switch to ${branch.name}`
+            ) : (
+              'Switch'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

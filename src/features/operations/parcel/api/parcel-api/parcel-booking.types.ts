@@ -47,6 +47,7 @@ export type SenderCashierParcel = {
   destinationName?: string | null;
   pickupLocationId: string | null;
   pickupLocationName?: string | null;
+  receivingOfficeName?: string | null;
   bookingCode: string;
   trackingCode: string;
   parcelDetails: string;

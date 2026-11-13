@@ -8,10 +8,15 @@ export function listReceivingOfficeOptions(token: string) {
   });
 }
 
-export function assignReceivingOffice(token: string, parcelId: string, receivingOfficeId: string) {
+export function assignReceivingOffice(
+  token: string,
+  parcelId: string,
+  receivingOfficeId: string,
+  expectedReceivingOfficeId: string | null,
+) {
   return mobileApiPatch<{ receivingOfficeId: string; receivingOfficeName: string }>({
     path: `/shipments/parcels/${parcelId}/receiving-office`,
     token,
-    body: { receivingOfficeId },
+    body: { receivingOfficeId, expectedReceivingOfficeId },
   });
 }

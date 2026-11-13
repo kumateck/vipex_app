@@ -1,6 +1,6 @@
 # Route Permissions: Operations and People
 
-Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-17.
+Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-11-13.
 
 Parcel, cashier, and human-capital route overrides.
 
@@ -14,6 +14,8 @@ Parcel, cashier, and human-capital route overrides.
 | `/parcels/waiting-pickup`               | `CanCompleteOfficePickup`          |
 | `/parcels/pickup-queue/receiver`        | `CanReadReceiverPickupQueue`       |
 | `/parcels/receiver-cashier`             | `CanCreateReceiverPayments`        |
+| `/parcels/otp-approvals`                | `CanAuthorizePickupWithoutOtp`     |
+| `/parcels/customer-corrections`         | `CanCorrectParcelCustomers`        |
 | `/parcels/uncollected`                  | `CanViewReportParcelsUncollected`  |
 | `/parcels/in-transit/outgoing`          | `CanReadParcelOutgoing`            |
 | `/parcels/in-transit/incoming`          | `CanReadParcelIncoming`            |
@@ -26,6 +28,7 @@ Parcel, cashier, and human-capital route overrides.
 | `/parcels/storage-clearances/execution` | `CanExecuteParcelStorageClearance` |
 | `/parcels/receive`                      | `CanReadParcelScan`                |
 | `/parcels/delivery-reversal`            | `CanReverseParcelDelivery`         |
+| `/parcels/charge-approvals`             | `CanApproveParcelCharge`           |
 | `/parcels/financial-repair`             | `CanRepairParcelFinancialState`    |
 | `/parcels/home-delivery/dispatch`       | `CanDispatchForDelivery`           |
 | `/parcels/home-delivery/returned`       | `CanDispatchForDelivery`           |
