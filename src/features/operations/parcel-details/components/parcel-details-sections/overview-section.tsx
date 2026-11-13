@@ -84,7 +84,10 @@ export const OverviewSection = memo(function OverviewSection({
               : null,
           ]}
         />
-        <ParcelOfficeEditor key={parcel.id} parcel={parcel} />
+        <ParcelOfficeEditor
+          key={`${parcel.id}:${parcel.pickupLocationId}:${parcel.recordedReceivingOfficeId ?? parcel.receivingOfficeId}`}
+          parcel={parcel}
+        />
         <ParcelOtpApproval key={`otp-${parcel.id}`} parcel={parcel} />
       </DetailCard>
       <Suspense

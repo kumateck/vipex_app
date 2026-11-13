@@ -676,10 +676,19 @@ Legacy clients can still receive at single-office locations. Receiving at a mult
 requires a client that can send the office ID.
 
 When a parcel changes offices, receiving staff at the destination can open **Parcel details →
-Overview**, choose another office at the same pickup location and save it. The save keeps the
-original receipt and records who changed the office. A parcel with a missing pickup location needs
-that location set first. A dispatched, delivered, cancelled, deleted or warehouse-held parcel
-cannot be assigned an office through this action.
+Overview** on web, desktop or mobile, choose another office at the same pickup location and
+select **Save office**. This also corrects the recorded office on a parcel marked **Delivered by
+Office** or **Delivered at Home** if it already has an office. The save preserves the receipt and
+handover records and adds the previous office, new office and staff member to parcel history.
+If another staff member changes the office first, reopen the parcel before saving. A parcel
+needs a valid pickup location. New office assignments require the parcel to be held there in
+an eligible receiving status.
+
+QA: correct the office on an awaiting-pickup parcel and on a delivered parcel with an office.
+Verify the latest office and actor in Parcel History, the original receipt and handover records,
+and that the former office can be deleted once its last parcel reference is moved. Verify that
+an office at a different pickup location, a stale edit, and a new assignment on an already
+delivered parcel are rejected.
 
 Staff search results and parcel details show the location and office together, for example
 **Anloga Junction → Office 3**, on web, desktop and mobile. This includes pickup and receiving

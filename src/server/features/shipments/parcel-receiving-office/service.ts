@@ -1,14 +1,17 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { locations, parcels, receivingOffices } from '@/db/schemas';
-import { canAssignReceivingOffice } from '@/shared/shipments/receiving-office';
+import { auditLogs, locations, parcels, receivingOffices } from '@/db/schemas';
+import {
+  canAssignReceivingOffice,
+  isDeliveredOfficeCorrection,
+} from '@/shared/shipments/receiving-office';
 import { BadRequest, Conflict, Forbidden, NotFound } from '@/server/utils/http-error';
-import { recordAuditLog } from '../../audit/logger';
 import { parcelAtPickupLocation } from './projection';
 
 export async function assignReceivingOffice(input: {
   parcelId: string;
   officeId: string;
+  expectedReceivingOfficeId?: string | null;
   companyId?: string | null;
   branchId?: string | null;
   actorUserId: string;
@@ -16,13 +19,14 @@ export async function assignReceivingOffice(input: {
   const { companyId, branchId } = input;
   if (!companyId || !branchId) throw Forbidden('Receiving branch context is required');
 
-  const assignment = await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     const [parcel] = await tx
       .select({
         status: parcels.status,
         atPickupLocation: parcelAtPickupLocation,
         locationId: parcels.pickupLocationId,
         officeId: parcels.receivingOfficeId,
+        confirmedAt: parcels.confirmedAt,
       })
       .from(parcels)
       .where(
@@ -32,14 +36,16 @@ export async function assignReceivingOffice(input: {
           eq(parcels.destinationId, branchId),
           eq(parcels.isDeleted, false),
           isNull(parcels.deletedAt),
-          isNull(parcels.confirmedAt),
         ),
       )
       .for('update');
     if (!parcel) throw NotFound('Parcel is unavailable');
-    if (!canAssignReceivingOffice(parcel.status) || !parcel.atPickupLocation)
+    const historicalCorrection = isDeliveredOfficeCorrection(parcel.status) && !!parcel.officeId;
+    const heldForCollection =
+      canAssignReceivingOffice(parcel.status) && !parcel.confirmedAt && parcel.atPickupLocation;
+    if (!historicalCorrection && !heldForCollection)
       throw Conflict(
-        'Only parcels held at the destination for collection or delivery can be assigned',
+        'The parcel must be at the pickup location or have an existing office on a delivered parcel',
       );
     if (!parcel.locationId)
       throw BadRequest('Set the parcel’s pickup location before assigning an office');
@@ -69,28 +75,38 @@ export async function assignReceivingOffice(input: {
     if (!office) throw BadRequest('Choose a receiving office at the parcel’s pickup location');
 
     if (parcel.officeId !== office.id) {
+      if (
+        input.expectedReceivingOfficeId !== undefined &&
+        input.expectedReceivingOfficeId !== parcel.officeId
+      ) {
+        throw Conflict('The receiving office changed. Reopen the parcel before saving.');
+      }
+      const [previousOffice] = parcel.officeId
+        ? await tx
+            .select({ name: receivingOffices.name })
+            .from(receivingOffices)
+            .where(eq(receivingOffices.id, parcel.officeId))
+        : [];
       await tx
         .update(parcels)
         .set({ receivingOfficeId: office.id, updatedAt: new Date() })
         .where(eq(parcels.id, input.parcelId));
+      await tx.insert(auditLogs).values({
+        companyId,
+        actorUserId: input.actorUserId,
+        entityType: 'parcel',
+        entityId: input.parcelId,
+        action: 'PARCEL_RECEIVING_OFFICE_CHANGED',
+        message: `Receiving office set to ${office.name}`,
+        metadata: {
+          branchId,
+          previousReceivingOfficeId: parcel.officeId,
+          previousReceivingOfficeName: previousOffice?.name ?? null,
+          receivingOfficeId: office.id,
+          receivingOfficeName: office.name,
+        },
+      });
     }
-    return { office, previousOfficeId: parcel.officeId };
+    return { receivingOfficeId: office.id, receivingOfficeName: office.name };
   });
-
-  if (assignment.previousOfficeId !== assignment.office.id) {
-    await recordAuditLog({
-      companyId,
-      actorUserId: input.actorUserId,
-      entityType: 'parcel',
-      entityId: input.parcelId,
-      action: 'PARCEL_RECEIVING_OFFICE_CHANGED',
-      message: `Receiving office set to ${assignment.office.name}`,
-      metadata: {
-        previousReceivingOfficeId: assignment.previousOfficeId,
-        receivingOfficeId: assignment.office.id,
-      },
-    });
-  }
-
-  return { receivingOfficeId: assignment.office.id, receivingOfficeName: assignment.office.name };
 }

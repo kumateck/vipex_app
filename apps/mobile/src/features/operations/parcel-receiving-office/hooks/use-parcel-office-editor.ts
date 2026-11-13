@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { canAssignReceivingOffice } from '@/shared/shipments/receiving-office';
+import { editableParcelOffice } from '@/shared/shipments/receiving-office';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { canViewReceiveScreen } from '@mobile/lib/permissions';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
@@ -11,25 +11,24 @@ import { useReceivingOfficeChoice } from './use-receiving-office-choice';
 export function useParcelOfficeEditor(parcel: ParcelFullDetails['parcel'], onSaved: () => void) {
   const { session, withAuth } = useAuth();
   const branchId = session.user?.branch?.id ?? session.user?.branchId;
-  const enabled =
-    branchId === parcel.destinationId &&
-    canViewReceiveScreen(session.user?.permissions) &&
-    canAssignReceivingOffice(parcel.status) &&
-    Boolean(parcel.pickupLocationId) &&
-    !parcel.isDeleted &&
-    !parcel.confirmedAt;
+  const allowed =
+    branchId === parcel.destinationId && canViewReceiveScreen(session.user?.permissions);
+  const assignment = allowed ? editableParcelOffice(parcel) : null;
   const office = useReceivingOfficeChoice({
-    enabled,
+    enabled: Boolean(assignment),
     locationId: parcel.pickupLocationId,
-    initialOfficeId: parcel.receivingOfficeId,
+    initialOfficeId: assignment?.officeId,
   });
   const [saving, setSaving] = useState(false);
 
   async function save() {
-    if (!enabled || !office.officeId || saving) return;
+    if (!assignment || saving || !office.officeId || office.officeId === assignment.officeId)
+      return;
     setSaving(true);
     try {
-      await withAuth((token) => assignReceivingOffice(token, parcel.id, office.officeId));
+      await withAuth((token) =>
+        assignReceivingOffice(token, parcel.id, office.officeId, assignment.officeId),
+      );
       notifySuccess('Receiving office updated');
       onSaved();
     } catch (error) {
@@ -42,5 +41,5 @@ export function useParcelOfficeEditor(parcel: ParcelFullDetails['parcel'], onSav
     }
   }
 
-  return { enabled, office, save, saving };
+  return { assignment, office, save, saving };
 }

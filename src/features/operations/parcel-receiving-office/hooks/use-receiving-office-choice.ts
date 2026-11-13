@@ -22,11 +22,12 @@ export function useReceivingOfficeChoice(input: {
     skip: !input.enabled || !scope,
     refetchOnMountOrArgChange: true,
   });
-  const [selection, setOfficeId] = useState(input.initialOfficeId ?? '');
+  const [selection, setOfficeId] = useState<string>();
   const offices = query.currentData ?? EMPTY_OFFICES;
   const options = input.allLocations
     ? offices
     : officesForPickupLocation(offices, input.locationId);
-  const officeId = options.find((office) => office.id === selection)?.id ?? '';
+  const officeId =
+    options.find((office) => office.id === (selection ?? input.initialOfficeId))?.id ?? '';
   return { ...query, options, officeId, setOfficeId };
 }

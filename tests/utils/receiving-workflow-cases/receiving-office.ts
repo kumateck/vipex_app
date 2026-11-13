@@ -59,7 +59,7 @@ export function registerReceivingOfficeCases(fixture: () => ReceivingWorkflowFix
     );
   });
 
-  test('office changes appear in parcel search and details and cannot move a handed-over parcel', async () => {
+  test('office changes appear in parcel search and details and respect destination branch scope', async () => {
     const f = fixture();
     await f.location('anloga');
     await addOffices('anloga', 'office1', 'office2');
@@ -100,15 +100,87 @@ export function registerReceivingOfficeCases(fixture: () => ReceivingWorkflowFix
       receivingOfficeId: 'office1',
     });
     expect(wrongBranch.status).toBe(404);
-    await sql`update users set branch_id = 'destination' where id = 'admin'`;
+  });
 
-    await sql`update parcels set status = ${ParcelStatus.DELIVERED_BY_OFFICE}`;
+  test('corrects an existing office on a delivered parcel and keeps the handover record', async () => {
+    const f = fixture();
+    await f.location('anloga');
+    await f.location('other');
+    await addOffices('anloga', 'office1', 'office2', 'office3');
+    await addOffices('other', 'wrong-office');
+    await sql`update parcels set status = ${ParcelStatus.DELIVERED_BY_OFFICE},
+      pickup_location_id = 'anloga', receiving_office_id = 'office1',
+      received_at = now() - interval '1 day', confirmed_at = now(), confirmed_by = 'admin'`;
+    const [before] = await sql`select * from parcels where id = 'parcel'`;
+    const detail = await f.request('GET', '/parcel/details');
+    expect(detail.status).toBe(200);
+    expect(await detail.json()).toMatchObject({
+      parcel: {
+        receivingOfficeId: null,
+        recordedReceivingOfficeId: 'office1',
+        recordedReceivingOfficeName: 'Office 1',
+      },
+    });
     expect(
-      (await f.request('PATCH', '/parcel/receiving-office', { receivingOfficeId: 'office1' }))
-        .status,
+      (
+        await f.request('PATCH', '/parcel/receiving-office', {
+          receivingOfficeId: 'wrong-office',
+          expectedReceivingOfficeId: 'office1',
+        })
+      ).status,
+    ).toBe(400);
+    const correction = { receivingOfficeId: 'office2', expectedReceivingOfficeId: 'office1' };
+    expect((await f.request('PATCH', '/parcel/receiving-office', correction)).status).toBe(200);
+    expect((await f.request('PATCH', '/parcel/receiving-office', correction)).status).toBe(200);
+    expect(
+      (
+        await f.request('PATCH', '/parcel/receiving-office', {
+          ...correction,
+          receivingOfficeId: 'office3',
+        })
+      ).status,
     ).toBe(409);
+    const [after] = await sql`select * from parcels where id = 'parcel'`;
+    expect(after).toEqual({
+      ...before,
+      receiving_office_id: 'office2',
+      updated_at: after?.updated_at,
+    });
+    const audits = await sql`select actor_user_id, metadata from audit_logs
+      where entity_id = 'parcel' and action = 'PARCEL_RECEIVING_OFFICE_CHANGED'`;
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      actor_user_id: 'admin',
+      metadata: {
+        previousReceivingOfficeId: 'office1',
+        previousReceivingOfficeName: 'Office 1',
+        receivingOfficeId: 'office2',
+        receivingOfficeName: 'Office 2',
+      },
+    });
+    const history = await f.request('GET', '/parcel/history');
+    expect(history.status).toBe(200);
+    expect(await history.json()).toMatchObject({
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          title: 'Receiving office set to Office 2',
+          actorName: 'Administrator',
+          description: 'Previous office: Office 1',
+        }),
+      ]),
+    });
     const delivered = await f.request('GET', '/?search=BOOK1');
     expect(await delivered.json()).toMatchObject({ data: [{ receivingOfficeName: null }] });
+    expect(
+      (await f.request('DELETE', '/anloga/receiving-offices/office1', undefined, 'locations'))
+        .status,
+    ).toBe(200);
+
+    await sql`update parcels set receiving_office_id = null`;
+    expect(
+      (await f.request('PATCH', '/parcel/receiving-office', { receivingOfficeId: 'office2' }))
+        .status,
+    ).toBe(409);
   });
 
   test('consignment receiving rolls back the checklist until an office is selected', async () => {

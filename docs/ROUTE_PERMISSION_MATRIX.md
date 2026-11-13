@@ -160,7 +160,8 @@ Management permissions.
 **Locations → Edit location → Receiving offices** uses `CanUpdateLocations` to list, add,
 rename or delete unused offices, scoped to the location's company. Receiving-office options and parcel office
 reassignment require `CanReadParcelIncoming` or `CanReadParcelScan` and use the authenticated
-company and destination branch. Display in parcel search and details uses each screen's
+company and destination branch, including corrections to an existing office on a delivered parcel.
+Display in parcel search and details uses each screen's
 existing read permission. See [Receiving offices](PARCEL_OPERATIONS.md#receiving-offices).
 
 Delivery Cashier's upcoming handovers section uses `CanManageParcelSecondReceiver` for

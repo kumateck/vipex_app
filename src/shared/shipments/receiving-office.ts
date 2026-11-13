@@ -13,6 +13,49 @@ export function canAssignReceivingOffice(status: number) {
   return RECEIVING_OFFICE_STATUSES.some((eligible) => eligible === status);
 }
 
+export const DELIVERED_OFFICE_CORRECTION_STATUSES = [
+  ParcelStatus.DELIVERED_BY_OFFICE,
+  ParcelStatus.DELIVERED_AT_HOME,
+] as const satisfies readonly number[];
+
+export function isDeliveredOfficeCorrection(status: number) {
+  return DELIVERED_OFFICE_CORRECTION_STATUSES.some((eligible) => eligible === status);
+}
+
+export type RecordedParcelOffice = {
+  recordedReceivingOfficeId?: string | null;
+  recordedReceivingOfficeName?: string | null;
+  atPickupLocation?: boolean;
+};
+
+export type ParcelOfficeAssignment = ParcelReceivingOffice &
+  RecordedParcelOffice & {
+    id: string;
+    status: number;
+    destinationId: string;
+    isDeleted?: boolean;
+    deletedAt?: string | null;
+    confirmedAt?: string | null;
+  };
+
+export function editableParcelOffice(parcel: ParcelOfficeAssignment) {
+  if (!parcel.pickupLocationId || parcel.isDeleted || parcel.deletedAt) return null;
+  if (isDeliveredOfficeCorrection(parcel.status) && parcel.recordedReceivingOfficeId) {
+    return { officeId: parcel.recordedReceivingOfficeId, historical: true };
+  }
+  if (
+    canAssignReceivingOffice(parcel.status) &&
+    !parcel.confirmedAt &&
+    parcel.atPickupLocation !== false
+  ) {
+    return {
+      officeId: parcel.recordedReceivingOfficeId ?? parcel.receivingOfficeId ?? null,
+      historical: false,
+    };
+  }
+  return null;
+}
+
 export type ParcelReceivingOffice = {
   pickupLocationId?: string | null;
   pickupLocationName?: string | null;

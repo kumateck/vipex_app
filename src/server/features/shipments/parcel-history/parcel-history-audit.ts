@@ -61,6 +61,17 @@ export function mapAuditEntry(entry: AuditEntry): ParcelHistoryDraft[] {
   const message = text(entry.message);
 
   switch (entry.action) {
+    case 'PARCEL_RECEIVING_OFFICE_CHANGED':
+      return [
+        draft(entry, {
+          category: 'edit',
+          title: message ?? 'Receiving office updated',
+          branchId: text(meta.branchId),
+          description: text(meta.previousReceivingOfficeName)
+            ? `Previous office: ${meta.previousReceivingOfficeName}`
+            : null,
+        }),
+      ];
     case 'PARCEL_HANDOVER_NOTE_SAVED':
       return [
         draft(entry, {

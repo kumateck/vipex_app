@@ -361,14 +361,18 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
 - `DELETE /locations/:id/receiving-offices/:officeId` requires `CanUpdateLocations` and removes
   an unused office from a receiving location in the caller's company. Returns `{ success: true }`
   on deletion, 404 for a missing or out-of-scope office, and 409 if any parcel references it.
-- `PATCH /shipments/parcels/:id/receiving-office` takes `{ receivingOfficeId }` and returns
+- `PATCH /shipments/parcels/:id/receiving-office` takes `{ receivingOfficeId, expectedReceivingOfficeId? }` and returns
   `{ receivingOfficeId, receivingOfficeName }`. Requires `CanReadParcelIncoming` or
   `CanReadParcelScan` and the parcel's company and destination branch. Returns 400 for an
-  invalid pickup location or office, 404 for unavailable parcels, and 409 when the parcel is
-  no longer held at the pickup location. Receipt date, status and queue are preserved.
+  invalid pickup location or office, 404 for unavailable parcels, and 409 for stale edits or
+  ineligible parcel states. The optional expected ID accepts null for an unassigned parcel.
+  An existing office can be corrected on a delivered parcel at the same pickup location.
+  The update and its audit entry commit together. Receipt, status, queue and handover are preserved.
 - Parcel search and detail responses include nullable `receivingOfficeId` and
   `receivingOfficeName` alongside pickup location fields. Pickup queue cards and consignment
-  checklist rows include the location and office names.
+  checklist rows include the location and office names. Parcel details also expose the
+  stored office in `recordedReceivingOfficeId` and `recordedReceivingOfficeName` and indicate
+  whether the parcel is at its pickup location with `atPickupLocation`.
 - `GET /shipments/parcels/delivery-reversal-candidates`: list office- and home-delivered parcels
   for the authenticated company and destination branch, with search and pagination. Requires
   `CanReverseParcelDelivery`.

@@ -1,4 +1,5 @@
 import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
+import type { RecordedParcelOffice } from '@/shared/shipments/receiving-office';
 import {
   type ParcelSearchRow,
   type ParcelDispositionActionRow,
@@ -10,55 +11,56 @@ import { type ParcelInternalHolderSnapshot } from './parcel-exceptions.types';
 export type ParcelFullDetails = {
   /** The parcel as list/search rows show it (names, phones, payer totals, rider, holder). */
   summary?: ParcelSearchRow | null;
-  parcel: ParcelHandoverNoteIndicator & {
-    id: string;
-    companyId: string;
-    sourceId: string;
-    destinationId: string;
-    bookingId: string;
-    bookingCode: string;
-    trackingCode: string;
-    senderId: string;
-    senderNameSnapshot: string;
-    receiverId: string;
-    receiverNameSnapshot: string;
-    secondReceiverId: string | null;
-    secondReceiverNameSnapshot: string | null;
-    status: number;
-    parcelDetails: string;
-    parcelContent: string;
-    parcelValuePsw: number;
-    chargeExemptCustomerType?: number | null;
-    relatedStaffId?: string | null;
-    relatedStaffNameSnapshot?: string | null;
-    chargePsw: number;
-    cardId: string | null;
-    cardNumber: string | null;
-    secondCardId: string | null;
-    secondCardNumber: string | null;
-    receivingOfficeId?: string | null;
-    receivingOfficeName?: string | null;
-    pickupLocationId: string | null;
-    plannedToBePaidPsw: number;
-    method: number;
-    shelfPickerStaffId: string | null;
-    taxReportConfirmation: boolean;
-    callSender: boolean;
-    isDeleted: boolean;
-    deletedBy: string | null;
-    deletedAt: string | null;
-    deleteReason: string | null;
-    createdBy: string | null;
-    processedBy?: string | null;
-    createdAt: string;
-    receivedBy: string | null;
-    receivedAt: string | null;
-    confirmedBy: string | null;
-    confirmedAt: string | null;
-    handoverNoteEditable?: boolean;
-    updatedAt: string;
-    cashierSessionId: string | null;
-  };
+  parcel: ParcelHandoverNoteIndicator &
+    RecordedParcelOffice & {
+      id: string;
+      companyId: string;
+      sourceId: string;
+      destinationId: string;
+      bookingId: string;
+      bookingCode: string;
+      trackingCode: string;
+      senderId: string;
+      senderNameSnapshot: string;
+      receiverId: string;
+      receiverNameSnapshot: string;
+      secondReceiverId: string | null;
+      secondReceiverNameSnapshot: string | null;
+      status: number;
+      parcelDetails: string;
+      parcelContent: string;
+      parcelValuePsw: number;
+      chargeExemptCustomerType?: number | null;
+      relatedStaffId?: string | null;
+      relatedStaffNameSnapshot?: string | null;
+      chargePsw: number;
+      cardId: string | null;
+      cardNumber: string | null;
+      secondCardId: string | null;
+      secondCardNumber: string | null;
+      receivingOfficeId?: string | null;
+      receivingOfficeName?: string | null;
+      pickupLocationId: string | null;
+      plannedToBePaidPsw: number;
+      method: number;
+      shelfPickerStaffId: string | null;
+      taxReportConfirmation: boolean;
+      callSender: boolean;
+      isDeleted: boolean;
+      deletedBy: string | null;
+      deletedAt: string | null;
+      deleteReason: string | null;
+      createdBy: string | null;
+      processedBy?: string | null;
+      createdAt: string;
+      receivedBy: string | null;
+      receivedAt: string | null;
+      confirmedBy: string | null;
+      confirmedAt: string | null;
+      handoverNoteEditable?: boolean;
+      updatedAt: string;
+      cashierSessionId: string | null;
+    };
   /** Full names for every user id referenced in these details. */
   userNames?: Record<string, string>;
   payments: Array<{
