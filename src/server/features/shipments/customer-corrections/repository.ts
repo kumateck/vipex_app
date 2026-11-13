@@ -1,8 +1,13 @@
 import { and, eq, getTableColumns, inArray, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { customers, parcels } from '@/db/schemas';
+import { customers, locations, parcels, receivingOffices } from '@/db/schemas';
 import { BadRequest, Conflict, NotFound } from '@/server/utils/http-error';
 import type { CorrectionParcel } from '@/shared/shipments/parcel-customer-correction';
+import type { ParcelReceivingOffice } from '@/shared/shipments/receiving-office';
+import {
+  receivingOfficeJoin,
+  receivingOfficeProjection,
+} from '../parcel-receiving-office/projection';
 import { correctionRestriction } from './rules';
 
 export type CorrectionTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -24,8 +29,14 @@ export async function findCorrectionParcels(companyId: string, bookingCode: stri
   const code = bookingCode.trim();
   if (!code || code.length > 255) throw BadRequest('Enter the booking code');
   const rows = await db
-    .select(parcelColumns)
+    .select({
+      ...parcelColumns,
+      pickupLocationName: locations.name,
+      office: receivingOfficeProjection,
+    })
     .from(parcels)
+    .leftJoin(locations, eq(locations.id, parcels.pickupLocationId))
+    .leftJoin(receivingOffices, receivingOfficeJoin)
     .where(
       and(
         eq(parcels.companyId, companyId),
@@ -37,12 +48,17 @@ export async function findCorrectionParcels(companyId: string, bookingCode: stri
     .limit(51);
   if (!rows.length) throw NotFound('No active parcel matches this booking code in your company');
   if (rows.length > 50) throw Conflict('More than 50 parcels use this code; contact support');
-  return Promise.all(rows.map((row) => buildCorrectionView(row)));
+  return Promise.all(
+    rows.map(({ office, ...row }) =>
+      buildCorrectionView(row, db, { pickupLocationName: row.pickupLocationName, ...office }),
+    ),
+  );
 }
 
 export async function buildCorrectionView(
   parcel: typeof parcels.$inferSelect & { version: string },
   executor: Executor = db,
+  pickup?: ParcelReceivingOffice,
 ): Promise<CorrectionParcel> {
   const ids = [parcel.senderId, parcel.receiverId, parcel.secondReceiverId].filter(
     (id): id is string => !!id,
@@ -66,6 +82,7 @@ export async function buildCorrectionView(
     id: parcel.id,
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
+    ...pickup,
     status: parcel.status,
     version: parcel.version,
     restriction: correctionRestriction(parcel),

@@ -1,3 +1,4 @@
+import { PickupOfficeText } from '@mobile/features/operations/parcel-receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
 import { useState } from 'react';
 import { Text } from 'react-native';
@@ -79,6 +80,11 @@ export function ReceiverSignaturesScreen() {
           <Text style={{ color: theme.colors.textMuted }}>
             {row.collectorName} · Associate: {row.associateName}
           </Text>
+          <PickupOfficeText
+            location={row.pickupLocationName}
+            office={row.receivingOfficeName}
+            style={{ color: theme.colors.textMuted }}
+          />
           {row.signedAt ? (
             <Text style={{ color: theme.colors.success }}>
               Signed · Awaiting desktop confirmation
@@ -103,6 +109,7 @@ export function ReceiverSignaturesScreen() {
           key={selected.handoverId}
           collector={selected.collectorName}
           trackingCode={selected.trackingCode}
+          pickup={selected}
           busy={signatures.saving}
           error={signatures.saveError}
           onClose={signatures.close}

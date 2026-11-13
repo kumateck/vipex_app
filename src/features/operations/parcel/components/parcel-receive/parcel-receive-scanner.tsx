@@ -3,7 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ParcelHandoverNoteAction } from '@/features/operations/parcel-handover-note';
-import { ReceivingOfficeField } from '@/features/operations/parcel-receiving-office';
+import {
+  ParcelPickupOffice,
+  ReceivingOfficeField,
+} from '@/features/operations/parcel-receiving-office';
 import { isBarcodeDetectorAvailable, QrScanner } from './qr-scanner';
 import type { useParcelReceiveWorkflow } from './use-parcel-receive-workflow';
 
@@ -86,6 +89,7 @@ export function ParcelReceiveScanner({
             aria-label="Scanned parcel with a critical note"
           >
             <p className="text-sm font-medium">{criticalParcel.bookingCode}</p>
+            <ParcelPickupOffice parcel={criticalParcel} className="text-sm text-muted-foreground" />
             <ParcelHandoverNoteAction
               parcelId={criticalParcel.id}
               hasHandoverNote={criticalParcel.hasHandoverNote}

@@ -89,6 +89,7 @@ export function ParcelSuperSearchPage() {
       />
 
       <ParcelSuperSearchDetailsDialog
+        allowReceivingOfficeEdit
         parcelId={selectedParcelId}
         companyId={companyId}
         branchNameById={branchNameById}

@@ -70,6 +70,12 @@ export function ParcelSummarySections({
               pickupOfficeLabel(destinationLocationName, details.parcel.receivingOfficeName),
             )}
           />
+          {!details.parcel.receivingOfficeName && details.parcel.recordedReceivingOfficeName ? (
+            <DetailRow
+              label="Recorded receiving office"
+              value={details.parcel.recordedReceivingOfficeName}
+            />
+          ) : null}
           <DetailRow
             label="Route"
             value={prettyRoute(

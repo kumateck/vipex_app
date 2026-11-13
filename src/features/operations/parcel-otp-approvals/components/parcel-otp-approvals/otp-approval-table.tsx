@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { memo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,17 +18,17 @@ type Props = {
   onSelect: (parcel: OtpApprovalQueueItem, trigger: HTMLButtonElement) => void;
 };
 
+const queueColumnLabels = ['Parcel', 'OTP recipient', 'Destination', 'Requested', 'OTP status'];
+
 export const OtpApprovalTable = memo(function OtpApprovalTable({ items, onSelect }: Props) {
   return (
     <div className="rounded-md border">
       <Table aria-label="Parcels awaiting OTP confirmation">
         <TableHeader>
           <TableRow>
-            <TableHead>Parcel</TableHead>
-            <TableHead>OTP recipient</TableHead>
-            <TableHead>Destination</TableHead>
-            <TableHead>Requested</TableHead>
-            <TableHead>OTP status</TableHead>
+            {queueColumnLabels.map((label) => (
+              <TableHead key={label}>{label}</TableHead>
+            ))}
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
         </TableHeader>
@@ -43,7 +44,14 @@ export const OtpApprovalTable = memo(function OtpApprovalTable({ items, onSelect
                   ? parcel.secondReceiverNameSnapshot || 'Second receiver'
                   : parcel.receiverNameSnapshot || 'Main receiver'}
               </TableCell>
-              <TableCell>{parcel.destinationName}</TableCell>
+              <TableCell>
+                {parcel.destinationName}
+                <ParcelPickupOffice
+                  parcel={parcel}
+                  className="text-xs text-muted-foreground"
+                  showLabel={false}
+                />
+              </TableCell>
               <TableCell>{formatDateTimeTZ(parcel.otpRequestedAt)}</TableCell>
               <TableCell>
                 <Badge variant={parcel.otpExpired ? 'outline' : 'secondary'}>

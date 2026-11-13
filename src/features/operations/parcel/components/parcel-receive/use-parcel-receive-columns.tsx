@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -41,6 +42,7 @@ export function useParcelReceiveColumns({
         cell: ({ row }) => (
           <div className="space-y-1">
             <span>{row.original.bookingCode}</span>
+            <ParcelPickupOffice parcel={row.original} className="text-xs text-muted-foreground" />
             <ParcelHandoverNoteAction
               parcelId={row.original.id}
               hasHandoverNote={row.original.hasHandoverNote}

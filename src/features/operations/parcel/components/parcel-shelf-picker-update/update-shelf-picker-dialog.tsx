@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -72,6 +73,7 @@ export function UpdateShelfPickerDialog({
                 <strong>Receiver:</strong> {parcel.receiverName ?? '-'} (
                 {parcel.receiverPhone ?? '-'})
               </p>
+              <ParcelPickupOffice parcel={parcel} />
               <p>
                 <strong>Details:</strong> {parcel.parcelDetails}
               </p>

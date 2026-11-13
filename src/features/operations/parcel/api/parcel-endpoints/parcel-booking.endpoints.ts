@@ -72,6 +72,8 @@ export const parcelApiPart1 = api.injectEndpoints({
         id: string;
         bookingCode: string;
         trackingCode: string;
+        pickupLocationName?: string | null;
+        receivingOfficeName?: string | null;
         status: number;
         chargeExemptCustomerType?: number | null;
         relatedStaffId?: string | null;

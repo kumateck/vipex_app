@@ -95,6 +95,28 @@ export function registerReceivingOfficeCases(fixture: () => ReceivingWorkflowFix
     });
     expect((await sql`select received_at from parcels`)[0]?.received_at).toEqual(receiveAt);
 
+    await sql`update parcels set call_center_assigned_to_user_id = 'admin'`;
+    const officeRow = {
+      pickupLocationName: 'anloga',
+      receivingOfficeId: 'office2',
+      receivingOfficeName: 'Office 2',
+    };
+    for (const path of ['/shelf-picker', '/call-center', '/call-center/assigned']) {
+      const result = await f.request('GET', `${path}?search=BOOK1`);
+      expect(result.status).toBe(200);
+      expect(await result.json()).toMatchObject({ data: [officeRow] });
+    }
+    await sql`update parcels set planned_tobepaid_psw = 5000`;
+    const cashier = await f.request('GET', '/receiver-cashier-queue?search=BOOK1');
+    expect(cashier.status).toBe(200);
+    expect(await cashier.json()).toMatchObject({ data: [officeRow] });
+    const repair = await f.request('GET', '/financial-repair/preview?search=BOOK1');
+    expect(repair.status).toBe(200);
+    expect(await repair.json()).toMatchObject({
+      pickupLocationName: 'anloga',
+      receivingOfficeName: 'Office 2',
+    });
+
     await sql`update users set branch_id = 'source' where id = 'admin'`;
     const wrongBranch = await f.request('PATCH', '/parcel/receiving-office', {
       receivingOfficeId: 'office1',

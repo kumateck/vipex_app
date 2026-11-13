@@ -1,3 +1,5 @@
+import type { ParcelReceivingOffice } from './receiving-office';
+
 export const MIN_OTP_EXCEPTION_REASON_LENGTH = 10;
 export const MAX_OTP_EXCEPTION_REASON_LENGTH = 500;
 
@@ -24,15 +26,16 @@ export type OtpApprovalParcel = {
   secondReceiverNameSnapshot: string | null;
 };
 
-export type OtpApprovalQueueItem = OtpApprovalParcel & {
-  bookingCode: string;
-  trackingCode: string;
-  destinationName: string;
-  otpRequestId: string;
-  otpTarget: string;
-  otpRequestedAt: string;
-  otpExpired: boolean;
-};
+export type OtpApprovalQueueItem = OtpApprovalParcel &
+  ParcelReceivingOffice & {
+    bookingCode: string;
+    trackingCode: string;
+    destinationName: string;
+    otpRequestId: string;
+    otpTarget: string;
+    otpRequestedAt: string;
+    otpExpired: boolean;
+  };
 
 export type OtpApprovalQueueQuery = {
   workflow: OtpAuthorizationWorkflow;

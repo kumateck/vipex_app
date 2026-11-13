@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -433,7 +434,12 @@ export function ParcelProcessedConsignmentPage() {
         header: 'Destination',
         cell: ({ row }) => (
           <div className="leading-tight">
-            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+            <ParcelPickupOffice
+              parcel={row.original}
+              className="font-medium"
+              showLabel={false}
+              fallback="-"
+            />
             <p className="text-muted-foreground text-xs">
               {row.original.destinationName ??
                 branchNameById.get(row.original.destinationId) ??

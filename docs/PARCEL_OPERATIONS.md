@@ -675,9 +675,9 @@ locations and invalid receipt states leave the parcel and consignment checklist 
 Legacy clients can still receive at single-office locations. Receiving at a multi-office location
 requires a client that can send the office ID.
 
-When a parcel changes offices, receiving staff at the destination can open **Parcel details →
-Overview** on web, desktop or mobile, choose another office at the same pickup location and
-select **Save office**. This also corrects the recorded office on a parcel marked **Delivered by
+When a parcel changes offices, receiving staff at the destination can open **Super Search →
+Parcel Details → Overview** on web, desktop or mobile, choose another office at the same
+pickup location and select **Save office**. This also corrects the recorded office on a parcel marked **Delivered by
 Office** or **Delivered at Home** if it already has an office. The save preserves the receipt and
 handover records and adds the previous office, new office and staff member to parcel history.
 If another staff member changes the office first, reopen the parcel before saving. A parcel
@@ -691,11 +691,18 @@ an office at a different pickup location, a stale edit, and a new assignment on 
 delivered parcel are rejected.
 
 Staff search results and parcel details show the location and office together, for example
-**Anloga Junction → Office 3**, on web, desktop and mobile. This includes pickup and receiving
-queues. Search continues to use the existing booking, tracking, name and phone fields. If the
-office is unknown or custody has moved away from the pickup location, the response has no
-current office. Public tracking shows the location and office names while the parcel is
-**Awaiting Pickup** and an office is recorded.
+**Anloga Junction → Office 3**, on web, desktop and mobile. This includes Shelf Picker Update,
+Waiting for Pickup, Receiver Cashier (including signatures), Parcel Assignment, Call Outcome,
+OTP Approvals, and pickup and receiving queues. Office labels outside Super Search are read-only.
+Select the initial office when recording receipt. Search continues to use the existing booking,
+tracking, name and phone fields. If the office is unknown or custody has moved away from the
+pickup location, the response has no current office. Public tracking shows the location and
+office names while the parcel is **Awaiting Pickup** and an office is recorded.
+
+QA: save an office change in Super Search, then look up the booking in Shelf Picker Update,
+Waiting for Pickup or Receiver Cashier as applicable, and Call Outcome. Verify that the result
+and workflow dialog show the current office. Open Full Details from a workflow queue and
+confirm the office is read-only there.
 
 QA scenarios are in [Mobile QA](MOBILE_QA_SMOKE_CHECKLIST.md#receiving-office-qa). The receiving
 workflow integration suite covers single-office defaults, multi-office validation and rollback,

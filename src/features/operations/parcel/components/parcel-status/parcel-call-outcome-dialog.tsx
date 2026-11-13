@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -61,9 +62,12 @@ export function ParcelCallOutcomeDialog({
           <DialogTitle>Call Outcome</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {selectedParcel ? `Booking: ${selectedParcel.bookingCode}` : ''}
-          </p>
+          {selectedParcel ? (
+            <div className="space-y-1 text-sm">
+              <p className="text-muted-foreground">Booking: {selectedParcel.bookingCode}</p>
+              <ParcelPickupOffice parcel={selectedParcel} />
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label>Outcome</Label>

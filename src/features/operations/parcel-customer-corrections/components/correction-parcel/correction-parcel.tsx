@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { parcelStatusLabel } from '@/shared/shipments/parcel-status-labels';
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import type { CorrectionParcel as Parcel, CorrectionParty } from '../../types';
 import { correctionPartyLabels } from '../../utils';
 import { CorrectionEditor } from '../correction-editor';
@@ -27,6 +28,7 @@ export function CorrectionParcel({
         <div>
           <h2 className="font-semibold">{parcel.bookingCode}</h2>
           <p className="text-sm text-muted-foreground">{parcel.trackingCode}</p>
+          <ParcelPickupOffice parcel={parcel} className="text-sm text-muted-foreground" />
         </div>
         <p className="text-sm">{parcelStatusLabel(parcel.status)}</p>
       </div>

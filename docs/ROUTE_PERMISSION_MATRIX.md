@@ -161,6 +161,7 @@ Management permissions.
 rename or delete unused offices, scoped to the location's company. Receiving-office options and parcel office
 reassignment require `CanReadParcelIncoming` or `CanReadParcelScan` and use the authenticated
 company and destination branch, including corrections to an existing office on a delivered parcel.
+The reassignment control is available through Super Search on web, desktop, and mobile.
 Display in parcel search and details uses each screen's
 existing read permission. See [Receiving offices](PARCEL_OPERATIONS.md#receiving-offices).
 

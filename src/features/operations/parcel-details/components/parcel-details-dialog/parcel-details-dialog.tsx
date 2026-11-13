@@ -21,6 +21,7 @@ export type ParcelDetailsDialogProps = {
   handoverNoteEditorBranchId?: string | null;
   /** Page-specific controls shown above the tabs (e.g. Return to Source). */
   renderBanner?: (details: ParcelFullDetails) => ReactNode;
+  renderOverview?: (details: ParcelFullDetails) => ReactNode;
   /** Page-specific actions shown in an extra "Actions" tab. */
   renderActions?: (details: ParcelFullDetails) => ReactNode;
 };
@@ -31,6 +32,7 @@ export function ParcelDetailsDialog({
   onClose,
   handoverNoteEditorBranchId,
   renderBanner,
+  renderOverview,
   renderActions,
 }: ParcelDetailsDialogProps) {
   const view = useParcelDetailsView(parcelId);
@@ -88,6 +90,7 @@ export function ParcelDetailsDialog({
                 isError: view.isHistoryError,
               }}
               actions={renderActions?.(details)}
+              overviewExtra={renderOverview?.(details)}
             />
           </div>
         ) : null}

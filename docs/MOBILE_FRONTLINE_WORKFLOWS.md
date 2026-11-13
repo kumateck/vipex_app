@@ -47,6 +47,13 @@ See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md) for payloads, helper permiss
 failure recovery, first-20-result limitation and platform differences. Receiver payment
 collection and receipt printing are not part of this mobile screen.
 
+Mobile parcel results show the pickup location and its current receiving office when available.
+This includes Super Search, Waiting for Pickup, Shelf Picker Update, Receiver Cashier and its
+signature queue, pickup queues, and assigned calls and the Call Outcome dialog. To correct an
+assignment, open the parcel in **Super Search → Parcel Details → Overview** and select
+**Save office**. The same destination-branch permissions and office eligibility apply on
+mobile and web. See [Receiving offices](PARCEL_OPERATIONS.md#receiving-offices).
+
 ## Rider Third-party Handover
 
 The delivery cashier adds or changes the parcel's second receiver on web/desktop under Delivery

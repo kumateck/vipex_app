@@ -1,7 +1,18 @@
 import { and, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
-import { branches, parcels, ParcelStatus, parcelReceiverOtps } from '@/db/schemas';
+import {
+  branches,
+  locations,
+  parcels,
+  ParcelStatus,
+  parcelReceiverOtps,
+  receivingOffices,
+} from '@/db/schemas';
 import type { OtpAuthorizationWorkflow } from '@/shared/shipments/receiver-otp-exception';
 import type { DbExecutor } from '../shipments/parcel-repositories/parcel-repository.types';
+import {
+  receivingOfficeJoin,
+  receivingOfficeProjection,
+} from '../shipments/parcel-receiving-office/projection';
 import { OTP_EXCEPTION_AUTHORIZED, OTP_EXCEPTION_USED } from './exception';
 import { currentReceiverPhone } from './repository';
 
@@ -85,6 +96,8 @@ function pendingOtpQuery(executor: DbExecutor, input: QueueScope, scope?: SQL) {
       secondReceiverId: parcels.secondReceiverId,
       secondReceiverNameSnapshot: parcels.secondReceiverNameSnapshot,
       destinationName: branches.name,
+      pickupLocationName: locations.name,
+      ...receivingOfficeProjection,
       otpRequestId: pending.id,
       otpTarget: pending.target,
       otpRequestedAt: pending.requestedAt,
@@ -96,6 +109,8 @@ function pendingOtpQuery(executor: DbExecutor, input: QueueScope, scope?: SQL) {
       and(eq(branches.id, parcels.destinationId), eq(branches.companyId, parcels.companyId)),
     )
     .innerJoinLateral(pending, sql`true`)
+    .leftJoin(locations, eq(locations.id, parcels.pickupLocationId))
+    .leftJoin(receivingOffices, receivingOfficeJoin)
     .where(
       and(
         eq(parcels.companyId, input.companyId),

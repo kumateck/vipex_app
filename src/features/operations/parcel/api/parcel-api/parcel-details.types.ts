@@ -1,5 +1,8 @@
 import type { ParcelHandoverNoteIndicator } from '@/shared/shipments/parcel-handover-note';
-import type { RecordedParcelOffice } from '@/shared/shipments/receiving-office';
+import type {
+  ParcelReceivingOffice,
+  RecordedParcelOffice,
+} from '@/shared/shipments/receiving-office';
 import {
   type ParcelSearchRow,
   type ParcelDispositionActionRow,
@@ -177,6 +180,7 @@ export type PickupQueueRecord = {
 };
 
 export type PickupQueueCard = PickupQueueRecord &
+  ParcelReceivingOffice &
   ParcelHandoverNoteIndicator & {
     trackingCode: string;
     bookingCode: string;

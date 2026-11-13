@@ -1,7 +1,6 @@
 import { ParcelOtpApproval } from '@/features/operations/parcel/components/receiver-otp-exception';
-import { ParcelOfficeEditor } from '@/features/operations/parcel-receiving-office';
 import { pickupOfficeLabel } from '@/shared/shipments/receiving-office';
-import { lazy, memo, Suspense } from 'react';
+import { lazy, memo, Suspense, type ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import type { ParcelFullDetails } from '@/features/operations/parcel/api/parcel.api';
 import { ParcelInternalHolderBadge } from '@/features/operations/parcel/components/parcel-internal-holder-badge';
@@ -22,8 +21,10 @@ const ParcelQrCode = lazy(() =>
 
 export const OverviewSection = memo(function OverviewSection({
   details,
+  extra,
 }: {
   details: ParcelFullDetails;
+  extra?: ReactNode;
 }) {
   const { parcel, summary, delivery } = details;
   const userNames = details.userNames ?? {};
@@ -63,6 +64,9 @@ export const OverviewSection = memo(function OverviewSection({
               label: 'Pickup location',
               value: pickupOfficeLabel(summary?.pickupLocationName, parcel.receivingOfficeName),
             },
+            !parcel.receivingOfficeName && parcel.recordedReceivingOfficeName
+              ? { label: 'Recorded receiving office', value: parcel.recordedReceivingOfficeName }
+              : null,
             { label: 'Consignment', value: summary?.consignmentCode },
             { label: 'Parcel Details', value: parcel.parcelDetails },
             { label: 'Parcel Content', value: parcel.parcelContent },
@@ -84,10 +88,7 @@ export const OverviewSection = memo(function OverviewSection({
               : null,
           ]}
         />
-        <ParcelOfficeEditor
-          key={`${parcel.id}:${parcel.pickupLocationId}:${parcel.recordedReceivingOfficeId ?? parcel.receivingOfficeId}`}
-          parcel={parcel}
-        />
+        {extra}
         <ParcelOtpApproval key={`otp-${parcel.id}`} parcel={parcel} />
       </DetailCard>
       <Suspense

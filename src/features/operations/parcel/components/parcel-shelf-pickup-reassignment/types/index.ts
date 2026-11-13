@@ -10,6 +10,8 @@ export type ShelfPickupParcel = Pick<
   | 'receiverPhone'
   | 'parcelDetails'
   | 'storageChargePsw'
+  | 'pickupLocationName'
+  | 'receivingOfficeName'
 > & { pickerStaffId: string | null; pickerStaffName: string | null };
 export type ShelfPickupList = { data: ShelfPickupParcel[]; meta: PaginationMeta };
 export type ShelfPickupStaff = { id: string; fullname: string };

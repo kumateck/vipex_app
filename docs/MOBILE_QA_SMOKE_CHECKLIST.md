@@ -354,6 +354,12 @@ unchanged and no duplicate customer or premature booking should be created.
 
 ## Receiving office QA
 
+- Search for an awaiting-pickup parcel with an office in Super Search and Shelf Picker Update.
+  For the same booking, confirm the office in Waiting for Pickup or Receiver Cashier as
+  applicable, and in the assigned call result and Call Outcome dialog. Correct the office in
+  Super Search, then repeat the searches and verify the updated office. Check that a parcel
+  without an office still shows its pickup location.
+
 - In web or desktop **Locations**, open Anloga Junction and verify four offices are available.
   Rename one and add another. Check that a case-insensitive duplicate is rejected. Open a
   different receiving location and confirm it has its own office.

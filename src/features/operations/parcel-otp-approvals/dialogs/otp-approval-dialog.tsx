@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ export function OtpApprovalDialog({
             {parcel.bookingCode} · {parcel.destinationName} ·{' '}
             {OTP_AUTHORIZATION_WORKFLOW_LABELS[workflow]}
           </DialogDescription>
+          <ParcelPickupOffice parcel={parcel} className="text-sm text-muted-foreground" />
         </DialogHeader>
         <AuthorizePickupForm
           parcel={parcel}

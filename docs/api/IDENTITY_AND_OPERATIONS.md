@@ -368,8 +368,11 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   ineligible parcel states. The optional expected ID accepts null for an unassigned parcel.
   An existing office can be corrected on a delivered parcel at the same pickup location.
   The update and its audit entry commit together. Receipt, status, queue and handover are preserved.
+  The web, desktop and mobile correction control is in Super Search parcel details.
 - Parcel search and detail responses include nullable `receivingOfficeId` and
-  `receivingOfficeName` alongside pickup location fields. Pickup queue cards and consignment
+  `receivingOfficeName` alongside pickup location fields. Shelf picker, Receiver Cashier,
+  call-center, pending receiver handover and OTP approval queue responses use the same
+  current-office rules. Pickup queue cards and consignment
   checklist rows include the location and office names. Parcel details also expose the
   stored office in `recordedReceivingOfficeId` and `recordedReceivingOfficeName` and indicate
   whether the parcel is at its pickup location with `atPickupLocation`.
