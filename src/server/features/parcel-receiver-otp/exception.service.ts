@@ -1,16 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/config';
-import {
-  branches,
-  BranchType,
-  customers,
-  parcels,
-  ParcelStatus,
-  rolePermissions,
-  users,
-  UserStatus,
-} from '@/db/schemas';
-import { PermissionKeys } from '@/shared/permissions/constants';
+import { branches, BranchType, customers, parcels, ParcelStatus } from '@/db/schemas';
 import {
   isOtpExceptionReason,
   OTP_AUTHORIZATION_MINUTES,
@@ -19,6 +9,8 @@ import {
 } from '@/shared/shipments/receiver-otp-exception';
 import { BadRequest, Conflict, Forbidden, NotFound } from '@/server/utils/http-error';
 import { getActiveOtpAuthorization, saveOtpAuthorization } from './exception';
+import { findOtpApprover } from './exception-access.repository';
+import { findPendingOtpForApproval } from './exception-queue.repository';
 
 type Input = {
   companyId: string;
@@ -43,6 +35,7 @@ export async function authorizeParcelWithoutOtp(
     actorUserId: string;
     expectedReceiverId: string;
     expectedCollectorId: string;
+    expectedOtpRequestId?: string;
     reason: string;
   },
 ) {
@@ -64,32 +57,7 @@ export async function authorizeParcelWithoutOtp(
       .for('update');
     if (!parcel) throw NotFound('Parcel not found');
 
-    const [grant] = await tx
-      .select({ branchType: branches.type })
-      .from(users)
-      .innerJoin(
-        branches,
-        and(eq(branches.id, users.branchId), eq(branches.companyId, users.companyId)),
-      )
-      .innerJoin(
-        rolePermissions,
-        and(
-          eq(rolePermissions.roleId, users.roleId),
-          eq(rolePermissions.companyId, users.companyId),
-        ),
-      )
-      .where(
-        and(
-          eq(users.id, input.actorUserId),
-          eq(users.companyId, input.companyId),
-          eq(users.branchId, input.branchId),
-          eq(users.status, UserStatus.ACTIVE),
-          eq(branches.isDeleted, false),
-          eq(rolePermissions.permission, PermissionKeys.CanAuthorizePickupWithoutOtp),
-        ),
-      )
-      .limit(1)
-      .for('share');
+    const grant = await findOtpApprover(tx, input, true);
     if (
       !grant ||
       (input.branchId !== parcel.destinationId && grant.branchType !== BranchType.HEADOFFICE)
@@ -133,6 +101,12 @@ export async function authorizeParcelWithoutOtp(
       )
       .for('share');
     if (!collector) throw Conflict('The collector is no longer available');
+
+    if (input.expectedOtpRequestId) {
+      const pending = await findPendingOtpForApproval(tx, input);
+      if (pending?.otpRequestId !== input.expectedOtpRequestId)
+        throw Conflict('The pending OTP request has changed. Refresh the approval queue.');
+    }
 
     const expiresAt = new Date(Date.now() + OTP_AUTHORIZATION_MINUTES * 60_000).toISOString();
     return saveOtpAuthorization(

@@ -797,12 +797,21 @@ clears the alert permanently and keeps the instruction on the record.
 
 ### Admin approval without OTP
 
-- A staff member with `CanAuthorizePickupWithoutOtp` opens **Parcel Details → Overview →
-  Authorize pickup without OTP** on web or desktop. Select Receiver Cashier or Waiting for
-  Pickup, select the linked collector, verify their identity, and enter a 10–500 character
-  reason. Active destination-branch staff and head-office staff with this grant can approve
-  eligible parcels in their own company. The parcel must be Awaiting Pickup, with OTP
-  required for the selected workflow and no pending signature.
+- On web and desktop, open **Operations → Pickup & Collection → OTP Approvals** with
+  `CanAuthorizePickupWithoutOtp`. Choose Receiver Cashier or Waiting for Pickup and search
+  by booking or tracking code. The queue shows the most recent unverified request per
+  parcel, including expired codes, where the request still matches a linked receiver.
+  The parcel must be Awaiting Pickup, with OTP required for the selected workflow and no
+  pending signature. Receiver OTP requests are shared by the two workflows, so select the
+  one the operator is using. A parcel with an active approval for that workflow drops out of the
+  queue. It can reappear after the approval expires if the request is still outstanding.
+- Select **Authorize without OTP**, verify the linked collector’s identity, and enter a
+  10–500 character reason. The queue rejects a request that changed after the dialog was
+  opened. **Parcel Details → Overview → Authorize pickup without OTP** is also available
+  for an eligible parcel, including when no OTP was requested. Active destination-branch
+  staff and head-office staff with this grant can approve parcels in their own company.
+  Mobile Waiting for Pickup supports using an approval during handover. Approvers use the
+  web or desktop page to issue one.
 - The operator selects the same collector and uses **Check admin approval** in the matching
   workflow. Receiver Cashier is on web and desktop. Waiting for Pickup also supports the
   approval in the mobile app. Waiting for Pickup requires a collector signature when
@@ -815,6 +824,11 @@ clears the alert permanently and keeps the instruction on the record.
 - QA: approve as one staff member and complete as a cashier without the approval grant.
   Check that stale, reused, wrong-workflow, and wrong-collector approvals fail, and that an
   unsuccessful payment leaves the approval available while valid.
+- QA: request an OTP and confirm it appears in the queue before and after code expiry.
+  Check that a verified request, a parcel with no request, and a different branch’s parcel
+  are hidden from a branch approver. Confirm the grant is required even for a cashier, head
+  office sees eligible parcels across the company, search matches the code, and only one of
+  two simultaneous approvals from the same queue entry succeeds.
 
 ## Digital Receipt Delivery
 

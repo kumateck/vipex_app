@@ -331,6 +331,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanCreateReceiverPayments,
           },
           {
+            title: 'OTP Approvals',
+            url: '/parcels/otp-approvals',
+            permissionKey: PermissionKeys.CanAuthorizePickupWithoutOtp,
+          },
+          {
             title: 'Reverse Delivery Confirmation',
             url: '/parcels/delivery-reversal',
             permissionKey: PermissionKeys.CanReverseParcelDelivery,

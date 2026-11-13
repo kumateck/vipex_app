@@ -11,19 +11,22 @@ import {
   auditLogs,
   branches,
   cashierSessions,
+  customers,
   parcels,
+  parcelReceiverOtps,
   payments,
   rolePermissions,
   roles,
   users,
 } from '@/db/schemas';
-import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
+import { BranchType, ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import {
   authorizeParcelWithoutOtp,
   readParcelOtpAuthorization,
 } from '@/server/features/parcel-receiver-otp/exception.service';
 import { collectReceiverPaymentAndDeliverSvc } from '@/server/features/payments/service';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { hasRequiredPermissionForPath } from '@/shared/permissions/path-access';
 import { createShelfPickupFixture } from '../utils/shelf-pickup-fixture';
 
 const app = new Elysia()
@@ -70,9 +73,124 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!fixture) return;
+  await db.delete(parcelReceiverOtps).where(eq(parcelReceiverOtps.companyId, fixture.companyId));
   await db.delete(payments).where(eq(payments.companyId, fixture.companyId));
   await db.delete(cashierSessions).where(eq(cashierSessions.cashierId, fixture.oldPicker));
   await fixture.cleanup();
+});
+
+test('OTP approval page requires the approval grant independently of cashier access', () => {
+  const route = '/parcels/otp-approvals';
+  expect(hasRequiredPermissionForPath(route, [PermissionKeys.CanAuthorizePickupWithoutOtp])).toBe(
+    true,
+  );
+  expect(hasRequiredPermissionForPath(route, [PermissionKeys.CanCreateReceiverPayments])).toBe(
+    false,
+  );
+});
+
+test('queue lists pending OTPs, scopes by branch and workflow, and rejects a stale approval', async () => {
+  const { companyId, branchId, actor, oldPicker } = fixture;
+  const [waiting, verified, notRequested, elsewhere] = await Promise.all([
+    fixture.parcel(),
+    fixture.parcel(),
+    fixture.parcel(),
+    fixture.parcel(),
+  ]);
+  const otherBranch = createId();
+  await db.insert(branches).values({
+    id: otherBranch,
+    companyId,
+    name: 'Other branch',
+    requireReceiverOtp: true,
+    requirePickupOtp: false,
+    createdBy: actor,
+  });
+  await db.update(parcels).set({ destinationId: otherBranch }).where(eq(parcels.id, elsewhere.id));
+  const phone = '0240000000';
+  await db.update(customers).set({ telephone: phone }).where(eq(customers.id, waiting.receiverId));
+  const now = Date.now();
+  const otp = {
+    companyId,
+    branchId,
+    targetReceiver: 'main',
+    phone,
+    otpHash: 'fixture-hash',
+    expiresAt: new Date(now - 60_000),
+    createdAt: new Date(now - 600_000),
+    createdBy: actor,
+  };
+  const requestId = createId();
+  await db.insert(parcelReceiverOtps).values([
+    { ...otp, parcelId: waiting.id, id: requestId },
+    { ...otp, parcelId: verified.id, createdAt: new Date(now - 660_000) },
+    { ...otp, parcelId: verified.id, verifiedAt: new Date(now - 120_000) },
+    { ...otp, parcelId: elsewhere.id, branchId: otherBranch },
+  ]);
+  const [approver, cashier] = await Promise.all([tokenFor(actor), tokenFor(oldPicker)]);
+  const root = 'http://localhost/shipments/parcels';
+  const queue = (token?: string, query = 'workflow=receiver_cashier') =>
+    app.handle(
+      new Request(`${root}/otp-approval-queue?${query}`, {
+        headers: token ? { authorization: `Bearer ${token}` } : {},
+      }),
+    );
+  expect((await queue()).status).toBe(401);
+  expect((await queue(cashier)).status).toBe(403);
+  expect((await queue(approver, 'workflow=invalid')).status).toBe(400);
+
+  const response = await queue(approver);
+  expect(response.status).toBe(200);
+  expect(response.headers.get('cache-control')).toBe('no-store, private');
+  const result = await response.json();
+  expect(result).toMatchObject({
+    items: [{ id: waiting.id, otpRequestId: requestId, otpExpired: true }],
+    hasNextPage: false,
+  });
+  expect(result.items).toHaveLength(1);
+  expect(result.items[0]).not.toHaveProperty('phone');
+  expect(result.items[0]).not.toHaveProperty('otpHash');
+  expect(
+    await (
+      await queue(approver, `workflow=receiver_cashier&search=${notRequested.bookingCode}`)
+    ).json(),
+  ).toEqual({ items: [], hasNextPage: false });
+
+  const approve = (expectedOtpRequestId: string) =>
+    app.handle(
+      new Request(`${root}/${waiting.id}/otp-authorization`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${approver}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          workflow: 'receiver_cashier',
+          handoverTarget: 'main',
+          reason: 'Verified identity in person',
+          expectedReceiverId: waiting.receiverId,
+          expectedCollectorId: waiting.receiverId,
+          expectedOtpRequestId,
+        }),
+      }),
+    );
+  expect((await approve(createId())).status).toBe(409);
+  const approvals = await Promise.all([approve(requestId), approve(requestId)]);
+  expect(approvals.map(({ status }) => status).sort()).toEqual([200, 409]);
+  expect(await (await queue(approver)).json()).toEqual({ items: [], hasNextPage: false });
+  expect(await (await queue(approver, 'workflow=office_pickup')).json()).toMatchObject({
+    items: [{ id: waiting.id }],
+  });
+
+  await db.update(branches).set({ type: BranchType.HEADOFFICE }).where(eq(branches.id, branchId));
+  try {
+    expect(await (await queue(approver)).json()).toMatchObject({ items: [{ id: elsewhere.id }] });
+    expect(
+      await (await queue(approver, 'workflow=office_pickup&page=2&pageSize=1')).json(),
+    ).toEqual({ items: [], hasNextPage: false });
+    expect(await (await queue(approver, 'workflow=office_pickup')).json()).toMatchObject({
+      items: [{ id: waiting.id }],
+    });
+  } finally {
+    await db.update(branches).set({ type: BranchType.AGENCY }).where(eq(branches.id, branchId));
+  }
 });
 
 test('admin approval unlocks only the matching cashier workflow and is consumed with payment', async () => {

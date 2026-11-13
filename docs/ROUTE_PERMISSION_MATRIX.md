@@ -35,7 +35,7 @@ and authenticated company/source-or-destination scope (company-wide parcel reade
 may verify other branches in the same company). No new permission is granted automatically.
 See [API scope and rejection rules](api/IDENTITY_AND_OPERATIONS.md#sticker-payment-verification).
 
-Last generated: 2026-10-17
+Last generated: 2026-11-13
 
 `/customer-messages` requires `CanReadCustomerMessages`; handling changes additionally
 require `CanManageCustomerMessages`. The backend derives company scope from the
@@ -47,9 +47,11 @@ Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverride
 `GET /v1/payments/receiver-otp/session` accepts `CanCreateReceiverPayments` or
 `CanCompleteOfficePickup` and checks the authenticated company and destination branch.
 
-The POST at `/v1/shipments/parcels/:id/otp-authorization` requires the current
-`CanAuthorizePickupWithoutOtp` grant for active staff at the destination branch or
-head office in the parcel’s company. The GET requires `CanCreateReceiverPayments`
+`/parcels/otp-approvals` and `GET /v1/shipments/parcels/otp-approval-queue` require
+`CanAuthorizePickupWithoutOtp` with no additional module gate. The queue and
+`POST /v1/shipments/parcels/:id/otp-authorization` check the current grant for active
+staff at the destination branch or head office in the parcel’s company.
+`GET /v1/shipments/parcels/:id/otp-authorization` requires `CanCreateReceiverPayments`
 for Receiver Cashier or `CanCompleteOfficePickup` for Waiting for Pickup, and uses
 the authenticated company and destination branch. No role receives the approval grant by default.
 

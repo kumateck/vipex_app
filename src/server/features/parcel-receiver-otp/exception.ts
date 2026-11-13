@@ -8,8 +8,8 @@ import type {
 import { BadRequest, Conflict } from '@/server/utils/http-error';
 import type { DbExecutor } from '../shipments/parcel-repositories/parcel-repository.types';
 
-const AUTHORIZED = 'PARCEL_RECEIVER_OTP_EXCEPTION_AUTHORIZED';
-const USED = 'PARCEL_RECEIVER_OTP_EXCEPTION_USED';
+export const OTP_EXCEPTION_AUTHORIZED = 'PARCEL_RECEIVER_OTP_EXCEPTION_AUTHORIZED';
+export const OTP_EXCEPTION_USED = 'PARCEL_RECEIVER_OTP_EXCEPTION_USED';
 
 export type ReceiverOtpExceptionInput = {
   otpAuthorizationId?: string;
@@ -45,7 +45,7 @@ export async function getActiveOtpAuthorization(tx: DbExecutor, scope: Authoriza
     .where(
       and(
         parcelAudit(scope),
-        eq(auditLogs.action, AUTHORIZED),
+        eq(auditLogs.action, OTP_EXCEPTION_AUTHORIZED),
         sql`${auditLogs.metadata}->>'workflow' = ${scope.workflow}`,
       ),
     )
@@ -70,7 +70,7 @@ export async function getActiveOtpAuthorization(tx: DbExecutor, scope: Authoriza
     .where(
       and(
         parcelAudit(scope),
-        eq(auditLogs.action, USED),
+        eq(auditLogs.action, OTP_EXCEPTION_USED),
         sql`${auditLogs.metadata}->>'authorizationId' = ${entry.id}`,
       ),
     )
@@ -112,7 +112,7 @@ export async function recordReceiverOtpException(
     actorUserId,
     entityType: 'parcel',
     entityId: scope.parcelId,
-    action: USED,
+    action: OTP_EXCEPTION_USED,
     message: 'Handover processed with admin approval without OTP',
     metadata: { ...scope, authorizationId: approval.id, approvedBy: approval.approvedBy },
   });
@@ -132,7 +132,7 @@ export async function saveOtpAuthorization(
       actorUserId,
       entityType: 'parcel',
       entityId: scope.parcelId,
-      action: AUTHORIZED,
+      action: OTP_EXCEPTION_AUTHORIZED,
       message: 'Admin approved parcel handover without OTP',
       metadata: { ...scope, reason, expiresAt },
       createdAt: sql`clock_timestamp() at time zone 'UTC'`,

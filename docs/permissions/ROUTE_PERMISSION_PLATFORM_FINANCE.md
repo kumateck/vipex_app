@@ -1,6 +1,6 @@
 # Route Permissions: Platform and Finance
 
-Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-17.
+Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-11-13.
 
 Platform, user, dashboard, accounting, and other core route overrides.
 
