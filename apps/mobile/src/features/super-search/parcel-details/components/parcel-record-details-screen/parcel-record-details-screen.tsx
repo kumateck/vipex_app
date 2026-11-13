@@ -101,7 +101,7 @@ export function ParcelRecordDetailsScreen() {
       ) : null}
       {tab === 'overview' ? (
         <ParcelOfficeEditor
-          key={details.parcel.id}
+          key={`${details.parcel.id}:${details.parcel.pickupLocationId}:${details.parcel.recordedReceivingOfficeId ?? details.parcel.receivingOfficeId}`}
           parcel={details.parcel}
           onSaved={() => {
             void load();

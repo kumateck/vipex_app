@@ -201,11 +201,24 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   `failed: { parcelId, message }[]` explains parcels that were stale, out of scope, missing a
   completed return, or held by an open reconciliation case. Every successful parcel gets its own
   audit entry and rider assignment notification.
+- `GET /shipments/parcels/otp-approval-queue` requires `CanAuthorizePickupWithoutOtp`.
+  It takes `workflow` (`receiver_cashier` or `office_pickup`) and optional `search`
+  (booking or tracking code), `page` (default 1), and `pageSize` (default 20, maximum 100).
+  Returns `{ items, hasNextPage }` with parcel/collector identifiers and names, destination,
+  and pending request ID, recipient, request time and expiry status. Responses use
+  `Cache-Control: no-store, private`. The queue includes expired unverified requests and
+  excludes parcels with an active approval for the selected workflow or a pending handover.
+  The destination branch must require OTP for that workflow. Missing authentication returns
+  401, a missing grant returns 403, and an invalid query returns 400. The page is on web
+  and desktop. This read uses existing OTP and audit records.
 - `POST /shipments/parcels/:id/otp-authorization` accepts `workflow` (`receiver_cashier`
   or `office_pickup`), `handoverTarget` (`main` or `second`), `expectedReceiverId`,
-  `expectedCollectorId`, and `reason`. Returns `{ id, expiresAt, handoverTarget }`.
+  `expectedCollectorId`, `reason`, and optional `expectedOtpRequestId`. Returns
+  `{ id, expiresAt, handoverTarget }`.
   The reason must be 10–500 characters after trimming. Unauthorized staff receive 403,
-  unknown parcels receive 404, and stale parcel or collector state receives 409.
+  unknown parcels receive 404, and stale parcel or collector state receives 409. The queue
+  supplies `expectedOtpRequestId` so a verified or replaced request, or a newly issued
+  approval for that workflow, also returns 409.
 - `GET /shipments/parcels/:id/otp-authorization` takes `workflow` and `handoverTarget`.
   Returns `{ approval }` with the active approval or `null`, without the reason or actor details.
   Receiver Cashier payment and signed office pickup accept `otpAuthorizationId` in place
@@ -348,14 +361,21 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
 - `DELETE /locations/:id/receiving-offices/:officeId` requires `CanUpdateLocations` and removes
   an unused office from a receiving location in the caller's company. Returns `{ success: true }`
   on deletion, 404 for a missing or out-of-scope office, and 409 if any parcel references it.
-- `PATCH /shipments/parcels/:id/receiving-office` takes `{ receivingOfficeId }` and returns
+- `PATCH /shipments/parcels/:id/receiving-office` takes `{ receivingOfficeId, expectedReceivingOfficeId? }` and returns
   `{ receivingOfficeId, receivingOfficeName }`. Requires `CanReadParcelIncoming` or
   `CanReadParcelScan` and the parcel's company and destination branch. Returns 400 for an
-  invalid pickup location or office, 404 for unavailable parcels, and 409 when the parcel is
-  no longer held at the pickup location. Receipt date, status and queue are preserved.
+  invalid pickup location or office, 404 for unavailable parcels, and 409 for stale edits or
+  ineligible parcel states. The optional expected ID accepts null for an unassigned parcel.
+  An existing office can be corrected on a delivered parcel at the same pickup location.
+  The update and its audit entry commit together. Receipt, status, queue and handover are preserved.
+  The web, desktop and mobile correction control is in Super Search parcel details.
 - Parcel search and detail responses include nullable `receivingOfficeId` and
-  `receivingOfficeName` alongside pickup location fields. Pickup queue cards and consignment
-  checklist rows include the location and office names.
+  `receivingOfficeName` alongside pickup location fields. Shelf picker, Receiver Cashier,
+  call-center, pending receiver handover and OTP approval queue responses use the same
+  current-office rules. Pickup queue cards and consignment
+  checklist rows include the location and office names. Parcel details also expose the
+  stored office in `recordedReceivingOfficeId` and `recordedReceivingOfficeName` and indicate
+  whether the parcel is at its pickup location with `atPickupLocation`.
 - `GET /shipments/parcels/delivery-reversal-candidates`: list office- and home-delivered parcels
   for the authenticated company and destination branch, with search and pagination. Requires
   `CanReverseParcelDelivery`.

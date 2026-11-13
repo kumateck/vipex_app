@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { useState } from 'react';
 import { useHasPermission } from '@/components/permissions/permission-guard';
 import { PermissionKeys } from '@/shared/permissions/constants';
@@ -109,6 +110,7 @@ export function PickupVerificationDialog({
                 <p>
                   <strong>Booking:</strong> {parcel.bookingCode}
                 </p>
+                <ParcelPickupOffice parcel={parcel} />
                 <p>
                   <strong>Receiver:</strong> {parcel.receiverName ?? '-'} (
                   {parcel.receiverPhone ?? '-'})

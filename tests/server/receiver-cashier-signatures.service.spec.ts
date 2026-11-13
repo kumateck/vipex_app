@@ -15,6 +15,7 @@ import {
   payments,
   pickupQueues,
   rolePermissions,
+  receivingOffices,
 } from '@/db/schemas';
 import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import { collectReceiverPaymentAndDeliverSvc } from '@/server/features/payments/service';
@@ -72,6 +73,11 @@ describe('Receiver Cashier signature handover', () => {
     if (!fixture) return;
     await db.delete(payments).where(eq(payments.companyId, fixture.companyId));
     await db.delete(cashierSessions).where(eq(cashierSessions.cashierId, fixture.actor));
+    await db
+      .update(parcels)
+      .set({ receivingOfficeId: null })
+      .where(eq(parcels.companyId, fixture.companyId));
+    await db.delete(receivingOffices).where(eq(receivingOffices.locationId, fixture.locationId));
     await fixture.cleanup();
   });
 
@@ -96,6 +102,20 @@ describe('Receiver Cashier signature handover', () => {
 
   test('wakes the mobile list and open desktop dialog without confirming delivery', async () => {
     const { parcel, ticket, scope, payment } = await setup();
+    const [office] = await db
+      .insert(receivingOffices)
+      .values({
+        locationId: fixture.locationId,
+        name: 'Office 3',
+      })
+      .returning({ id: receivingOffices.id });
+    await db
+      .update(parcels)
+      .set({
+        pickupLocationId: fixture.locationId,
+        receivingOfficeId: office!.id,
+      })
+      .where(eq(parcels.id, parcel.id));
     await expect(
       collectReceiverPaymentAndDeliverSvc({ ...payment, requestSignature: false }),
     ).rejects.toThrow('Branch signature settings changed');
@@ -115,6 +135,8 @@ describe('Receiver Cashier signature handover', () => {
       signedAt: null,
       collectorName: 'Shelf customer',
       associateName: fixture.oldPicker,
+      pickupLocationName: fixture.locationId,
+      receivingOfficeName: 'Office 3',
     });
     expect((await listReceiverHandovers({ ...scope, branchId: fixture.companyId })).rows).toEqual(
       [],

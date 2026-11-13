@@ -44,8 +44,11 @@ account status, role permissions, or company scope.
 ## Switch Branch
 
 Grant **Switch active branch** (`CanSwitchBranch`) on the user's role. Staff sign in
-again after receiving the grant. Web and desktop users open the branch control in
-the header. Mobile users open **Profile → Switch branch**.
+again after receiving the grant. In the web interface used by browsers and desktop,
+open the header account menu and choose **Switch branch**. The dialog shows the
+current role and branch, offers searchable branch and location selectors, and names
+the destination on the confirmation button. Use **Cancel** to close the dialog.
+Mobile users open **Profile → Switch branch**.
 The selector lists active branches in the user's company. Only staff assigned to head
 office can select a head-office branch. Staff returning to their assigned branch use
 their assigned location. Other branches require an active location when one is listed.
@@ -63,7 +66,11 @@ to refresh sessions. Existing sessions start with their assigned branch. Removin
 grant or deactivating the selected branch or location ends access through the switched
 session. Sign in again to return to the assigned branch.
 
-QA: test a role with and without the grant. Switch to a second branch with a location,
+QA: test a role with and without the grant. In the header account menu, open the dialog,
+check the current role and branch, and use **Cancel** to return focus to the menu trigger.
+Reopen it, search for a branch, and verify that a branch with multiple locations requires
+a location selection before confirming. Check that a rejected switch leaves the dialog open.
+Switch to a second branch with a location,
 check that branch-scoped screens load the new branch, renew the session, and switch back.
 Verify that foreign-company and deleted branches, head-office targets for agency staff,
 and locations from another branch are rejected. Check that the old token cannot make

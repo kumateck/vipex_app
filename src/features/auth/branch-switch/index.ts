@@ -1,2 +1,2 @@
-export { BranchSwitchButton } from './components/branch-switch/branch-switch-button';
+export { BranchSwitchDialog } from './dialogs/branch-switch-dialog';
 export { useSyncBranchContext } from './hooks/use-sync-branch-context';

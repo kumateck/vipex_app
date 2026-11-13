@@ -5,10 +5,13 @@ import { AppButton } from '@mobile/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import { isReceiverCashierSignature } from '@/shared/shipments/receiver-cashier-signature';
+import type { ParcelReceivingOffice } from '@/shared/shipments/receiving-office';
+import { PickupOfficeText } from '@mobile/features/operations/parcel-receiving-office';
 
 type Props = {
   collector: string;
   trackingCode: string;
+  pickup: ParcelReceivingOffice;
   busy: boolean;
   error: string;
   onClose: () => void;
@@ -18,6 +21,7 @@ type Props = {
 export function ReceiverSignatureDialog({
   collector,
   trackingCode,
+  pickup,
   busy,
   error,
   onClose,
@@ -36,6 +40,11 @@ export function ReceiverSignatureDialog({
           <Text style={[mobileTextStyles.title3, { color: theme.colors.text }]}>
             Signature for {trackingCode}
           </Text>
+          <PickupOfficeText
+            location={pickup.pickupLocationName}
+            office={pickup.receivingOfficeName}
+            style={{ color: theme.colors.textMuted }}
+          />
           <Text style={{ color: theme.colors.textMuted }}>
             {collector}, sign to acknowledge receipt of this parcel.
           </Text>

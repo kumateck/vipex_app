@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -93,6 +94,7 @@ function ParcelSummary({ dialog, parcel }: { dialog: WorkflowDialog; parcel: Sel
       <p>
         <strong>Booking:</strong> {parcel.bookingCode}
       </p>
+      <ParcelPickupOffice parcel={parcel} />
       <p>
         <strong>Receiver:</strong> {parcel.receiverName ?? '-'} ({parcel.receiverPhone ?? '-'})
       </p>

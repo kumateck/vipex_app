@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { locations, parcels, parcelInternalHolders, receivingOffices } from '@/db/schemas';
 import { RECEIVING_OFFICE_STATUSES } from '@/shared/shipments/receiving-office';
 
@@ -6,6 +7,8 @@ export const receivingOfficeProjection = {
   receivingOfficeId: receivingOffices.id,
   receivingOfficeName: receivingOffices.name,
 };
+
+export const recordedOffice = alias(receivingOffices, 'recorded_receiving_office');
 
 export const parcelAtPickupLocation = sql<boolean>`not exists (
   select 1 from ${parcelInternalHolders}
@@ -32,4 +35,10 @@ export const receivingOfficeJoin = and(
       and ${locations.canReceive}
       and not ${locations.isDeleted})`,
   inArray(parcels.status, RECEIVING_OFFICE_STATUSES),
+);
+
+export const recordedOfficeJoin = and(
+  eq(recordedOffice.id, parcels.receivingOfficeId),
+  eq(parcels.isDeleted, false),
+  isNull(parcels.deletedAt),
 );

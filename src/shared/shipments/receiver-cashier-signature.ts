@@ -1,21 +1,23 @@
 import { isHandoverSignature, MAX_HANDOVER_SIGNATURE_LENGTH } from './handover-signature';
 import type { ParcelHandoverNoteIndicator } from './parcel-handover-note';
+import type { ParcelReceivingOffice } from './receiving-office';
 
 export type ReceiverCashierSignature =
   | { source: 'touchscreen'; signatureImage: string }
   | { source: 'topaz'; signatureImage: string; sigString: string };
 
-export type PendingReceiverHandoverRow = ParcelHandoverNoteIndicator & {
-  id: string;
-  handoverId: string;
-  trackingCode: string;
-  bookingCode: string;
-  collectorName: string;
-  associateName: string;
-  requestedAt: string;
-  signedAt: string | null;
-  receiverId: string;
-};
+export type PendingReceiverHandoverRow = ParcelHandoverNoteIndicator &
+  ParcelReceivingOffice & {
+    id: string;
+    handoverId: string;
+    trackingCode: string;
+    bookingCode: string;
+    collectorName: string;
+    associateName: string;
+    requestedAt: string;
+    signedAt: string | null;
+    receiverId: string;
+  };
 
 export type ReceiverHandoverWatchKey = { parcelId: string; handoverId?: string };
 export type ReceiverHandoverListQuery = Partial<ReceiverHandoverWatchKey> & {

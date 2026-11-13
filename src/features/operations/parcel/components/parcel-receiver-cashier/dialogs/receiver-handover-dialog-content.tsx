@@ -1,3 +1,4 @@
+import { ParcelPickupOffice } from '@/features/operations/parcel-receiving-office';
 import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -60,6 +61,7 @@ export function ReceiverHandoverDialogContent({
         <DialogDescription>
           {row ? `${row.trackingCode} · ${row.collectorName}` : 'Receiver Cashier handover'}
         </DialogDescription>
+        {row ? <ParcelPickupOffice parcel={row} className="text-sm text-muted-foreground" /> : null}
       </DialogHeader>
       {finished ? (
         <p role="status">Preparing the receipt…</p>
