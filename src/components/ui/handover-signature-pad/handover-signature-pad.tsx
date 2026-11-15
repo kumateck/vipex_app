@@ -8,7 +8,7 @@ import {
 const WIDTH = 480;
 const HEIGHT = 160;
 
-export function PickupCollectorSignature({
+export function HandoverSignaturePad({
   onChange,
   disabled,
 }: {

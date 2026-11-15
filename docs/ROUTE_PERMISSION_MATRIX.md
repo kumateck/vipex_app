@@ -47,6 +47,11 @@ Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverride
 `GET /v1/payments/receiver-otp/session` accepts `CanCreateReceiverPayments` or
 `CanCompleteOfficePickup` and checks the authenticated company and destination branch.
 
+`/v1/payments/office-pickup-batch-handover` and its OTP and confirm routes require
+`CanCompleteOfficePickup`. The corresponding `receiver-cashier-batch-handover` routes require
+`CanCreateReceiverPayments`. Both require an assigned destination branch. Receiver Cashier
+batch send and confirmation also require an active cashier session.
+
 `/parcels/otp-approvals` and `GET /v1/shipments/parcels/otp-approval-queue` require
 `CanAuthorizePickupWithoutOtp` with no additional module gate. The queue and
 `POST /v1/shipments/parcels/:id/otp-authorization` check the current grant for active

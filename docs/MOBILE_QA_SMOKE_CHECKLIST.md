@@ -2,6 +2,21 @@
 
 Last updated: 2026-11-08
 
+## Batch parcel handover
+
+- On Android and iOS, open **Waiting for Pickup → Hand over multiple parcels**. Search a
+  receiver with at least three settled parcels using their +233 number. Select two, send one
+  OTP, verify it, sign once, and confirm. Verify both selected parcels and their queue tickets
+  complete and the third parcel stays awaiting pickup.
+- In **Operations Hub → Receiver Cashier**, repeat with parcels that have principal and storage
+  amounts due. Verify the total and use an active cashier session to complete payment. Check
+  the payment records and individual receipts on Desktop. Repeat on web and Desktop, including
+  a Desktop Topaz capture.
+- Try a wrong OTP, a blank signature, a changed selection, an expired OTP, and a parcel without
+  today’s ticket at a queue-enabled branch. End a selected pickup ticket after OTP verification
+  and verify all selected parcels retain their original status and payment records. Retry a
+  completed batch and verify it records no duplicate payments.
+
 ## Waiting for Pickup
 
 Run on Android in light/dark mode. These device scenarios are pending execution;

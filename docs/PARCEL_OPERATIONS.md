@@ -859,6 +859,50 @@ Unticking Physical in the Sender/Receiver cashier dialogs skips the automatic pr
 happen after the transaction succeeds and never roll it back. See [Digital receipts](DIGITAL_RECEIPTS.md).
 Automated coverage: `otp-sms-delivery.test.ts`, `sms-provider-payloads.test.ts`.
 
+### Hand over multiple parcels
+
+In **Waiting for Pickup** or **Receiver Cashier**, select **Hand over multiple parcels** on
+web, Vipex Desktop, Android or iOS. On mobile, open **Receiver Cashier** from the Operations
+Hub. Search by the main receiver’s complete registered primary or secondary telephone, select
+2–20 parcels, then send and verify one six-digit OTP. Ghana local and +233 formats match the
+same number. Have the main receiver sign once and confirm receipt for the selection.
+
+Waiting for Pickup lists settled parcels. Receiver Cashier lists parcels with principal or
+storage due and shows the total at handover. Use an active cashier session to record Cash,
+Telecel or Airtel payments. MTN Request-to-Pay remains available in the single-parcel cashier
+workflow. Batch payments and receipt records are kept per parcel. Use **Receiver Cashier →
+Delivered** to reprint individual receipts. Desktop can use a Topaz pad for Receiver Cashier
+batch signatures. All clients can use the on-screen signing pad.
+
+The batch uses the staff member’s active destination branch and keeps each assigned shelf
+picker. When some parcels have no picker, choose an active associate at your assigned location
+for those parcels. Branches with pickup queues require a current-day ticket for every parcel.
+Parcels with an existing Receiver Cashier signature request remain in **Receiver Signatures**.
+The batch flow requires the main receiver, an OTP and a signature even at branches with optional
+OTP or cashier signatures for individual parcels. Individual workflows support alternate collectors
+and authorized OTP exceptions.
+
+Each OTP is bound to the authenticated staff member, branch, receiver telephone, and exact set
+of parcels and quoted balances. SMS is the default and configured branches can select WhatsApp.
+Codes and verified proofs each expire after 10 minutes. Five incorrect attempts require a new
+code. While a batch is open, another request to the same number at that branch requires a
+60-second wait. Change
+the selection before sending a new code. A failed provider dispatch leaves the previous issued
+code available until it expires.
+
+Confirmation marks all selected parcels **Delivered by Office** and ends their queue tickets in
+one transaction. A changed receiver, balance, queue ticket or parcel status, invalid signature,
+or open reconciliation case prevents the entire update. Search again when the selection changes.
+Retrying a successful confirmation returns the original result without posting any additional
+payments. Migration `0100_parcel_batch_handover` extends `parcel_receiver_otps` with batch
+scope and completion fields. The delivery snapshot and audit history on each selected parcel
+record the same batch ID. Audit history excludes the signature image and OTP.
+
+QA covers exact telephone matching, permission and OTP isolation, leaving unselected parcels
+awaiting pickup, concurrent retries, and rollback of all cashier charges when one ticket changes
+in `tests/server/parcel-batch-handover.spec.ts`. The mobile smoke checklist also covers
+on-device signature capture and confirmation.
+
 ### Receiver Cashier signatures
 
 A destination branch can require a customer signature after Receiver Cashier processing.

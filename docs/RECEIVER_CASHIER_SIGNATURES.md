@@ -32,6 +32,16 @@ capture is retained. Confirming twice does not deliver or print twice. If the re
 print after delivery, use Receiver Cashier → Delivered → Reprint Receipt. Turning the setting
 off affects future payments. Existing pending parcels still require a signature and confirmation.
 
+## Batch handover
+
+**Receiver Cashier → Hand over multiple parcels** is available on web, Desktop and mobile.
+Search by receiver telephone and select 2–20 parcels with a balance due. After one OTP is verified,
+the main receiver signs once. Confirm to record the selected payment method and deliver the
+whole selection in one transaction. It requires an active cashier session. The web and mobile
+signing pads are available, and Desktop supports Topaz. Confirmed payments remain eligible for
+per-parcel receipt reprint in **Receiver Cashier → Delivered**. Existing pending signatures use
+the single-parcel flow above. See [Parcel operations](PARCEL_OPERATIONS.md#hand-over-multiple-parcels).
+
 ## Windows Topaz setup
 
 Use the Topaz SignatureGem T-LBK462-HSB-R connected by USB. Install the manufacturer's

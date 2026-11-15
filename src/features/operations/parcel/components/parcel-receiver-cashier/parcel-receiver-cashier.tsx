@@ -1,3 +1,4 @@
+import { ParcelBatchHandover } from '@/features/operations/parcel-batch-handover';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -66,6 +67,9 @@ export function ParcelReceiverCashier() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {context.branchId && !table.isDelivered ? (
+                <ParcelBatchHandover key={context.branchId} workflow="receiver-cashier" />
+              ) : null}
               {context.branchId && !table.isDelivered ? (
                 <ReceiverHandoverList
                   key={context.branchId}
