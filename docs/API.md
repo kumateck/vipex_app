@@ -666,6 +666,36 @@ shared endpoint. Notification dispatch logs retain the send failure. Tests:
 `src/server/features/parcel-receiver-otp/otp-sms-delivery.test.ts` and
 `src/server/features/notification-hub/sms-provider-payloads.test.ts`.
 
+### Batch parcel handover
+
+The four routes below are under both `/v1/payments/office-pickup-batch-handover`
+(`CanCompleteOfficePickup`) and `/v1/payments/receiver-cashier-batch-handover`
+(`CanCreateReceiverPayments`). They use the authenticated destination branch. Receiver Cashier
+requires an active cashier session to send an OTP and confirm.
+
+| Route suffix        | Request                                                                                | Successful response                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `GET /`             | `telephone`, optional `after` cursor                                                   | `{ rows, next, staff }`, including balances, receiver IDs, pickup offices, and blockers |
+| `POST /otp/request` | `{ telephone, items, channel }`                                                        | `{ id, expiresAt, resendAt }`                                                           |
+| `POST /otp/verify`  | `{ id, otp }`                                                                          | `{ verificationToken, expiresAt }`                                                      |
+| `POST /confirm`     | `{ id, telephone, items, verificationToken, signature, associateId?, paymentMethod? }` | `{ parcelIds, alreadyConfirmed }`                                                       |
+
+`items` is an array of 2–20 unique `{ id, receiverId, principalPsw, storagePsw }` quotes from
+the search response. `channel` is `sms` or `whatsapp`. The signature accepts
+`{ source: 'touchscreen', signatureImage }` on all clients. Receiver Cashier also accepts
+`{ source: 'topaz', signatureImage, sigString }` from Desktop. Receiver Cashier requires
+`paymentMethod` (`cash`, `telecel`, or `airtel`). Office pickup collects zero payment.
+Search and proof responses use `Cache-Control: no-store`.
+
+Missing permissions or a proof for another selection return 403. Wrong OTP returns 400, an OTP
+session outside the staff member’s scope returns 404, and expired codes, resend cooldown, changed
+eligibility or a missing ticket return 409. Delivery-provider failures return 503. Confirmation
+writes all parcels, payments and queue updates in one transaction. Retrying with the completed
+batch’s verification token returns `alreadyConfirmed: true`. Batch codes and proofs are scoped
+separately from individual parcel OTPs. See [Parcel operations](PARCEL_OPERATIONS.md#hand-over-multiple-parcels).
+
+### Self-service booking
+
 Self-service public `POST /self-service/drafts` now returns `bookingsCompleted` and nullable
 `nextSession` alongside `draftId`/`expiresAt`. One QR scan permits ten successful drafts within
 its original 15-minute deadline; tokens remain single-use. Persistence and continuation issuance

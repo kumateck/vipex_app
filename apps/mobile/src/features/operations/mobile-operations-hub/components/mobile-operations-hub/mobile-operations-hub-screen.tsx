@@ -150,7 +150,7 @@ export function MobileOperationsHubScreen() {
         <ModuleCard
           icon="cash-outline"
           title="Receiver Cashier"
-          description="Look up parcels awaiting cashier collection and read their handover notes."
+          description="Find parcels, review handover notes, and collect payment for a batch handover."
           href="/(app)/receiver-cashier"
           linkLabel="Open Cashier Queue"
         />
