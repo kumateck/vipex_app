@@ -1,3 +1,4 @@
+import { ParcelBatchHandover } from '@/features/operations/parcel-batch-handover';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,9 @@ export function ParcelWaitingPickupPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {context.branchId ? (
+              <ParcelBatchHandover key={context.branchId} workflow="office-pickup" />
+            ) : null}
             <form
               className="flex items-center gap-2"
               onSubmit={(event) => {

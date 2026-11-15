@@ -4,8 +4,8 @@ import type { PickupOtpAuthorization } from '@/shared/shipments/receiver-otp-exc
 import { OtpApprovalStatus } from '../receiver-otp-exception';
 
 const SignaturePad = lazy(() =>
-  import('./pickup-collector-signature').then(({ PickupCollectorSignature }) => ({
-    default: PickupCollectorSignature,
+  import('@/components/ui/handover-signature-pad').then(({ HandoverSignaturePad }) => ({
+    default: HandoverSignaturePad,
   })),
 );
 

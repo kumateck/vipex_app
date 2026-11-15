@@ -1,20 +1,16 @@
-import { useCallback } from 'react';
-import { Text } from 'react-native';
+import { MobileParcelBatchHandover } from '@mobile/features/operations/parcel-batch-handover';
+import { useCallback, useState } from 'react';
 import { AppScreen } from '@mobile/components/screen';
-import { AppButton, AppCard, AppPageHeader, MobileNoAccess } from '@mobile/components/ui/mobile';
+import { AppPageHeader, MobileNoAccess } from '@mobile/components/ui/mobile';
 import { canCompleteOfficePickup } from '@mobile/lib/permissions';
 import { useAuth } from '@mobile/providers/auth-provider';
-import { useAppearance } from '@mobile/providers/appearance-provider';
 import {
   useOfficePickupHandover,
   useOfficePickupList,
   usePickupContext,
   useWhatsAppAvailability,
 } from '../../hooks';
-import { PickupHandoverPanel } from './pickup-handover-panel';
-import { PickupParcelFinder } from './pickup-parcel-finder';
-import { PickupSuccessCard } from './pickup-success-card';
-import { pickupStyles } from './office-pickup.styles';
+import { OfficePickupContent } from './office-pickup-content';
 
 /**
  * Mobile counterpart of the web "Waiting for Pickup" page: hand a sender-paid
@@ -22,7 +18,7 @@ import { pickupStyles } from './office-pickup.styles';
  */
 export function OfficePickupScreen() {
   const { session } = useAuth();
-  const { theme } = useAppearance();
+  const [batchOpen, setBatchOpen] = useState(false);
   const allowed = canCompleteOfficePickup(session.user?.permissions ?? []);
   const context = usePickupContext();
   const list = useOfficePickupList(context, allowed);
@@ -45,6 +41,20 @@ export function OfficePickupScreen() {
     );
   }
 
+  if (batchOpen && context.branchId) {
+    return (
+      <AppScreen keyboardShouldPersistTaps="handled">
+        <MobileParcelBatchHandover
+          key={context.branchId}
+          workflow="office-pickup"
+          onClose={() => setBatchOpen(false)}
+          onConfirmed={onFinished}
+          whatsappAvailable={isWhatsAppAvailable}
+        />
+      </AppScreen>
+    );
+  }
+
   const subtitle = list.isPickupQueueEnabled
     ? 'Sender-paid parcels awaiting office pickup and identity verification.'
     : 'Search for a sender-paid parcel to process pickup at this branch.';
@@ -56,28 +66,13 @@ export function OfficePickupScreen() {
       onRefresh={handover.parcel ? undefined : () => void list.refresh()}
     >
       <AppPageHeader title="Waiting for Pickup" subtitle={subtitle} />
-      {!context.branchId ? (
-        <MobileNoAccess message="Your user account needs an assigned branch to process pickups." />
-      ) : list.settingsError ? (
-        <AppCard>
-          <Text style={[pickupStyles.text, { color: theme.colors.textMuted }]}>
-            Unable to load pickup settings for your branch.
-          </Text>
-          <AppButton title="Try again" variant="secondary" onPress={() => void list.refresh()} />
-        </AppCard>
-      ) : handover.completed ? (
-        <PickupSuccessCard completed={handover.completed} onDone={handover.close} />
-      ) : handover.parcel ? (
-        <PickupHandoverPanel
-          handover={handover}
-          context={context}
-          isPickupOtpRequired={list.isPickupOtpRequired}
-          isPickupQueueEnabled={list.isPickupQueueEnabled}
-          isWhatsAppAvailable={isWhatsAppAvailable}
-        />
-      ) : (
-        <PickupParcelFinder list={list} onOpen={(parcel) => void handover.open(parcel)} />
-      )}
+      <OfficePickupContent
+        context={context}
+        list={list}
+        handover={handover}
+        isWhatsAppAvailable={isWhatsAppAvailable}
+        onOpenBatch={() => setBatchOpen(true)}
+      />
     </AppScreen>
   );
 }

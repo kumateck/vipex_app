@@ -8,6 +8,7 @@ export type DeliveryConfirmationSnapshot = {
   paymentIds: string[];
   creditChargeIds: string[];
   pickupQueueId: string | null;
+  batchHandoverId?: string;
   receiverCashierReceiptTax?: {
     vatPsw: number;
     getfundPsw: number;
