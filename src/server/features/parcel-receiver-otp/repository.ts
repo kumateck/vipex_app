@@ -41,6 +41,7 @@ export async function getActiveParcelReceiverOtpRepo(
         eq(parcelReceiverOtps.targetReceiver, targetReceiver),
         isNull(parcelReceiverOtps.verifiedAt),
         gt(parcelReceiverOtps.expiresAt, new Date()),
+        isNull(parcelReceiverOtps.batchScope),
         currentReceiverPhone,
       ),
     )
@@ -92,6 +93,7 @@ export async function getVerifiedOtpByTokenRepo(
         eq(parcelReceiverOtps.targetReceiver, targetReceiver),
         eq(parcelReceiverOtps.verificationToken, token),
         gt(parcelReceiverOtps.verificationTokenExpiresAt, new Date()),
+        isNull(parcelReceiverOtps.batchScope),
         currentReceiverPhone,
       ),
     )

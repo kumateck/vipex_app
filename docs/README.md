@@ -18,6 +18,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 
 - [Parcel operations](PARCEL_OPERATIONS.md)
   - [Receiving offices](PARCEL_OPERATIONS.md#receiving-offices)
+  - [Hand over multiple parcels](PARCEL_OPERATIONS.md#hand-over-multiple-parcels)
   - [Other Customer Booking](PARCEL_OPERATIONS.md#other-customer-booking)
 - [Parcel details and history](PARCEL_DETAILS.md)
 - [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md)

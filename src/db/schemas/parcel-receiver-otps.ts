@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { index, integer, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 import { createId } from '@paralleldrive/cuid2';
 import { branches, companies, users } from './core';
@@ -26,6 +27,8 @@ export const parcelReceiverOtps = pgTable(
     targetReceiver: varchar('target_receiver', { length: 16 }).notNull(), // 'main' | 'second'
     phone: varchar('phone', { length: 32 }).notNull(),
     channel: varchar('channel', { length: 16 }).notNull().default('sms'), // 'sms' | 'whatsapp'
+    batchScope: varchar('batch_scope', { length: 96 }),
+    batchCompletedAt: timestamp('batch_completed_at', { withTimezone: false }),
     otpHash: varchar('otp_hash', { length: 64 }).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: false }).notNull(),
     verifiedAt: timestamp('verified_at', { withTimezone: false }),
@@ -41,6 +44,12 @@ export const parcelReceiverOtps = pgTable(
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   },
   (t) => ({
+    byBatch: index('parcel_receiver_otps_batch_idx')
+      .on(t.batchScope, t.createdBy, t.createdAt)
+      .where(sql`${t.batchScope} is not null`),
+    byBatchPhone: index('parcel_receiver_otps_batch_phone_idx')
+      .on(t.companyId, t.branchId, t.phone, t.createdAt)
+      .where(sql`${t.batchScope} is not null`),
     byParcel: index('parcel_receiver_otps_parcel_idx').on(t.parcelId),
     byParcelExpires: index('parcel_receiver_otps_parcel_expires_idx').on(t.parcelId, t.expiresAt),
     byVerificationToken: index('parcel_receiver_otps_verification_token_idx').on(

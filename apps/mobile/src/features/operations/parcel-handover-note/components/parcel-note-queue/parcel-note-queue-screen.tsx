@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { MobileReceiverCashierBatchHandover } from '@mobile/features/operations/parcel-batch-handover';
 import { Text, View } from 'react-native';
 import { AppButton, AppInput, AppPageHeader, MobileNoAccess } from '@mobile/components/ui/mobile';
 import { AppScreen } from '@mobile/components/screen';
@@ -25,22 +27,46 @@ const queueDetails = {
 
 export function ParcelNoteQueueScreen({ queue }: { queue: NoteQueue }) {
   const { session } = useAuth();
+  const [batchOpen, setBatchOpen] = useState(false);
   const { theme } = useAppearance();
   const { permission, title } = queueDetails[queue];
   const allowed = Boolean(session.user?.permissions?.includes(permission));
   const state = useNoteQueue(queue, allowed);
+  const batchBranch =
+    queue === 'receiver-cashier-queue'
+      ? (session.user?.branch?.id ?? session.user?.branchId)
+      : undefined;
   if (!allowed)
     return (
       <AppScreen>
         <MobileNoAccess message="This parcel workflow requires permission." />
       </AppScreen>
     );
+  if (batchOpen && batchBranch) {
+    return (
+      <AppScreen keyboardShouldPersistTaps="handled">
+        <MobileReceiverCashierBatchHandover
+          key={batchBranch}
+          onClose={() => setBatchOpen(false)}
+          onConfirmed={state.refresh}
+        />
+      </AppScreen>
+    );
+  }
+
   return (
     <AppScreen refreshing={state.loading} onRefresh={state.refresh}>
       <AppPageHeader
         title={title}
         subtitle="Search parcels in this workflow and review their handover notes."
       />
+      {batchBranch ? (
+        <AppButton
+          title="Hand over multiple parcels"
+          variant="secondary"
+          onPress={() => setBatchOpen(true)}
+        />
+      ) : null}
       <AppInput
         accessibilityLabel="Parcel search"
         placeholder="Booking, tracking, name or phone"

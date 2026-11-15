@@ -29,6 +29,7 @@ export async function getResumableReceiverOtp(
       and(
         eq(parcelReceiverOtps.parcelId, parcelId),
         eq(parcelReceiverOtps.targetReceiver, targetReceiver),
+        isNull(parcelReceiverOtps.batchScope),
         currentReceiverPhone,
         or(
           and(isNull(parcelReceiverOtps.verifiedAt), gt(parcelReceiverOtps.expiresAt, now)),

@@ -16,6 +16,7 @@ import {
   requireAuth,
   requirePermissions,
 } from '@/server/plugins/auth';
+import { parcelBatchHandoverRoutes } from '../parcel-batch-handover';
 import { receiverHandoverRoutes } from './receiver-handover.routes';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { receiverOtpSessionRoutes } from '../parcel-receiver-otp';
@@ -23,6 +24,7 @@ import { receiverOtpSessionRoutes } from '../parcel-receiver-otp';
 export const paymentsRoutes = new Elysia({ name: 'payments' })
   .use(authPlugin)
   .use(receiverHandoverRoutes)
+  .use(parcelBatchHandoverRoutes)
   .use(receiverOtpSessionRoutes)
   .post(
     '/',

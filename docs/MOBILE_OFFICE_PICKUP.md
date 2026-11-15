@@ -10,8 +10,15 @@ web/desktop `/parcels/waiting-pickup`. The feature lives in
 Android and iOS use the same feature. Native device smoke testing remains required.
 
 This completes office handover without collecting payment. Parcels with outstanding principal
-or storage charges belong in Receiver Cashier. Mobile Receiver Signatures captures signatures for payments already processed in Receiver Cashier. See [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md). Mobile receiver-payment collection, receipt
-printing and the full web cashier table are not implemented by this feature.
+or storage charges belong in Receiver Cashier. Mobile Receiver Signatures captures signatures for payments already processed in Receiver Cashier. See [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md). Mobile batch payment collection is available in **Operations Hub → Receiver Cashier**. For receipts, use the desktop Receiver Cashier reprint flow.
+
+## Batch pickup
+
+Choose **Hand over multiple parcels**, enter the receiver’s full telephone, and select 2–20
+settled parcels. Send and verify one OTP for the selection and capture one signature from the
+main receiver. Confirm once to close the selected queue tickets and mark those parcels received.
+Follow the same steps in mobile **Operations Hub → Receiver Cashier** when a payment is due.
+See [Parcel operations](PARCEL_OPERATIONS.md#hand-over-multiple-parcels) for limits and failure handling.
 
 ## Finding a parcel
 
