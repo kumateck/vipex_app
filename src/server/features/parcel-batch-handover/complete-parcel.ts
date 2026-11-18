@@ -9,7 +9,12 @@ import { confirmOfficePickupInTransaction } from '../shipments/parcel-services/c
 import { checkBatchQuote } from './eligibility';
 import { batchStaffScope, type BatchActor, type getBatchMembers } from './selection';
 
-type BatchCapture = { id: string; signature: ReceiverCashierSignature; capturedAt: string };
+type BatchCapture = {
+  id: string;
+  signature: ReceiverCashierSignature;
+  capturedAt: string;
+  capturedBy: string;
+};
 
 export async function completeBatchParcel(
   actor: BatchActor,
@@ -96,6 +101,7 @@ export async function completeBatchParcel(
         locationId: actor.locationId,
         actorUserId: actor.actorId,
         signatureImage: batch.signature.signatureImage,
+        signatureCapturedBy: batch.capturedBy,
         expectedMainReceiverId: parcel.receiverId,
         expectedSecondReceiverId: parcel.secondReceiverId,
         secondReceiverId: parcel.secondReceiverId,
@@ -123,6 +129,7 @@ export async function completeBatchParcel(
       handoverTarget: 'main',
       customerId: parcel.receiverId,
       capturedAt: batch.capturedAt,
+      capturedBy: batch.capturedBy,
       source: batch.signature.source,
       otpVerified: true,
     },

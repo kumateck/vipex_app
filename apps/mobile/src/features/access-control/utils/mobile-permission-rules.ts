@@ -76,6 +76,9 @@ export const canCaptureReceiverSignature = (permissions: MobilePermissions) =>
 export const canCompleteOfficePickup = (permissions: MobilePermissions) =>
   hasPermission(permissions, MobilePermissionKeys.CanCompleteOfficePickup);
 
+export const canViewReceiverSignatures = (permissions: MobilePermissions) =>
+  canCaptureReceiverSignature(permissions) || canCompleteOfficePickup(permissions);
+
 export const canViewRiderCurrent = (permissions: MobilePermissions) =>
   hasPermission(permissions, MobilePermissionKeys.CanReadRiderCurrentParcels);
 

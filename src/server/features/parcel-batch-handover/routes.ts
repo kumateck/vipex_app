@@ -14,6 +14,9 @@ import { confirmBatchHandover } from './confirm';
 import { requestBatchOtp, verifyBatchOtp } from './otp';
 import { searchBatchParcels } from './search';
 import type { BatchActor } from './selection';
+import { requestBatchSignature, cancelBatchSignature } from './signature-request';
+import { getBatchSignatureStatus } from './signature-capture';
+import { batchSignatureRoutes } from './signature.routes';
 
 const telephone = t.String({ minLength: 10, maxLength: 40, pattern: '^[+0-9 ().-]+$' });
 const selection = {
@@ -77,10 +80,35 @@ function batchRoutes(workflow: BatchHandoverWorkflow) {
         beforeHandle: gate,
       },
     )
+    .post('/signature/request', ({ user, body }) => requestBatchSignature(scope(user!), body), {
+      beforeHandle: gate,
+      body: t.Object({
+        ...selection,
+        id: UUID,
+        verificationToken: t.String({ pattern: '^[a-f0-9]{48}$' }),
+      }),
+    })
+    .get(
+      '/:id/signature',
+      ({ user, params, set }) => {
+        set.headers['cache-control'] = 'no-store';
+        return getBatchSignatureStatus(scope(user!), params.id);
+      },
+      { beforeHandle: gate, params: t.Object({ id: UUID }) },
+    )
+    .post(
+      '/:id/signature/cancel',
+      ({ user, params, body }) => cancelBatchSignature(scope(user!), params.id, body.requestId),
+      {
+        beforeHandle: gate,
+        params: t.Object({ id: UUID }),
+        body: t.Object({ requestId: UUID }),
+      },
+    )
     .post(
       '/confirm',
       ({ user, body, request }) => {
-        if (body.signature.source === 'topaz' && readNativeClient(request) !== 'desktop')
+        if (body.signature?.source === 'topaz' && readNativeClient(request) !== 'desktop')
           throw Forbidden('Use Vipex Desktop to capture a Topaz signature');
         return confirmBatchHandover(scope(user as AuthUser), body);
       },
@@ -93,7 +121,7 @@ function batchRoutes(workflow: BatchHandoverWorkflow) {
           paymentMethod: t.Optional(
             t.Union(BATCH_PAYMENT_METHODS.map(({ value }) => t.Literal(value))),
           ),
-          signature,
+          signature: t.Optional(signature),
         }),
         beforeHandle: gate,
       },
@@ -101,5 +129,6 @@ function batchRoutes(workflow: BatchHandoverWorkflow) {
 }
 
 export const parcelBatchHandoverRoutes = new Elysia({ name: 'parcel-batch-handover' })
+  .use(batchSignatureRoutes)
   .use(batchRoutes('office-pickup'))
   .use(batchRoutes('receiver-cashier'));

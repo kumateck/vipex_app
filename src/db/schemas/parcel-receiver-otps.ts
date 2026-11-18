@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
-import { index, integer, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import type { BatchSignatureRequest } from '@/shared/shipments/batch-signature-request';
 import { createId } from '@paralleldrive/cuid2';
 import { branches, companies, users } from './core';
 import { parcels } from './shipments';
@@ -29,6 +30,7 @@ export const parcelReceiverOtps = pgTable(
     channel: varchar('channel', { length: 16 }).notNull().default('sms'), // 'sms' | 'whatsapp'
     batchScope: varchar('batch_scope', { length: 96 }),
     batchCompletedAt: timestamp('batch_completed_at', { withTimezone: false }),
+    batchSignatureRequest: jsonb('batch_signature_request').$type<BatchSignatureRequest>(),
     otpHash: varchar('otp_hash', { length: 64 }).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: false }).notNull(),
     verifiedAt: timestamp('verified_at', { withTimezone: false }),
@@ -44,6 +46,9 @@ export const parcelReceiverOtps = pgTable(
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   },
   (t) => ({
+    byPendingSignature: index('parcel_receiver_otps_pending_signature_idx')
+      .on(t.companyId, t.branchId, t.id)
+      .where(sql`${t.batchSignatureRequest} is not null and ${t.batchCompletedAt} is null`),
     byBatch: index('parcel_receiver_otps_batch_idx')
       .on(t.batchScope, t.createdBy, t.createdAt)
       .where(sql`${t.batchScope} is not null`),

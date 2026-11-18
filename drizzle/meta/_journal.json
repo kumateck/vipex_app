@@ -708,6 +708,13 @@
       "when": 1794700800000,
       "tag": "0100_parcel_batch_handover",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1794960000000,
+      "tag": "0101_batch_mobile_signature",
+      "breakpoints": true
     }
   ]
 }

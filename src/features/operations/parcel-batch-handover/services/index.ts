@@ -1,4 +1,7 @@
 export {
+  useRequestBatchSignatureMutation,
+  useGetBatchSignatureQuery,
+  useCancelBatchSignatureMutation,
   useConfirmBatchHandoverMutation,
   useRequestBatchOtpMutation,
   useSearchBatchParcelsMutation,
