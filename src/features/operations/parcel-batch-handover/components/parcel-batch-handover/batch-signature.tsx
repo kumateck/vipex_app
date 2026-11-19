@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { isReceiverCashierSignature } from '@/shared/shipments/receiver-cashier-signature';
-import type { useBatchHandover } from '../../hooks';
+import type { useWebBatchHandover } from '../../hooks/web';
 import { useBatchTopazSignature } from '../../hooks/web';
+import { BatchMobileSignature } from './batch-mobile-signature';
 
 const SignaturePad = lazy(() =>
   import('@/components/ui/handover-signature-pad').then(({ HandoverSignaturePad }) => ({
@@ -14,16 +15,34 @@ export function BatchSignature({
   flow,
   allowTopaz,
 }: {
-  flow: ReturnType<typeof useBatchHandover>;
+  flow: ReturnType<typeof useWebBatchHandover>;
   allowTopaz: boolean;
 }) {
   const topaz = useBatchTopazSignature(flow.setSignature);
   const signed = flow.signature && isReceiverCashierSignature(flow.signature);
-  const disabled = flow.busy || topaz.busy;
+  const disabled =
+    flow.busy || topaz.busy || flow.mobileSignature.busy || flow.mobileSignature.checking;
+
+  if (flow.mobileSignature.status) return <BatchMobileSignature flow={flow} />;
 
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">Receiver signature for all selected parcels</p>
+      <Button
+        variant="outline"
+        disabled={disabled}
+        onClick={() => void flow.mobileSignature.request()}
+      >
+        Request signature on mobile
+      </Button>
+      {flow.mobileSignature.error ? (
+        <div role="alert" className="space-y-2 text-sm text-destructive">
+          <p>{flow.mobileSignature.error}</p>
+          <Button variant="outline" onClick={flow.mobileSignature.retry}>
+            Retry signature check
+          </Button>
+        </div>
+      ) : null}
       {flow.signature?.source === 'topaz' ? (
         <div className="space-y-2">
           <img

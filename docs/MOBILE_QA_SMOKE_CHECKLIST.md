@@ -4,6 +4,17 @@ Last updated: 2026-11-08
 
 ## Batch parcel handover
 
+- Start **Hand over multiple parcels** on Desktop, verify the single batch OTP and choose
+  **Request signature on mobile**. On Android and iOS, open Receiver Signatures and check
+  that one request shows the entire selected list, including a match searched by its second
+  parcel. Sign once, check the open Desktop dialog receives the preview, then confirm. Repeat
+  in Waiting for Pickup and Receiver Cashier. Verify the capture operator and batch ID on
+  every selected parcel and that a third unselected parcel remains available.
+- Close and reopen the mobile screen before and after signing, retry a save, cancel/replace
+  the desktop request while the mobile dialog is open, and expire the proof. Check that stale
+  captures fail and completed, cancelled or expired requests leave the queue. Confirm that
+  each workflow permission shows only its matching requests at the signed-in branch.
+
 - On Android and iOS, open **Waiting for Pickup → Hand over multiple parcels**. Search a
   receiver with at least three settled parcels using their +233 number. Select two, send one
   OTP, verify it, sign once, and confirm. Verify both selected parcels and their queue tickets

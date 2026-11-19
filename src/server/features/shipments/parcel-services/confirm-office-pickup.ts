@@ -36,6 +36,7 @@ export type OfficePickupInput = {
   confirmedBy: string;
   handoverTarget: 'main' | 'second';
   signatureImage: string;
+  signatureCapturedBy?: string;
   expectedMainReceiverId: string;
   expectedSecondReceiverId: string | null;
   secondReceiverId: string | null;
@@ -210,7 +211,9 @@ export async function confirmOfficePickupInTransaction(
           signatureImage: input.signatureImage,
           handoverTarget,
           customerId,
-          capturedBy: input.actorUserId,
+          capturedBy: batchId
+            ? (input.signatureCapturedBy ?? input.actorUserId)
+            : input.actorUserId,
         },
       },
     },

@@ -22,7 +22,12 @@ import { validateExceptionCollector } from './validate-otp-exception-collector';
 import type { DbExecutor } from '../types/payment.types';
 import type { ReceiverCashierSignature } from '@/shared/shipments/receiver-cashier-signature';
 
-type VerifiedBatch = { id: string; signature: ReceiverCashierSignature; capturedAt: string };
+type VerifiedBatch = {
+  id: string;
+  signature: ReceiverCashierSignature;
+  capturedAt: string;
+  capturedBy?: string;
+};
 
 export async function processReceiverPayment(
   input: ReceiverPaymentInput,
@@ -208,7 +213,7 @@ export async function processReceiverPayment(
       collectorId: prepared.collectorId,
       collectorName: prepared.collectorName,
       handoverTarget: prepared.handoverTarget,
-      capturedBy: input.cashierUserId,
+      capturedBy: batch.capturedBy ?? input.cashierUserId,
       capturedAt: batch.capturedAt,
     };
   }

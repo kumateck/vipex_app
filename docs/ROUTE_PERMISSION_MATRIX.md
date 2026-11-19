@@ -52,6 +52,14 @@ Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverride
 `CanCreateReceiverPayments`. Both require an assigned destination branch. Receiver Cashier
 batch send and confirmation also require an active cashier session.
 
+The batch `/signature/request`, `/:id/signature` and `/:id/signature/cancel` endpoints use the
+same workflow permission and additionally scope the OTP session to its initiating staff member.
+`GET /v1/payments/batch-handover-signatures` accepts either grant and shows only the permitted
+workflow at the authenticated company/branch. The matching `POST /:id/signature` additionally
+requires the mobile client header and a current request ID. Office-pickup staff can open mobile
+Receiver Signatures to sign those batches. Single-parcel cashier signature routes retain
+`CanCreateReceiverPayments`. See [batch signatures](RECEIVER_CASHIER_SIGNATURES.md#batch-handover).
+
 `/parcels/otp-approvals` and `GET /v1/shipments/parcels/otp-approval-queue` require
 `CanAuthorizePickupWithoutOtp` with no additional module gate. The queue and
 `POST /v1/shipments/parcels/:id/otp-authorization` check the current grant for active
