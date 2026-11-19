@@ -47,7 +47,7 @@ export type BatchOtpProof = { verificationToken: string; expiresAt: string };
 export type BatchConfirmation = BatchSelection & {
   id: string;
   verificationToken: string;
-  signature: ReceiverCashierSignature;
+  signature?: ReceiverCashierSignature;
   associateId?: string;
   paymentMethod?: BatchPaymentMethod;
 };

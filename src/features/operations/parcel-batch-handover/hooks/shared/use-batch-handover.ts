@@ -115,15 +115,20 @@ export function useBatchHandover(api: BatchHandoverApi, onConfirmed?: () => void
     }, 'Unable to verify the pickup OTP.');
   };
 
-  const confirm = () => {
-    if (!session || !proof || !signature || !isReceiverCashierSignature(signature)) return;
+  const confirm = (useSavedSignature = false) => {
+    if (
+      !session ||
+      !proof ||
+      (!useSavedSignature && (!signature || !isReceiverCashierSignature(signature)))
+    )
+      return;
     return run(async () => {
       const result = await api.confirm({
         ...selection(),
         id: session.id,
         verificationToken: proof.verificationToken,
         associateId: needsAssociate ? associateId : undefined,
-        signature,
+        signature: useSavedSignature ? undefined : signature,
         paymentMethod: totalPsw > 0 ? paymentMethod : undefined,
       });
       setCompletedCount(result.parcelIds.length);
@@ -162,6 +167,14 @@ export function useBatchHandover(api: BatchHandoverApi, onConfirmed?: () => void
     verifyOtp,
     confirm,
     changeSelection: resetOtp,
+    signaturePreparation:
+      session && proof
+        ? {
+            ...selection(),
+            id: session.id,
+            verificationToken: proof.verificationToken,
+          }
+        : undefined,
     readyToSend:
       normalizeBatchTelephone(draft) === telephone &&
       selected.length >= 2 &&

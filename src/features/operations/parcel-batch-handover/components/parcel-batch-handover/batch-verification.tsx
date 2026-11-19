@@ -14,7 +14,8 @@ import {
   type BatchOtpSession,
   type BatchPaymentMethod,
 } from '@/shared/shipments/parcel-batch-handover';
-import { useBatchOtpResend, type useBatchHandover } from '../../hooks';
+import { useBatchOtpResend } from '../../hooks';
+import type { useWebBatchHandover } from '../../hooks/web';
 import { formatBatchAmount } from '../../utils';
 import { BatchSignature } from './batch-signature';
 
@@ -23,7 +24,7 @@ export function BatchVerification({
   session,
   allowTopaz,
 }: {
-  flow: ReturnType<typeof useBatchHandover>;
+  flow: ReturnType<typeof useWebBatchHandover>;
   session: BatchOtpSession;
   allowTopaz: boolean;
 }) {

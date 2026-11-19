@@ -10,25 +10,32 @@ import {
   AppPageHeader,
   MobileNoAccess,
 } from '@mobile/components/ui/mobile';
-import { canCaptureReceiverSignature } from '@mobile/lib/permissions';
+import { canCaptureReceiverSignature, canViewReceiverSignatures } from '@mobile/lib/permissions';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { ReceiverSignatureDialog } from '../../dialogs';
 import { useReceiverSignatures } from '../../hooks';
+import { BatchSignatureQueue } from './batch-signature-queue';
 
 export function ReceiverSignaturesScreen() {
   const { session } = useAuth();
   const { theme } = useAppearance();
   const branchId = session.user?.branch?.id;
-  const allowed = canCaptureReceiverSignature(session.user?.permissions);
-  const signatures = useReceiverSignatures(branchId, allowed);
+  const allowed = canViewReceiverSignatures(session.user?.permissions);
+  const cashierAllowed = canCaptureReceiverSignature(session.user?.permissions);
+  const signatures = useReceiverSignatures(branchId, cashierAllowed);
   const [search, setSearch] = useState('');
+  const [submittedSearch, setSubmittedSearch] = useState('');
+  const submitSearch = () => {
+    signatures.search(search);
+    setSubmittedSearch(search.trim());
+  };
   const { page, selected } = signatures;
 
   if (!allowed || !branchId) {
     return (
       <AppScreen scrollable={false}>
-        <MobileNoAccess message="Receiver Cashier permission and an assigned branch are required." />
+        <MobileNoAccess message="Receiver Cashier or Waiting for Pickup permission and an assigned branch are required." />
       </AppScreen>
     );
   }
@@ -37,7 +44,7 @@ export function ReceiverSignaturesScreen() {
     <AppScreen keyboardShouldPersistTaps="handled">
       <AppPageHeader
         title="Receiver Signatures"
-        subtitle="Capture the customer’s signature for a parcel processed at Receiver Cashier."
+        subtitle="Capture one signature for the parcel or list requested by the handover operator."
       />
       <AppCard>
         <AppInput
@@ -47,10 +54,21 @@ export function ReceiverSignaturesScreen() {
           accessibilityLabel="Search receiver signatures"
           maxLength={100}
           returnKeyType="search"
-          onSubmitEditing={() => signatures.search(search)}
+          onSubmitEditing={submitSearch}
         />
-        <AppButton title="Search" variant="secondary" onPress={() => signatures.search(search)} />
+        <AppButton title="Search" variant="secondary" onPress={submitSearch} />
       </AppCard>
+      <BatchSignatureQueue
+        key={branchId}
+        branchId={branchId}
+        search={submittedSearch}
+        allowed={allowed}
+      />
+      {cashierAllowed ? (
+        <Text accessibilityRole="header" style={{ color: theme.colors.text, fontWeight: '600' }}>
+          Single-parcel signatures
+        </Text>
+      ) : null}
       {signatures.saved ? (
         <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.success }}>
           {signatures.saved}
@@ -61,7 +79,7 @@ export function ReceiverSignaturesScreen() {
           <Text style={{ color: theme.colors.danger }}>{signatures.loadError}</Text>
           <AppButton title="Retry" variant="secondary" onPress={signatures.refresh} />
         </AppCard>
-      ) : !page ? (
+      ) : cashierAllowed && !page ? (
         <Text style={{ color: theme.colors.textMuted }}>Loading signatures…</Text>
       ) : null}
       {page?.rows.length === 0 ? (
