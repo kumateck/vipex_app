@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, StyleSheet, Text, View } from 'react-native';
+import type { BatchSignatureParcel } from '@/shared/shipments/batch-signature-request';
 import { CustomerSignaturePad } from '@mobile/components/courier';
 import { AppButton } from '@mobile/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
@@ -12,6 +13,7 @@ type Props = {
   collector: string;
   trackingCode: string;
   pickup: ParcelReceivingOffice;
+  parcels?: BatchSignatureParcel[];
   busy: boolean;
   error: string;
   onClose: () => void;
@@ -22,6 +24,7 @@ export function ReceiverSignatureDialog({
   collector,
   trackingCode,
   pickup,
+  parcels,
   busy,
   error,
   onClose,
@@ -46,8 +49,21 @@ export function ReceiverSignatureDialog({
             style={{ color: theme.colors.textMuted }}
           />
           <Text style={{ color: theme.colors.textMuted }}>
-            {collector}, sign to acknowledge receipt of this parcel.
+            {collector}, sign to acknowledge receipt of{' '}
+            {parcels ? `all ${parcels.length} listed parcels` : 'this parcel'}.
           </Text>
+          {parcels ? (
+            <FlatList
+              style={{ maxHeight: 140 }}
+              data={parcels}
+              keyExtractor={(parcel) => parcel.id}
+              renderItem={({ item }) => (
+                <Text style={{ color: theme.colors.text }}>
+                  {item.bookingCode} · {item.trackingCode}
+                </Text>
+              )}
+            />
+          ) : null}
           <CustomerSignaturePad disabled={busy} onChange={setDrawing} />
           {drawing && !usable ? (
             <Text style={{ color: theme.colors.danger }}>
@@ -84,6 +100,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 520,
+    maxHeight: '95%',
     padding: mobileSpacing.md,
     gap: mobileSpacing.md,
     borderRadius: mobileRadius.lg,

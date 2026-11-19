@@ -20,6 +20,12 @@ main receiver. Confirm once to close the selected queue tickets and mark those p
 Follow the same steps in mobile **Operations Hub → Receiver Cashier** when a payment is due.
 See [Parcel operations](PARCEL_OPERATIONS.md#hand-over-multiple-parcels) for limits and failure handling.
 
+For a batch initiated on web or Desktop, the initiating operator verifies OTP and chooses
+**Request signature on mobile**. Open **Operations → Receiver Signatures**, review every parcel
+in the request, and save one signature for the entire list. The initiating operator confirms
+the handover. `CanCompleteOfficePickup` permits office-pickup requests at the active branch.
+See [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md#batch-handover) for both workflows.
+
 ## Finding a parcel
 
 - An assigned company and branch are required. Branch operational settings must load before

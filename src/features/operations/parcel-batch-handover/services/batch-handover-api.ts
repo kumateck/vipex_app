@@ -1,5 +1,9 @@
 import { api } from '@/services/api';
 import type {
+  BatchSignaturePreparation,
+  BatchSignatureStatus,
+} from '@/shared/shipments/batch-signature-request';
+import type {
   BatchConfirmation,
   BatchHandoverWorkflow,
   BatchOtpProof,
@@ -14,6 +18,30 @@ const root = (workflow: BatchHandoverWorkflow) => `/payments/${workflow}-batch-h
 
 const batchHandoverApi = api.injectEndpoints({
   endpoints: (builder) => ({
+    requestBatchSignature: builder.mutation<
+      { requestId: string },
+      Request<BatchSignaturePreparation>
+    >({
+      query: ({ workflow, ...body }) => ({
+        url: `${root(workflow)}/signature/request`,
+        method: 'POST',
+        body,
+      }),
+    }),
+    getBatchSignature: builder.query<BatchSignatureStatus | null, Request<{ id: string }>>({
+      query: ({ workflow, id }) => `${root(workflow)}/${id}/signature`,
+      keepUnusedDataFor: 0,
+    }),
+    cancelBatchSignature: builder.mutation<
+      { cancelled: boolean },
+      Request<{ id: string; requestId: string }>
+    >({
+      query: ({ workflow, id, requestId }) => ({
+        url: `${root(workflow)}/${id}/signature/cancel`,
+        method: 'POST',
+        body: { requestId },
+      }),
+    }),
     searchBatchParcels: builder.mutation<
       BatchPickupPage,
       Request<{ telephone: string; after?: string }>
@@ -55,6 +83,9 @@ const batchHandoverApi = api.injectEndpoints({
 });
 
 export const {
+  useRequestBatchSignatureMutation,
+  useGetBatchSignatureQuery,
+  useCancelBatchSignatureMutation,
   useSearchBatchParcelsMutation,
   useRequestBatchOtpMutation,
   useVerifyBatchOtpMutation,

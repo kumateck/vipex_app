@@ -874,6 +874,13 @@ workflow. Batch payments and receipt records are kept per parcel. Use **Receiver
 Delivered** to reprint individual receipts. Desktop can use a Topaz pad for Receiver Cashier
 batch signatures. All clients can use the on-screen signing pad.
 
+After verifying the batch OTP on web or Desktop, **Request signature on mobile** sends the
+whole selected list to **Operations → Receiver Signatures** on Android and iOS. The receiver
+reviews the list and signs once. The initiating dialog refreshes the signature preview every
+four seconds, then confirms the exact selection. This works in both batch workflows and uses
+their existing permissions. See [batch mobile signatures](RECEIVER_CASHIER_SIGNATURES.md#batch-handover)
+for expiry, cancellation, rollout and validation rules.
+
 The batch uses the staff member’s active destination branch and keeps each assigned shelf
 picker. When some parcels have no picker, choose an active associate at your assigned location
 for those parcels. Branches with pickup queues require a current-day ticket for every parcel.

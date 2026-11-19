@@ -21,12 +21,6 @@ const paymentMethods: Record<BatchPaymentMethod, PaymentMethod> = {
 };
 
 export async function confirmBatchHandover(actor: BatchActor, input: BatchConfirmation) {
-  if (
-    !isReceiverCashierSignature(input.signature) ||
-    (actor.workflow === 'office-pickup' && input.signature.source !== 'touchscreen')
-  ) {
-    throw BadRequest('Capture a valid receiver signature');
-  }
   const cashier = actor.workflow === 'receiver-cashier';
   const method = input.paymentMethod ? paymentMethods[input.paymentMethod] : undefined;
   if (cashier && method === undefined) throw BadRequest('Select a payment method');
@@ -46,6 +40,15 @@ export async function confirmBatchHandover(actor: BatchActor, input: BatchConfir
     if (!otp.verificationTokenExpiresAt || otp.verificationTokenExpiresAt.getTime() <= Date.now())
       throw Conflict('OTP verification expired. Send a new code and sign again.');
 
+    const capture = otp.batchSignatureRequest?.capture;
+    const signature = otp.batchSignatureRequest ? capture?.signature : input.signature;
+    if (
+      !signature ||
+      !isReceiverCashierSignature(signature) ||
+      (actor.workflow === 'office-pickup' && signature.source !== 'touchscreen')
+    )
+      throw BadRequest('Capture a valid receiver signature');
+
     const [members, branch] = await Promise.all([
       getBatchMembers(actor, input, tx),
       getBatchBranch(actor, tx),
@@ -57,8 +60,13 @@ export async function confirmBatchHandover(actor: BatchActor, input: BatchConfir
           })
         : null,
     ]);
-    const capturedAt = new Date().toISOString();
-    const batch = { id: otp.id, signature: input.signature, capturedAt };
+    const capturedAt = capture?.capturedAt ?? new Date().toISOString();
+    const batch = {
+      id: otp.id,
+      signature,
+      capturedAt,
+      capturedBy: capture?.capturedBy ?? actor.actorId,
+    };
 
     // Apply the writes in the same order as the parcel locks.
     for (const member of members) {

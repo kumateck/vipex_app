@@ -16,6 +16,7 @@ import {
   canViewRiderCurrent,
   canViewRiderHistory,
   canViewSelfServiceBookings,
+  canViewReceiverSignatures,
 } from './mobile-permission-rules';
 import { PermissionKeys as DesktopPermissionKeys } from '../../../../../../src/shared/permissions/constants';
 
@@ -30,6 +31,12 @@ describe('mobile permission parity', () => {
     expect(canCompleteOfficePickup(['CanReadParcels'])).toBeFalse();
     expect(canCompleteOfficePickup(['CanCompleteOfficePickup'])).toBeTrue();
     expect(canViewOperationsHub(['CanCompleteOfficePickup'])).toBeTrue();
+  });
+
+  it('opens signature capture for the matching cashier or office-pickup workflow', () => {
+    expect(canViewReceiverSignatures(['CanCreateReceiverPayments'])).toBeTrue();
+    expect(canViewReceiverSignatures(['CanCompleteOfficePickup'])).toBeTrue();
+    expect(canViewReceiverSignatures(['CanReadParcels'])).toBeFalse();
   });
 
   it('does not treat parcel read access as queue access', () => {

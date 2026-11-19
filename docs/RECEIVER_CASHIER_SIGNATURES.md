@@ -42,6 +42,34 @@ signing pads are available, and Desktop supports Topaz. Confirmed payments remai
 per-parcel receipt reprint in **Receiver Cashier → Delivered**. Existing pending signatures use
 the single-parcel flow above. See [Parcel operations](PARCEL_OPERATIONS.md#hand-over-multiple-parcels).
 
+For a desktop-initiated batch, verify its OTP, then choose **Request signature on mobile**.
+On Android or iOS, open **Operations → Receiver Signatures**. The **Multiple-parcel signatures**
+section shows one request with every selected booking and tracking code. Review the list, choose
+**Sign for N parcels**, and save one drawing. The desktop dialog checks for the signature every
+four seconds and displays its preview. The initiating operator then confirms the payment and
+handover for that exact selection. Payment and delivery occur together at confirmation.
+
+The same remote signature flow supports desktop **Waiting for Pickup** batches. Mobile users
+with `CanCompleteOfficePickup` see office-pickup requests, and those with
+`CanCreateReceiverPayments` see cashier requests at their active destination branch. The
+single-parcel cashier list continues to require the cashier permission. Signing retains the
+mobile capture operator separately from the desktop operator who confirms the handover.
+
+Requests last until the verified batch proof expires. Reopening the mobile screen restores the
+saved request and any existing signature. Keep the initiating desktop batch dialog open for
+confirmation. **Sign here instead** cancels the mobile request and returns to the local pad.
+Each replacement request has a new ID, so a drawing from an older open mobile dialog is rejected.
+The server retains the first successful capture and rechecks every member's receiver, status,
+balance and queue before signing and before confirming. A changed member requires refreshing the
+selection. A resend invalidates the previous proof after successful dispatch. Expired, completed
+and cancelled requests leave the mobile queue. The batch list includes the parcel references
+and note indicators. It excludes OTP codes, verification tokens and signature images.
+
+Migration `0101_batch_mobile_signature` must precede the updated server and clients. It adds a
+private JSON request/capture field and pending-request index to `parcel_receiver_otps`.
+Request, capture and cancellation write batch audit events with the selected parcel IDs. The
+image and OTP are excluded from those audit events.
+
 ## Windows Topaz setup
 
 Use the Topaz SignatureGem T-LBK462-HSB-R connected by USB. Install the manufacturer's
@@ -69,6 +97,18 @@ cases. Storage collected during preparation is checked against the amount accrue
 An existing delivery reversal clears the active delivery snapshot.
 
 ## QA
+
+- Start a two-parcel batch on desktop in each workflow and request mobile signing after OTP
+  verification. Find it on Android and iOS using the second parcel's booking/tracking code.
+  Review all members, save one signature and verify the open desktop preview updates. Confirm
+  once and verify both parcels record that batch and mobile capture operator, with one payment
+  per cashier parcel. An unselected third parcel must stay Awaiting Pickup.
+- Retry mobile capture and desktop confirmation concurrently. Keep the first saved drawing,
+  with one set of payments and deliveries. Change a ticket, receiver or balance before signing
+  or confirmation and check the entire operation fails. Check expiry, wrong branch/company,
+  wrong workflow permission and a cancelled/replaced request from a previously opened dialog.
+- Automated coverage is in `tests/server/parcel-batch-signature.spec.ts`. Native screen and
+  hardware QA remain device checks.
 
 - With the setting on, open Receiver Cashier on desktop and Receiver Signatures on mobile.
   Process a parcel and verify it appears on mobile without a manual refresh. Check that it

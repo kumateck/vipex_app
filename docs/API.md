@@ -668,17 +668,20 @@ shared endpoint. Notification dispatch logs retain the send failure. Tests:
 
 ### Batch parcel handover
 
-The four routes below are under both `/v1/payments/office-pickup-batch-handover`
+The routes below are under both `/v1/payments/office-pickup-batch-handover`
 (`CanCompleteOfficePickup`) and `/v1/payments/receiver-cashier-batch-handover`
 (`CanCreateReceiverPayments`). They use the authenticated destination branch. Receiver Cashier
 requires an active cashier session to send an OTP and confirm.
 
-| Route suffix        | Request                                                                                | Successful response                                                                     |
-| ------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `GET /`             | `telephone`, optional `after` cursor                                                   | `{ rows, next, staff }`, including balances, receiver IDs, pickup offices, and blockers |
-| `POST /otp/request` | `{ telephone, items, channel }`                                                        | `{ id, expiresAt, resendAt }`                                                           |
-| `POST /otp/verify`  | `{ id, otp }`                                                                          | `{ verificationToken, expiresAt }`                                                      |
-| `POST /confirm`     | `{ id, telephone, items, verificationToken, signature, associateId?, paymentMethod? }` | `{ parcelIds, alreadyConfirmed }`                                                       |
+| Route suffix                 | Request                                                                                 | Successful response                                                                     |
+| ---------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `GET /`                      | `telephone`, optional `after` cursor                                                    | `{ rows, next, staff }`, including balances, receiver IDs, pickup offices, and blockers |
+| `POST /otp/request`          | `{ telephone, items, channel }`                                                         | `{ id, expiresAt, resendAt }`                                                           |
+| `POST /otp/verify`           | `{ id, otp }`                                                                           | `{ verificationToken, expiresAt }`                                                      |
+| `POST /confirm`              | `{ id, telephone, items, verificationToken, signature?, associateId?, paymentMethod? }` | `{ parcelIds, alreadyConfirmed }`                                                       |
+| `POST /signature/request`    | `{ id, telephone, items, verificationToken }`                                           | `{ requestId }`                                                                         |
+| `GET /:id/signature`         | Initiating staff member's OTP session ID                                                | Request, parcel list and signature preview, or `null` when unavailable                  |
+| `POST /:id/signature/cancel` | `{ requestId }`                                                                         | `{ cancelled: true }`                                                                   |
 
 `items` is an array of 2–20 unique `{ id, receiverId, principalPsw, storagePsw }` quotes from
 the search response. `channel` is `sms` or `whatsapp`. The signature accepts
@@ -686,6 +689,23 @@ the search response. `channel` is `sms` or `whatsapp`. The signature accepts
 `{ source: 'topaz', signatureImage, sigString }` from Desktop. Receiver Cashier requires
 `paymentMethod` (`cash`, `telecel`, or `airtel`). Office pickup collects zero payment.
 Search and proof responses use `Cache-Control: no-store`.
+
+After OTP verification, the initiating client can request a single mobile signature for the
+immutable selection. `GET /v1/payments/batch-handover-signatures` returns `{ rows, next }`,
+accepting optional `search` and `after`. It uses the authenticated company/destination branch
+and filters each workflow by its permission. Rows include request/session IDs, workflow,
+telephone, expiry, signing time and parcel references. They exclude codes, tokens and drawings.
+`POST /v1/payments/batch-handover-signatures/:id/signature` accepts
+`{ requestId, signature: { source: 'touchscreen', signatureImage } }` with
+`x-vipex-client: mobile`. It returns `{ signedAt }`. Request/capture reject a changed selection
+with 409, outside scope or expired captures return 404, and wrong client/permission returns 403.
+Request and capture recheck member eligibility. Polling and status responses use no-store.
+The first capture wins. A replacement request gets a new ID and rejects previous-dialog saves.
+`POST /confirm` uses the saved capture when a remote request is active and requires that capture
+before completing. Otherwise the client supplies its local `signature`. Confirmation still
+checks the initiating staff member's proof and commits all payments/deliveries atomically.
+Migration `0101_batch_mobile_signature` is required. See
+[Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md#batch-handover).
 
 Missing permissions or a proof for another selection return 403. Wrong OTP returns 400, an OTP
 session outside the staff member’s scope returns 404, and expired codes, resend cooldown, changed

@@ -19,6 +19,7 @@ import {
   canViewParcelSearch,
   canViewQueueScreen,
   canViewSelfServiceBookings,
+  canViewReceiverSignatures,
 } from '@mobile/lib/permissions';
 import { AppCard, AppPageHeader, MobileNoAccess } from '@/components/ui/mobile';
 import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
@@ -155,11 +156,11 @@ export function MobileOperationsHubScreen() {
           linkLabel="Open Cashier Queue"
         />
       ) : null}
-      {canCaptureReceiverSignature(permissions) ? (
+      {canViewReceiverSignatures(permissions) ? (
         <ModuleCard
           icon="create-outline"
           title="Receiver Signatures"
-          description="Capture signatures for parcels processed by Receiver Cashier."
+          description="Sign for a parcel or a list requested by Receiver Cashier or Waiting for Pickup."
           href="/(app)/receiver-signatures"
           linkLabel="Open Receiver Signatures"
         />
