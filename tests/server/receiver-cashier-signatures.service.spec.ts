@@ -125,7 +125,11 @@ describe('Receiver Cashier signature handover', () => {
     expect(processed).toMatchObject({
       awaitingSignature: true,
       status: ParcelStatus.AWAITING_PICKUP,
+      payment: null,
     });
+    expect(await db.select().from(payments).where(eq(payments.parcelId, parcel.id))).toHaveLength(
+      0,
+    );
     const pendingRevision = await mobileUpdate;
     expect(pendingRevision.revision).not.toBe(initial.revision);
     const list = await listReceiverHandovers({ ...scope, search: parcel.trackingCode });
@@ -148,7 +152,7 @@ describe('Receiver Cashier signature handover', () => {
       actorId: fixture.actor,
     };
     expect(processed.handoverId).toBe(action.handoverId);
-    await expect(collectReceiverPaymentAndDeliverSvc(payment)).rejects.toThrow('already processed');
+    await expect(collectReceiverPaymentAndDeliverSvc(payment)).rejects.toThrow('already prepared');
     await expect(confirmSignedReceiverHandover(action)).rejects.toThrow('must sign');
     await expect(
       captureReceiverHandoverSignature({
@@ -206,6 +210,10 @@ describe('Receiver Cashier signature handover', () => {
     const [before] = await db.select().from(parcels).where(eq(parcels.id, parcel.id));
     expect(before?.status).toBe(ParcelStatus.AWAITING_PICKUP);
     expect(before?.confirmedAt).toBeNull();
+    expect(before?.plannedToBePaidPsw).toBe(1_000);
+    expect(await db.select().from(payments).where(eq(payments.parcelId, parcel.id))).toHaveLength(
+      0,
+    );
     const yesterday = new Date();
     yesterday.setUTCHours(0, 0, 0, 0);
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);

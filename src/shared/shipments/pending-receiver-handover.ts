@@ -1,6 +1,16 @@
 import type { DeliveryConfirmationSnapshot } from './delivery-confirmation-snapshot';
 
 import type { ReceiverCashierSignature } from './receiver-cashier-signature';
+import type { PaymentMethod } from '@/db/schemas/enums';
+
+export type ReceiverHandoverPaymentPlan = {
+  method: PaymentMethod;
+  principalPsw: number;
+  storagePsw: number;
+  chargePsw: number;
+  existingPaymentIds: string[];
+  momoTransactionId: string | null;
+};
 
 export type ReceiverHandoverCapture = ReceiverCashierSignature & {
   capturedAt: string;
@@ -21,6 +31,8 @@ export type PendingReceiverHandover = {
   associateName: string;
   storageAccruedPsw: number;
   otpVerified: boolean;
+  /** Absent on legacy handovers whose payments were already posted. */
+  paymentPlan?: ReceiverHandoverPaymentPlan;
   capture?: ReceiverHandoverCapture;
   snapshot: DeliveryConfirmationSnapshot;
 };

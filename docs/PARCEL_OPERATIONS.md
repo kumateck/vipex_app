@@ -256,11 +256,11 @@ show one queue row per parcel. The dedicated reassignment screen still recognise
 stored on an older active ticket.
 
 Office pickup and new receiver payment require today's ticket where the branch uses queues.
-An already processed receiver payment keeps its original ticket for signature and confirmation
-across midnight. Staff open that parcel in **Awaiting Signature**. QA: keep a ticket open from
+An already prepared receiver handover keeps its original ticket for signature and confirmation
+across midnight. Staff open that parcel in **Receiver signatures**. QA: keep a ticket open from
 yesterday, search for the parcel today and issue a new ticket twice. Verify both requests return
 today's code, the parcel appears once, and successful handover closes the open tickets while
-preserving their records. Repeat with an already processed receiver payment awaiting signature.
+preserving their records. Repeat with a prepared receiver handover awaiting signature.
 
 **Pickup & Collection → Reassign Shelf Pickup** opens the separate page at
 `/parcels/shelf-pickup-reassignment`. It requires the existing
@@ -912,9 +912,11 @@ on-device signature capture and confirmation.
 
 ### Receiver Cashier signatures
 
-A destination branch can require a customer signature after Receiver Cashier processing.
-The cashier records payment and requests the signature, the customer signs on mobile or a
-Windows Topaz pad, and Vipex Desktop confirms delivery and handles printing. See
+A destination branch can require a customer signature for Receiver Cashier handover.
+The cashier requests a signature with a validated payment plan, the customer signs on mobile or a
+Windows Topaz pad, and **Confirm Received** in Vipex Desktop records the payment and delivery
+atomically before printing. Requesting or saving a signature leaves the receiver balance unpaid.
+Older pending requests with existing payments confirm using those records without collecting again. See
 [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md) for setup and failure handling.
 
 ## Pickup and Last-Mile Delivery

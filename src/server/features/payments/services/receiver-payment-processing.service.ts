@@ -37,7 +37,7 @@ export async function collectReceiverPaymentAndDeliverSvc(input: ReceiverPayment
       receiptTaxBreakdown: result.receiptTaxBreakdown,
       storageSettlement: result.storageAfter,
       message: result.pending
-        ? 'Payment processed. Awaiting signature.'
+        ? 'Handover prepared. Payment will be recorded when receipt is confirmed.'
         : 'Receiver cashier flow completed.',
     };
   } catch (error) {
