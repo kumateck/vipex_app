@@ -221,7 +221,7 @@ export function ReceiverPaymentDeliveryDialog({
                     if (awaitingSignature === undefined) return;
                     toast.success(
                       awaitingSignature
-                        ? 'Payment recorded. The parcel is awaiting signature.'
+                        ? 'Signature requested. Payment will be recorded when receipt is confirmed.'
                         : 'Payment received and parcel marked as delivered.',
                     );
                   } catch (error) {
@@ -247,7 +247,7 @@ export function ReceiverPaymentDeliveryDialog({
                     : approval
                       ? 'Continue with Admin Approval'
                       : context.requireSignature
-                        ? 'Receive Payment + Request Signature'
+                        ? 'Request Signature'
                         : 'Receive Payment + Deliver'}
               </Button>
             </DialogFooter>

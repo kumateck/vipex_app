@@ -18,6 +18,7 @@ import type { DeliveryConfirmationSnapshot } from '@/shared/shipments/delivery-c
 import { prepareReceiverHandover } from './prepare-receiver-handover';
 import type { ReceiverPaymentInput } from '../types/receiver-payment.types';
 import { settleReceiverPayments } from './settle-receiver-payments';
+import { prepareReceiverPaymentPlan } from './receiver-handover';
 import { validateExceptionCollector } from './validate-otp-exception-collector';
 import type { DbExecutor } from '../types/payment.types';
 import type { ReceiverCashierSignature } from '@/shared/shipments/receiver-cashier-signature';
@@ -64,7 +65,7 @@ export async function processReceiverPayment(
     throw BadRequest('Parcel is not at this destination branch');
   }
   if (beforeDelivery.pending) {
-    throw Conflict('Payment is already processed. Open the parcel in Awaiting Signature.');
+    throw Conflict('Handover is already prepared. Open the parcel in Receiver signatures.');
   }
   if (beforeDelivery.status !== ParcelStatus.AWAITING_PICKUP || beforeDelivery.confirmedAt) {
     throw Conflict('Parcel is no longer awaiting pickup');
@@ -146,8 +147,10 @@ export async function processReceiverPayment(
     throw Conflict('Create a pickup queue ticket before processing receiver payment');
   }
   await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);
-  const { payment, storagePayment, storageAfter, receiptTaxBreakdown } =
-    await settleReceiverPayments(input, tx);
+  const { payment, storagePayment, storageAfter, receiptTaxBreakdown, paymentPlan } =
+    needsSignature && !batch
+      ? await prepareReceiverPaymentPlan(input, tx)
+      : { ...(await settleReceiverPayments(input, tx)), paymentPlan: undefined };
   const snapshot: DeliveryConfirmationSnapshot = {
     parcelStatus: beforeDelivery.status,
     confirmedAt: null,
@@ -199,6 +202,7 @@ export async function processReceiverPayment(
           secondReceiverId: handoverFields.secondReceiverId,
           storageAccruedPsw: storageAfter.accruedPsw,
           otpVerified: Boolean(batch || (destinationBranch.requireReceiverOtp && !approval)),
+          paymentPlan,
           snapshot,
         },
         tx,

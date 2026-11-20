@@ -707,6 +707,12 @@ checks the initiating staff member's proof and commits all payments/deliveries a
 Migration `0101_batch_mobile_signature` is required. See
 [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md#batch-handover).
 
+Single-parcel Receiver Cashier signature requests now save a payment plan without posting money.
+`POST /v1/payments/receiver-handovers/:parcelId/confirm` records payment and delivery atomically
+after signature review; failed confirmation leaves both unpaid and undelivered. Existing pending
+requests with already-posted payments confirm without another charge. See
+[request/confirmation responses and validation](api/IDENTITY_AND_OPERATIONS.md).
+
 Missing permissions or a proof for another selection return 403. Wrong OTP returns 400, an OTP
 session outside the staff member’s scope returns 404, and expired codes, resend cooldown, changed
 eligibility or a missing ticket return 409. Delivery-provider failures return 503. Confirmation

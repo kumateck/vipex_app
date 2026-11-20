@@ -29,7 +29,9 @@ export async function createPaymentCore(input: PaymentCreateInput, executor: DbE
     throw BadRequest('Cannot collect payment for deleted parcel');
   }
   if (parcel.hasPendingReceiverHandover)
-    throw Conflict('Payment is already processed for this handover');
+    throw Conflict(
+      'Complete the pending Receiver Cashier handover before recording another payment',
+    );
   assertParcelCanAccrueCharge(parcel, 1);
   assertCreditPrincipalNotCollected(parcel.method, input.component);
   if (input.cashierType === CashierType.SENDING && parcel.sourceId !== input.branchId) {
