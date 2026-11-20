@@ -7,8 +7,9 @@ only storage fees due. **Require receiver OTP** remains a separate branch settin
 ## Processing, signing, and confirmation
 
 1. In **Receiver Cashier**, open the parcel, select the collector and parcel associate, verify
-   OTP if required, and choose **Receive Payment + Request Signature**. The server records payment
-   and prepares the handover together. The parcel stays Awaiting Pickup and leaves both ordinary
+   OTP if required, and choose **Request Signature**. The server validates and saves the proposed
+   principal/storage collection without creating payment records, posting tax, or reducing the
+   outstanding balance. The parcel stays Awaiting Pickup and leaves both ordinary
    Receiver Cashier and Waiting for Pickup lists. The cashier’s open dialog switches to waiting
    for the signature. A cashier can also reopen the handover from the Receiver signatures list.
 2. In React Native, open **Operations → Receiver Signatures**. The open list refreshes when the
@@ -17,8 +18,10 @@ only storage fees due. **Require receiver OTP** remains a separate branch settin
    same parcel. A signature submission records the drawing and leaves the handover pending.
 3. In Vipex Desktop, **Receiver Cashier → Receiver signatures** changes to **Ready to confirm**
    as soon as the signature is saved. The open dialog automatically loads the preview and enables
-   **Confirm Received** when the preview is ready. Confirm when the customer has the parcel. The server marks it delivered and closes the
-   pickup ticket, if any. The desktop app then prints the receipt by default. If Digital Receipts
+   **Confirm Received** when the preview is ready. Confirm when the customer has the parcel. The
+   server records payment, posts applicable tax, marks it delivered, and closes the pickup ticket
+   in one transaction. A failure rolls back all of these changes and preserves the signed request
+   for retry. The desktop app then prints the receipt by default. If Digital Receipts
    is enabled, the cashier chooses delivery options in this confirmation dialog.
 
 The lists reconcile automatically, with a four second refresh fallback if the two clients reach
@@ -27,10 +30,24 @@ Desktop confirmation requires an open cashier session. Web Receiver Cashier can 
 signature request and see its status. Desktop owns confirmation and physical printing.
 
 A parcel stays resumable if the pad disconnects, the customer cancels signing, or either app
-closes. Reopen it in Receiver Signatures without taking payment again. Only the first successful
+closes. Reopen it in Receiver Signatures; a new request's payment remains unposted until
+**Confirm Received**. Only the first successful
 capture is retained. Confirming twice does not deliver or print twice. If the receipt fails to
 print after delivery, use Receiver Cashier → Delivered → Reprint Receipt. Turning the setting
-off affects future payments. Existing pending parcels still require a signature and confirmation.
+off affects future requests. Existing pending parcels still require a signature and confirmation.
+
+Payment is attributed to the cashier who confirms receipt, using that cashier's active session
+and the confirmation-time tax rules. Audit records link the payment to its handover ID and retain
+the operator who originally requested the signature. Signature capture alone never records money.
+Branches without required signatures and signed batches already record payment and delivery in
+the same transaction and retain that behavior. This rule applies to receiver handover collections;
+sender payments remain independent of destination pickup.
+
+Pending handovers created by older server versions may already contain posted payments. They
+retain those exact payment records and confirm without charging again. This change does not void,
+backdate, or rewrite historical payments, including booking `AN7139582Q`. No database migration
+or financial backfill is required. Deploy the server before updated clients; older clients may
+still display the former payment-recorded wording until updated.
 
 ## Batch handover
 
@@ -89,11 +106,19 @@ against a known sample. OTP verifies access to the registered receiver phone whe
 ## Data and failure handling
 
 Migration `0094_receiver_cashier_signature` adds the branch setting and a private pending handover
-field to parcels. The pending record holds the collector, associate, the payment and queue
-references, and any saved signature. Completion moves the signature into the delivery confirmation
+field to parcels. New pending records also hold a private payment plan with the selected method,
+principal/storage amounts, charge, existing payment IDs, and optional MoMo reference. These plan
+details are not exposed in the signature list or preview. The record holds the collector,
+associate, queue reference, and any saved signature. Completion moves the signature into the delivery confirmation
 snapshot and adds a parcel history event without raw signature content. The server rejects wrong
 branch, stale handover, missing signature, changed payment or pickup ticket, and open reconciliation
-cases. Storage collected during preparation is checked against the amount accrued at that time.
+cases. Confirmation revalidates the proposed collection against current principal and storage
+balances and the original active payment IDs. Changed charges, accrual, payments, or queue state
+block posting; staff must resolve the mismatch before retrying. Legacy already-paid requests
+retain their existing accrued-storage checks. Closing the dialog or saving a signature creates
+no payment and does not clear the receiver balance. Confirmation retries are idempotent, including
+concurrent requests; the delivery reversal snapshot contains only payments created by that
+confirmation so existing sender payments remain intact.
 An existing delivery reversal clears the active delivery snapshot.
 
 ## QA
@@ -112,11 +137,13 @@ An existing delivery reversal clears the active delivery snapshot.
 
 - With the setting on, open Receiver Cashier on desktop and Receiver Signatures on mobile.
   Process a parcel and verify it appears on mobile without a manual refresh. Check that it
-  remains undelivered, the pickup ticket is open, and there is one payment. Keep the payment
+  remains undelivered, the pickup ticket is open, the receiver balance is unchanged, and there
+  are no new payments or tax postings. Keep the payment
   dialog open and verify it switches to waiting for the signature.
 - Sign on mobile. Check that desktop shows Ready to confirm without a refresh, that the preview
   matches the drawing in the same open dialog, and that confirmation prints the receiver receipt
-  and closes the ticket. Repeat by closing the dialog and reopening the unsigned handover from
+  and closes the ticket while recording payment exactly once. Saving the signature alone must
+  leave the balance unchanged. Repeat by closing the dialog and reopening the unsigned handover from
   the list. Confirm the button stays disabled until the signature preview is ready.
 - Repeat with the Topaz pad. Test clear, cancel, blank capture, unplugging the pad, reopening
   the app, and signing again. Include one combined principal and storage receipt.
@@ -124,3 +151,12 @@ An existing delivery reversal clears the active delivery snapshot.
   a user without permission. Verify no extra payment, delivery or automatic print.
 - Turn the setting off with one parcel still pending. Verify the pending parcel can still be
   confirmed and the next Receiver Cashier payment follows the immediate delivery flow.
+- Confirm a legacy already-paid pending handover without inserting, modifying, or voiding its
+  payments. Confirm a new request as another authorized cashier with an active session and check
+  that payment attribution follows that final cashier. Block a closed confirmation session.
+- Change the charge, existing payments, storage accrual, or ticket between request and confirmation;
+  verify no payment or delivery is committed. Simulate failure after settlement and verify payment,
+  audit, balance, and pending state roll back together; retry once successfully.
+- Automated coverage: `tests/server/receiver-cashier-signatures.service.spec.ts` and
+  `tests/server/receiver-handover-payment-confirmation.spec.ts`, including principal plus storage,
+  storage-only collections, legacy pending records, rollback and duplicate confirmations.
