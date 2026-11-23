@@ -66,6 +66,12 @@ to refresh sessions. Existing sessions start with their assigned branch. Removin
 grant or deactivating the selected branch or location ends access through the switched
 session. Sign in again to return to the assigned branch.
 
+Single-parcel receiving and legacy status-only arrival updates use this selected session
+branch. Receiving after switching into a parcel's destination is allowed with the receiving
+grant; switching away returns 404 even when the destination is the user's assigned branch.
+The receiving actor and stored user branch assignment stay unchanged. Web, desktop and mobile
+share this backend behavior. See [Arrival consistency](PARCEL_OPERATIONS.md#pickup-location-and-arrival-consistency).
+
 QA: test a role with and without the grant. In the header account menu, open the dialog,
 check the current role and branch, and use **Cancel** to return focus to the menu trigger.
 Reopen it, search for a branch, and verify that a branch with multiple locations requires

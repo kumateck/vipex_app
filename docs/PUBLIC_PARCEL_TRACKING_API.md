@@ -41,6 +41,13 @@ containing `"message": "Route not found"` means the server does not have this en
 evidence that the tracking code is absent. The old `/api/v1/bookings/:code/tracker` URL and other
 legacy aliases are not supported.
 
+The production backend is `https://app.vipexparcels.com` (plural **parcels**).
+The similarly named `https://app.vipexparcel.com` serves legacy HTML, including
+HTTP 200 loading pages for API-shaped URLs. Website tracking, receipt and contact
+clients must use the plural backend. A successful HTML response or a missing API
+route is a connection/deployment failure, not evidence that a tracking code is invalid.
+The website's API client rejects these responses and offers a retry.
+
 Rate limits: the endpoint is covered by the global rate limiter, and it also has its own per-IP
 lookup quota so that tracking codes cannot be guessed at the global rate:
 

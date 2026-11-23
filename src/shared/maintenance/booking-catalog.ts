@@ -9,6 +9,20 @@ const booking = [
 ];
 export const BOOKING_MAINTENANCE_SCRIPTS: MaintenanceScript[] = [
   {
+    id: 'recover-unpaid-receiver-handover',
+    title: 'Recover receiver handover with no cash received',
+    kind: 'repair',
+    fields: booking,
+    description:
+      'Reverse premature cash postings on an unfinished legacy handover, restore its balance and keep the signature. The cashier who confirms receipt will record the payment.',
+    confirmation:
+      'I verified that no cash was physically received for the exact payments shown in this preview.',
+    sourceFiles: [
+      'src/server/features/maintenance/booking-operations/unpaid-receiver-handover.ts',
+      'scripts/inspect-interrupted-receiver-handovers.ts',
+    ],
+  },
+  {
     id: 'repair-parcel-receiving-workflow',
     title: 'Repair parcel receiving workflow',
     kind: 'repair',

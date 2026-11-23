@@ -22,6 +22,7 @@ export async function listParcelsCtrl(
     cashierCollectionRequired?: boolean | null;
     received?: boolean | null;
     includeDeleted?: boolean | null;
+    undeliveredFirst?: boolean;
     assignedToUserId?: string | null;
     callCenterAssignmentOrder?: boolean;
     callCenterUncalledOnly?: boolean;
@@ -54,6 +55,7 @@ export async function listParcelsCtrl(
     search: pagination.search ?? null,
     received: q.filters?.received ?? null,
     includeDeleted: q.filters?.includeDeleted ?? null,
+    undeliveredFirst: q.filters?.undeliveredFirst ?? false,
     assignedToUserId: q.filters?.assignedToUserId ?? null,
     callCenterAssignmentOrder: q.filters?.callCenterAssignmentOrder ?? false,
     callCenterUncalledOnly: q.filters?.callCenterUncalledOnly ?? false,

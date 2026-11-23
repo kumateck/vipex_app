@@ -127,8 +127,32 @@ tabs, chosen with a horizontally scrolling switcher:
 
 History loads separately from details. If it fails, the other tabs still work and History shows the
 error; pull to refresh reloads both. The Delivery card that used to sit in Overview is now the
-Delivery tab. Mobile does not show the tracking QR code or the receiver signature image, and it has
-no page actions, because Super Search is its only entry point.
+Delivery tab. Mobile does not show the tracking QR code or the receiver signature image.
+
+### Mobile Super Search editing
+
+**Edit parcel details** above the mobile details tabs opens a form with only **Parcel details**
+and **Receiver name**. It is available after opening a Super Search result, including a parcel
+found by its scanned booking/tracking code. It does not add editing to other mobile screens or
+add a camera scanner to Super Search.
+
+The action requires `CanReadParcels` and `CanUpdateParcels`, a non-deleted parcel, and the user's
+branch matching its source or destination. Receiver name additionally requires
+`CanUpdateCustomers` and loaded contact data matching the parcel's current receiver ID; otherwise
+the name is read-only and details-only changes remain available. Search-only fallback details
+remain read-only until the full details endpoint loads successfully.
+
+The form sends only changed fields to `POST /v1/shipments/parcels/:id/edit-information` in one
+atomic request. Telephone and content fields are never submitted by this editor. Parcel details
+and corrected names must be nonblank and at most 255 characters. A name correction updates the
+selected parcel's recorded receiver name and linked customer; other parcels retain their recorded
+names. The existing endpoint requires migration `0081` for snapshot corrections, as described in
+[Parcel operations](PARCEL_OPERATIONS.md#correcting-a-receiver-from-a-parcel).
+
+Repeated saves and closing while saving are blocked. Validation, permission, stale receiver,
+network and server failures keep the form and entered values open with an error. Success reloads
+details and history; returning to Super Search refreshes the result list. There is no new status
+restriction, receiver reassignment, sender editing, or telephone editing in this mobile action.
 
 ## QA
 
@@ -143,8 +167,21 @@ no page actions, because Super Search is its only entry point.
 4. Open a deleted parcel and confirm the warning names the user and reason.
 5. Request another company's parcel ID directly and confirm 404 for details and history.
 6. Resize below 768px: tabs wrap and fields drop to one column without horizontal scrolling.
+7. Mobile Super Search: open a parcel at its source and destination branches. With read/update
+   parcel grants, edit details; add the customer-update grant to correct its receiver name. Confirm
+   there is no telephone field and the request contains no telephone/content changes. Verify the
+   parcel, linked customer, history and refreshed search agree; another parcel for that receiver
+   must keep its recorded name.
+8. Verify the action is hidden for deleted parcels, third branches, read-only users and fallback
+   search details. Missing/mismatched receiver contact data must leave only details editable.
+   Blank/overlong input, lost permissions, a stale receiver, a failed network request or a 409
+   response must preserve edits for retry. Double-tap Save and press Android Back during a pending
+   save: only one request is sent and the dialog stays open until it completes. Cancel and reopen
+   restores saved values. Check light/dark themes and the onscreen keyboard on a small phone.
 
 Automated: `src/server/features/shipments/parcel-history/*.test.ts` (audit mapping, duplicate
 rule, unknown-action fallback, arrival detection, delivery steps, name resolution and ordering),
 `src/features/operations/parcel-details/**/*.test.ts(x)` (day grouping, name/phone fallbacks,
 history rendering and empty/error states).
+Mobile editor coverage: `apps/mobile/src/features/super-search/parcel-information-editor/utils/
+parcel-information-editor.test.ts` (scope, grants, validation, receiver identity and name-only payloads).

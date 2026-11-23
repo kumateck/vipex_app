@@ -104,7 +104,7 @@ describe('maintenance console rendering', () => {
       if (selected.kind === 'repair' && selected.id !== 'repair-credit-print-payment')
         expect(html).not.toContain('I confirmed that printing created this payment');
     }
-    expect(render(fixture())).toContain('Available scripts (10)');
+    expect(render(fixture())).toContain(`Available scripts (${MAINTENANCE_SCRIPTS.length})`);
   });
   test('receiving repair exposes its booking input, optional location and specific confirmation', () => {
     const selected = MAINTENANCE_SCRIPTS.find(

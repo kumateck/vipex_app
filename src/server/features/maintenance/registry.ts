@@ -2,6 +2,7 @@ import {
   repairBookingBalance,
   backfillBookingNames,
   repairReversedRecipientPayments,
+  recoverUnpaidReceiverHandover,
   checkBookingSearch,
   inspectClearedDeliveryFee,
 } from './booking-operations';
@@ -33,6 +34,8 @@ export async function runRegisteredScript(
     apply: input.apply,
   };
   switch (input.operationId) {
+    case 'recover-unpaid-receiver-handover':
+      return recoverUnpaidReceiverHandover(tx, operation);
     case 'repair-parcel-receiving-workflow':
       return repairReceivingWorkflow(tx, {
         ...operation,
