@@ -334,7 +334,7 @@ read-only inspections and audit rollback. Existing server integration tests requ
 `vipex_maintenance_test`. The fixture refuses other database names and remote hosts. Never run
 write tests against the configured production `DATABASE_URL`.
 
-Additional QA: confirm all ten entries and their booking-code inputs are visible on narrow and
+Additional QA: confirm all eleven entries and their booking-code inputs are visible on narrow and
 wide screens; select each repair and check its confirmation text matches the operation. Enter
 another booking code after preview and verify execution is unavailable until previewed again.
 Inspect a cleared delivery fee without changing it. Test financial repairs with sender/recipient
