@@ -59,16 +59,19 @@ export function useParcelRecordDetails({
   const [row, setRow] = useState<ParcelSearchRow | null>(null);
   const [relatedRows, setRelatedRows] = useState<ParcelSearchRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [hasCanonicalDetails, setHasCanonicalDetails] = useState(false);
 
   const load = useCallback(async () => {
     if (!parcelId) return;
     setLoading(true);
     setLoadError(null);
+    setHasCanonicalDetails(false);
     try {
       if (!companyId) {
         try {
           const detailsPayload = await withAuth((token) => getParcelDetails(token, parcelId));
           setDetails(detailsPayload);
+          setHasCanonicalDetails(true);
         } catch (err) {
           const message = getMobileErrorMessage(
             err,
@@ -118,6 +121,7 @@ export function useParcelRecordDetails({
         setDetails(fallbackDetails);
       } else {
         setDetails(detailsPayload);
+        setHasCanonicalDetails(true);
       }
 
       const resolvedBookingCode = (
@@ -168,5 +172,5 @@ export function useParcelRecordDetails({
     void load();
   }, [load]);
 
-  return { loading, details, row, relatedRows, loadError, load };
+  return { loading, details, row, relatedRows, loadError, load, hasCanonicalDetails };
 }

@@ -115,6 +115,7 @@ export const routes = new Elysia({ name: 'parcel-mutations' })
           receiverOtpTarget?: 'main' | 'second';
         },
         authUser.sub,
+        { companyId: authUser.companyId ?? '', branchId: authUser.branchId ?? '' },
       );
     },
     {

@@ -7,9 +7,9 @@ import { validateMaintenanceParams } from '@/server/features/maintenance/validat
 const OPERATOR_ONLY_SOURCES = new Set(['scripts/repair-missing-parcel-locations.ts']);
 
 describe('complete booking-code maintenance catalog', () => {
-  test('all ten operations are distinct and repairs have specific confirmations', () => {
-    expect(MAINTENANCE_SCRIPTS).toHaveLength(10);
-    expect(new Set(MAINTENANCE_SCRIPTS.map((script) => script.id)).size).toBe(10);
+  test('all eleven operations are distinct and repairs have specific confirmations', () => {
+    expect(MAINTENANCE_SCRIPTS).toHaveLength(11);
+    expect(new Set(MAINTENANCE_SCRIPTS.map((script) => script.id)).size).toBe(11);
     for (const script of MAINTENANCE_SCRIPTS) {
       expect(script.fields.some((field) => field.name === 'bookingCode')).toBe(true);
       if (script.kind === 'repair') expect(script.confirmation?.length).toBeGreaterThan(10);

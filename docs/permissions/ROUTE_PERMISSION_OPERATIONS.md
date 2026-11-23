@@ -94,6 +94,13 @@ Parcels / Consignment, In Transit Outgoing and Super Search; receiver fields add
 `CanUpdateCustomers`. Source read-workflow grants alone do not permit outgoing edits. See
 `tests/server/parcel-information-edit-access.spec.ts` and `parcel-information-edit.spec.ts`.
 
+Mobile Super Search exposes a details/name-only editor with `CanReadParcels` plus
+`CanUpdateParcels` at the source or destination branch. `CanUpdateCustomers` additionally enables
+the loaded receiver name. It sends no telephone changes. Deleted parcels, other branches and
+search-only fallback details remain read-only. This is a client gate over the existing endpoint;
+the API permissions above are unchanged. See [Mobile editing](../PARCEL_DETAILS.md#mobile-super-search-editing)
+for validation, error handling and QA scenarios.
+
 Sender customer correction: `GET /shipments/parcels/:id/sender-candidates` and
 `POST /shipments/parcels/:id/correct-sender` both require `CanUpdateParcels` **and**
 `CanUpdateCustomers` and enforce the authenticated company/source branch. Neither destination

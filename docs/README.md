@@ -25,6 +25,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 - [Parcel printing](PARCEL_PRINTING.md)
 - [Cashier, payments, and shifts](CASHIER_PAYMENTS_AND_SHIFTS.md)
 - [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md)
+  - [Interrupted handovers investigation — 23 November 2026](incidents/2026-11-23-interrupted-receiver-handovers.md)
 - [Parcel internal transfers](PARCEL_INTERNAL_TRANSFERS.md)
 - [Self-service booking](SELF_SERVICE_BOOKING.md)
 - [Reconciliation](RECONCILIATION_MODULE.md)

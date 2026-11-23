@@ -20,7 +20,7 @@ export function ParcelSuperSearchPage() {
   const [query, setQuery] = useState<ParcelSuperSearchQuery>({
     page: 1,
     pageSize: 20,
-    filters: { companyId, includeDeleted: true },
+    filters: { companyId, includeDeleted: true, undeliveredFirst: true },
   });
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
   const [returningParcel, setReturningParcel] = useState<{
@@ -39,7 +39,7 @@ export function ParcelSuperSearchPage() {
     {
       ...query,
       search: shouldSearch ? submittedSearch.trim() : undefined,
-      filters: { companyId, includeDeleted: true },
+      filters: { companyId, includeDeleted: true, undeliveredFirst: true },
     },
     {
       skip: !companyId || !shouldSearch,
@@ -69,7 +69,11 @@ export function ParcelSuperSearchPage() {
       return;
     }
     setSubmittedSearch(term);
-    setQuery((prev) => ({ ...prev, page: 1, filters: { companyId, includeDeleted: true } }));
+    setQuery((prev) => ({
+      ...prev,
+      page: 1,
+      filters: { companyId, includeDeleted: true, undeliveredFirst: true },
+    }));
   };
 
   return (

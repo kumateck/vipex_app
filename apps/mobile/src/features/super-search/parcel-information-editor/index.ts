@@ -1,0 +1,1 @@
+export { ParcelInformationEditAction } from './components';

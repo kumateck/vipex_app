@@ -1,6 +1,7 @@
 import { and, desc, eq, lt, isNotNull, or, ilike, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
-import { locations, parcels, receivingOffices } from '@/db/schemas';
+import { customers, locations, parcels, receivingOffices } from '@/db/schemas';
 import { NotFound } from '@/server/utils/http-error';
 import type {
   PendingReceiverHandoverRow,
@@ -14,6 +15,9 @@ import {
 import { parcelScope, type Scope } from './scope';
 
 const PAGE_SIZE = 40;
+const receiver = alias(customers, 'handover_receiver');
+const collector = alias(customers, 'handover_collector');
+const sender = alias(customers, 'handover_sender');
 
 export async function listReceiverHandovers(
   scope: Scope & ReceiverHandoverListQuery,
@@ -42,6 +46,9 @@ export async function listReceiverHandovers(
     .from(parcels)
     .leftJoin(locations, eq(locations.id, parcels.pickupLocationId))
     .leftJoin(receivingOffices, receivingOfficeJoin)
+    .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
+    .leftJoin(sender, eq(sender.id, parcels.senderId))
+    .leftJoin(collector, sql`${collector.id} = ${parcels.pendingReceiverHandover}->>'collectorId'`)
     .where(
       and(
         parcelScope(scope),
@@ -58,6 +65,21 @@ export async function listReceiverHandovers(
               ilike(parcels.trackingCode, `%${search}%`),
               ilike(parcels.bookingCode, `%${search}%`),
               ilike(sql`${parcels.pendingReceiverHandover}->>'collectorName'`, `%${search}%`),
+              ilike(
+                sql`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname})`,
+                `%${search}%`,
+              ),
+              ilike(
+                sql`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname})`,
+                `%${search}%`,
+              ),
+              ilike(collector.fullname, `%${search}%`),
+              ilike(receiver.telephone, `%${search}%`),
+              ilike(receiver.telephone2, `%${search}%`),
+              ilike(collector.telephone, `%${search}%`),
+              ilike(collector.telephone2, `%${search}%`),
+              ilike(sender.telephone, `%${search}%`),
+              ilike(sender.telephone2, `%${search}%`),
             )
           : undefined,
       ),
