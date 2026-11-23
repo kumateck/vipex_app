@@ -232,11 +232,18 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   breakdown. Storage-only collection returns a receipt breakdown even when `payment` is null.
   For a destination branch with `requireReceiverCashierSignature`, submit
   `requestSignature: true`, `handoverTarget`, `expectedReceiverId`, and
-  `expectedSecondReceiverId` when selecting the second receiver. Payment returns
-  `awaitingSignature: true` with status Awaiting Pickup and the new `handoverId`. A stale branch setting or
-  already processed handover returns 409.
+  `expectedSecondReceiverId` when selecting the second receiver. Preparation returns
+  `awaitingSignature: true`, status Awaiting Pickup, the new `handoverId`, and null `payment`,
+  `storagePayment`, and `receiptTaxBreakdown`. It saves a private collection plan without payment
+  or tax entries and leaves the balance unchanged. A stale branch setting, changed collection
+  amount, or already prepared handover returns 409. An active cashier session is required.
 - `GET /payments/receiver-handovers` lists the branch's pending parcels with the collector,
-  associate, and nullable `signedAt`. It supports `search` and `after` pagination. A desktop
+  associate, and nullable `signedAt`. It supports `search` and `after` pagination. Search matches
+  tracking/booking codes, sender/receiver name snapshots, saved/current collector names, and
+  primary/secondary sender, receiver or collector phones. `%`, `_` and backslashes are literal
+  search characters. Results include earlier-day requests and requests from other cashiers at
+  the authenticated destination branch, regardless of the current signature setting or balance.
+  The main web/Desktop Receiver Cashier search also filters this pending list. A desktop
   dialog filters by exact `parcelId` and `handoverId` to watch one request independently of
   the visible page. Pass the returned `revision` as `since` to wait up to four seconds for a change.
 - `POST /payments/receiver-handovers/:parcelId/signature` accepts `{ handoverId, signature }`.
@@ -245,7 +252,13 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
 - `GET /payments/receiver-handovers/:parcelId/signature?handoverId=…` returns the signature
   image and timestamp for desktop preview. `POST /payments/receiver-handovers/:parcelId/confirm`
   accepts `{ handoverId }`, requires a signed handover and active cashier session, and returns
-  `{ id, alreadyConfirmed }`. These routes use the authenticated company and destination branch
+  `{ id, alreadyConfirmed }`. New requests post principal/storage payments, applicable tax and
+  payment audit records, clear the balance, deliver the parcel and close its queue in one
+  transaction. Payment belongs to the confirming cashier. Current charge, payments, storage and
+  queue must still match the saved plan; mismatch returns 409 without financial changes. Any
+  later failure rolls back posting and retains the pending signature. Repeated/concurrent
+  successful confirmation creates no duplicate payment. Legacy pending records without a plan
+  reuse their existing posted payments. These routes use the authenticated company and destination branch
   and require `CanCreateReceiverPayments`. Preview and confirmation require the desktop client.
 - `GET /shipments/parcels/:id/receiver-receipt-reprint?includeParcel=true` also includes the
   receipt display fields used by desktop after a signed handover. The existing receipt access

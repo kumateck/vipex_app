@@ -53,6 +53,14 @@ export function createParcelListOrder(
             })
             .filter((value): value is ReturnType<typeof asc> => value !== null)
         : [asc(parcels.createdAt), asc(parcels.id)];
+  if (p.undeliveredFirst) {
+    orderBy.unshift(
+      asc(sql`case when ${parcels.status} in (
+      ${ParcelStatus.DELIVERED_BY_OFFICE}, ${ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER}, ${ParcelStatus.DELIVERED_AT_HOME}
+    ) then 1 else 0 end`),
+    );
+    if (sort.length && !sort.some((item) => item.field === 'id')) orderBy.push(asc(parcels.id));
+  }
   const currentQueueOnly =
     p.pickupQueueTodayOnly || (p.status === ParcelStatus.AWAITING_PICKUP && !p.shelfPickerAssigned);
   const pickupQueueJoin = currentQueueOnly

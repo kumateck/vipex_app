@@ -10,7 +10,7 @@ web/desktop `/parcels/waiting-pickup`. The feature lives in
 Android and iOS use the same feature. Native device smoke testing remains required.
 
 This completes office handover without collecting payment. Parcels with outstanding principal
-or storage charges belong in Receiver Cashier. Mobile Receiver Signatures captures signatures for payments already processed in Receiver Cashier. See [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md). Mobile batch payment collection is available in **Operations Hub → Receiver Cashier**. For receipts, use the desktop Receiver Cashier reprint flow.
+or storage charges belong in Receiver Cashier. Mobile Receiver Signatures captures signatures for prepared Receiver Cashier handovers; payment is recorded with **Confirm Received** on desktop. Legacy already-paid requests are not charged again. See [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md). Mobile batch payment collection is available in **Operations Hub → Receiver Cashier**. For receipts, use the desktop Receiver Cashier reprint flow.
 
 ## Batch pickup
 

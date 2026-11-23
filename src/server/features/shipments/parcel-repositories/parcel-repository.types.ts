@@ -102,6 +102,7 @@ export type ListParcelsParams = {
   parcelCode?: string | null; // Exact tracking or booking code from a sticker
   received?: boolean | null;
   includeDeleted?: boolean | null;
+  undeliveredFirst?: boolean;
   assignedToUserId?: string | null;
   callCenterAssignmentOrder?: boolean;
   callCenterUncalledOnly?: boolean;

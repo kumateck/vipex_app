@@ -38,6 +38,13 @@ whitespace, and combines with the other filters. Mobile Waiting for Pickup uses 
 sticker scans with its existing company, destination, status and collection filters. Manual
 `search` continues to match partial codes, names and stored phone numbers for both parties.
 
+`GET /shipments/parcels` also accepts `undeliveredFirst=true`. It orders statuses other than
+`DELIVERED_BY_OFFICE` (6), `RIDER_GIVEN_PARCEL_TO_CUSTOMER` (10) and `DELIVERED_AT_HOME` (11) before
+those three delivered statuses, across
+the complete matching set before pagination. Existing sort fields apply within each group;
+parcel ID breaks ties. Super Search enables it on web/Desktop and mobile. Omitted/false preserves
+the existing parcel-list order. It does not filter delivered records or change payment/state.
+
 Mobile Waiting for Pickup uses `POST /payments/receiver-otp/request` and
 `POST /payments/receiver-otp/verify` to verify the main receiver. It then sends
 `POST /shipments/parcels/:id/confirm-office-pickup` with `confirmedBy`, `handoverTarget`,
@@ -54,7 +61,7 @@ See [Mobile Office Pickup](MOBILE_OFFICE_PICKUP.md#api-and-permission-dependenci
 
 System Admin maintenance endpoints:
 
-- `GET /maintenance/scripts`: all ten supported booking-code operations, descriptors,
+- `GET /maintenance/scripts`: all eleven supported booking-code operations, descriptors,
   allowed fields, operation-specific repair confirmation text and source references.
 - `GET /maintenance/runs`: latest 20 company-scoped runs, status and results.
 - `POST /maintenance/runs`: `{ operationId, params, mode: "preview" | "execute",
@@ -63,7 +70,7 @@ previewRunId?, confirmNoCashReceived?, confirmRepair? }`.
   `check-parcel-booking-search`, `inspect-cleared-delivery-fee`,
   `backfill-parcel-customer-names`, `restore-reversed-parcel-balance`,
   `fix-reversed-booking-to-be-paid`, `repair-parcel-financial-state`,
-  `repair-parcel-receiving-workflow`.
+  `repair-parcel-receiving-workflow`, `recover-unpaid-receiver-handover`.
   Operations accept `{ bookingCode }`; conflicts may use `{}` for the company scan.
   Receiving workflow also accepts optional `pickupLocationId`: without it a missing pickup
   location can be filled only when exactly one receiving location exists at the destination.
@@ -73,7 +80,8 @@ previewRunId?, confirmNoCashReceived?, confirmRepair? }`.
   receipt timestamps are preserved; no caller is assigned automatically.
   New adapters accept case-insensitive booking/tracking codes and reject ambiguous matches.
   Execute requires a successful same-admin/company preview from the last ten minutes and an
-  unchanged plan. Credit-print repair requires `confirmNoCashReceived: true`; other repairs
+  unchanged plan. Credit-print repair and unpaid receiver handover recovery require
+  `confirmNoCashReceived: true`; other repairs
   require `confirmRepair: true` for the specific confirmation returned in their descriptor.
   Blocked/already-correct previews return `readyToApply: false` and cannot be executed.
 
@@ -577,6 +585,9 @@ current receiving user's company/destination branch, status 2, no stored receipt
 an undeleted/unconfirmed parcel. Status-only `PATCH /shipments/parcels/:id` with `{ status: 3 }`
 uses the same operation and receiving permissions for old mobile clients; mixed arrival/edit
 payloads return 400. Both routes write location, status, receiver and receipt time atomically.
+For both routes the receiving company/branch comes from the authenticated session, including
+its validated switched branch, rather than from the user's assigned branch. Body-supplied
+scope cannot override it. The active actor is still checked against that company.
 Missing/foreign/wrong-branch/deleted records return 404; already-received/progressed/confirmed
 records and concurrent repeats return 409. A stale consignment item or invalid bulk member rolls
 back all receipt changes. See [Arrival consistency](PARCEL_OPERATIONS.md#pickup-location-and-arrival-consistency).
@@ -706,6 +717,27 @@ before completing. Otherwise the client supplies its local `signature`. Confirma
 checks the initiating staff member's proof and commits all payments/deliveries atomically.
 Migration `0101_batch_mobile_signature` is required. See
 [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md#batch-handover).
+
+Single-parcel Receiver Cashier signature requests now save a payment plan without posting money.
+`POST /v1/payments/receiver-handovers/:parcelId/confirm` records payment and delivery atomically
+after signature review; failed confirmation leaves both unpaid and undelivered. Existing pending
+requests with already-posted payments confirm without another charge. See
+[request/confirmation responses and validation](api/IDENTITY_AND_OPERATIONS.md).
+
+`GET /v1/payments/receiver-handovers` also matches sender/receiver names and primary/secondary
+contact phones, plus saved/current collector names and phones. The main web/Desktop Receiver
+Cashier search includes this pending list, so another authorized cashier at the destination
+branch can find an earlier handover. Requests are not restricted to the initiating operator or
+day; financial, signature and ticket confirmation guards remain enforced.
+
+For a legacy pending handover whose original cash collection did not physically occur, System
+Admin can preview `recover-unpaid-receiver-handover` through `POST /v1/maintenance/runs` with
+`params: { bookingCode }`. Execution requires that admin's fresh, unchanged preview and
+`confirmNoCashReceived: true`. It voids the original cash principal/storage entries, excludes their
+unfiled tax, restores the balance and saves a deferred plan while retaining the signature.
+It creates no replacement collection until another authorized cashier confirms receipt.
+Electronic payments, filed/reviewed tax, journals, saved daily cash confirmations and bank
+settlements block recovery. See [maintenance validation and QA](SYSTEM_MAINTENANCE.md#recover-an-unpaid-receiver-cashier-handover).
 
 Missing permissions or a proof for another selection return 403. Wrong OTP returns 400, an OTP
 session outside the staff member’s scope returns 404, and expired codes, resend cooldown, changed

@@ -7,4 +7,5 @@ export {
 } from './context';
 export { backfillBookingNames } from './names';
 export { repairReversedRecipientPayments } from './recipient-payments';
+export { recoverUnpaidReceiverHandover } from './unpaid-receiver-handover';
 export { checkBookingSearch, inspectClearedDeliveryFee } from './inspections';

@@ -21,6 +21,16 @@ buildscript {
 apply plugin: "com.facebook.react.rootproject"
 
 subprojects { subproject ->
+  // Legacy libraries must use the same Android plugin already loaded by the root build.
+  subproject.buildscript.configurations.configureEach { configuration ->
+    if (configuration.name == 'classpath') {
+      configuration.resolutionStrategy.eachDependency { dependency ->
+        if (dependency.requested.group == 'com.android.tools.build' && dependency.requested.name == 'gradle') {
+          dependency.useVersion(com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION)
+        }
+      }
+    }
+  }
   if (subproject.name == 'react-native-print') {
     subproject.afterEvaluate {
       android {

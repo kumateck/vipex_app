@@ -42,6 +42,9 @@ Current permission behavior and planned desktop-to-mobile capability work are ma
 - Sender-paid parcel plans.
 - Queue management and ticket details.
 - Parcel search and super search.
+- Super Search **Edit parcel details** changes parcel details and the recorded receiver name,
+  with permission/branch checks and an atomic save. This editor has no telephone field. See
+  [Mobile Super Search editing](PARCEL_DETAILS.md#mobile-super-search-editing).
 - Consignment list, scan-based receiving session, completeness checklist, and exception closeout.
 - Waiting for Pickup: scan/search settled parcels, verify collection OTP by SMS or available
   WhatsApp, record receiver cards and capture the collector’s handwritten signature. Receiver
@@ -132,6 +135,36 @@ From `apps/mobile`:
 - `bun run lint`
 
 Android uses Gradle and iOS uses Xcode/CocoaPods. Release environment configuration is loaded through the native build configuration and `react-native-config`.
+Android library buildscript dependencies use the root Android Gradle Plugin version, including
+legacy vector-icons configuration, so native builds do not resolve a separate obsolete plugin.
+
+### Local Android Demo APK
+
+Build a standalone demo APK from `apps/mobile/android`:
+
+```sh
+ENVFILE=.env.demo ./gradlew assembleRelease --no-daemon
+```
+
+`apps/mobile/.env.demo` selects `https://testing.app.vipexparcel.com` for the API
+and `wss://testing.app.vipexparcel.com/v1/communication/ws` for communication.
+The API client adds `/v1` automatically. The override applies only to this build;
+the default release configuration remains `.env.production`. Keep `APP_VERSION`
+in the demo environment aligned with `versionName` in `android/app/build.gradle`.
+
+The output is `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`.
+It includes the JavaScript bundle and uses the existing internal debug signing key.
+It can run without Metro; Android 7.0 (API 24) or later is required.
+This local build does not publish an update or install the APK on a device.
+
+Demo validation scenarios:
+
+- Verify the generated release `BuildConfig` contains the testing API and WebSocket URLs.
+- Verify the APK signature and package/version metadata before sharing it.
+- On a device with Metro stopped, register and approve the installation on the testing
+  environment, sign in, load a permitted parcel workflow, and check communication reconnects.
+- With the testing server unreachable, confirm the app reports a connection failure;
+  pending or revoked installations must remain blocked by the existing device approval flow.
 
 ## Update Behavior
 

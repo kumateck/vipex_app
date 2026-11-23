@@ -42,11 +42,18 @@ export async function updateParcelSvc(
     receiverOtpTarget?: 'main' | 'second';
   },
   actorUserId?: string | null,
+  receivingScope?: { companyId: string; branchId: string },
 ): Promise<{ id: string }> {
   if (patch.status === ParcelStatus.ARRIVED_AT_DESTINATION) {
     if (!actorUserId || Object.keys(patch).some((key) => key !== 'status'))
       throw BadRequest('Confirm arrival separately from parcel edits');
-    await markParcelReceivedSvc(id, { receivedBy: actorUserId, status: patch.status });
+    if (!receivingScope?.companyId || !receivingScope.branchId)
+      throw BadRequest('Authenticated company and receiving branch are required');
+    await markParcelReceivedSvc(id, {
+      receivedBy: actorUserId,
+      ...receivingScope,
+      status: patch.status,
+    });
     return { id };
   }
   const cur = await getParcelRepo(id);

@@ -32,10 +32,11 @@ export async function executeMaintenanceRunSvc(
   const { companyId, actorId } = await assertMaintenanceAdmin(user);
   const { script, params } = validateMaintenanceParams(request.operationId, request.params);
   const apply = request.mode === 'execute';
-  const confirmed =
-    script.id === 'repair-credit-print-payment'
-      ? request.confirmNoCashReceived === true
-      : request.confirmRepair === true;
+  const confirmed = ['repair-credit-print-payment', 'recover-unpaid-receiver-handover'].includes(
+    script.id,
+  )
+    ? request.confirmNoCashReceived === true
+    : request.confirmRepair === true;
   if (apply && (script.kind !== 'repair' || !request.previewRunId || !confirmed)) {
     throw BadRequest('A repair requires a fresh preview and its operation-specific confirmation');
   }

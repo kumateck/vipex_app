@@ -256,11 +256,11 @@ show one queue row per parcel. The dedicated reassignment screen still recognise
 stored on an older active ticket.
 
 Office pickup and new receiver payment require today's ticket where the branch uses queues.
-An already processed receiver payment keeps its original ticket for signature and confirmation
-across midnight. Staff open that parcel in **Awaiting Signature**. QA: keep a ticket open from
+An already prepared receiver handover keeps its original ticket for signature and confirmation
+across midnight. Staff open that parcel in **Receiver signatures**. QA: keep a ticket open from
 yesterday, search for the parcel today and issue a new ticket twice. Verify both requests return
 today's code, the parcel appears once, and successful handover closes the open tickets while
-preserving their records. Repeat with an already processed receiver payment awaiting signature.
+preserving their records. Repeat with a prepared receiver handover awaiting signature.
 
 **Pickup & Collection → Reassign Shelf Pickup** opens the separate page at
 `/parcels/shelf-pickup-reassignment`. It requires the existing
@@ -451,6 +451,20 @@ enter an existing customer's telephone and confirm that customer is linked uncha
 main receiver's telephone and a nine-digit number and confirm both are rejected; confirm a
 dispatched parcel remains editable until handover and another branch's parcel returns 404.
 
+Super Search on web, desktop, Android and iOS lists undelivered parcels before delivered parcels.
+**Delivered by Office**, **Rider Given Parcel to Customer** and **Delivered at Home** belong to the
+delivered group, matching Super Search's existing delivered-date display. Awaiting Pickup,
+pending signature requests, returned parcels and other undelivered statuses remain ahead of them.
+The API orders the entire matching set before pagination. Existing date or selected column order
+is retained within each group, with a stable parcel ID tie-breaker. Delivered matches remain
+available on later rows/pages. This ordering changes no parcel status, payment or permissions;
+other operational lists retain their existing order.
+
+QA: search a name or phone with older delivered parcels and newer undelivered parcels. Verify
+undelivered matches come first, including when there are more matches than one page. Test both
+office/home delivered statuses, a pending signature, column sorting, delivered-only filters and
+mobile search refresh. Automated coverage: `tests/server/super-search-undelivered-first.spec.ts`.
+
 All Parcels Super Search uses the same payment legend and places the matching colored indicator in
 each Payment cell. A fully paid parcel shows only its **Paid** amount; a fully unpaid parcel shows
 only its **To be paid** amount; a partial parcel shows both amounts. Zero rows for the inapplicable
@@ -629,6 +643,15 @@ with other edits in that legacy PATCH; save edits separately. These server prote
 web, desktop and older mobile clients after backend deployment; the new mobile button behavior
 requires the updated mobile bundle.
 
+Both single-parcel POST receipt and legacy status-only PATCH receipt use the authenticated
+session's active company and branch, including a validated **Switch branch** selection. The
+user's assigned/home branch is not substituted for that receiving scope. The saved receiving
+actor remains the signed-in active user, and the user's branch assignment is unchanged.
+Switching away from the parcel's destination makes receipt return 404 even if the user's
+assigned branch is that destination. Company, deletion, status and duplicate-receipt checks
+remain in force. This server fix applies to web, desktop and mobile after backend deployment;
+it requires no client payload change or database migration.
+
 These changes prevent new missing-location arrivals and repeat-arrival regressions. They do not
 bulk-rewrite historical parcels or infer missing historical receipt timestamps. Use the reviewed
 [maintenance repair](SYSTEM_MAINTENANCE.md#receiving-workflow-repair) for existing affected records.
@@ -643,6 +666,8 @@ Repeat via a stale consignment item and a mixed bulk selection; verify complete 
 concurrent receipt requests and verify only one succeeds. Automated integration coverage is
 `parcel-receiving-workflow.spec.ts` using only the empty local `vipex_receiving_workflow_test`
 database with `RECEIVING_WORKFLOW_TEST=1`; its fixture refuses remote/other databases.
+The same suite covers POST and legacy PATCH receipt after switching into the destination,
+switching away from an assigned destination, foreign-company parcels and revoked switch grants.
 
 ### Receiving offices
 
@@ -912,9 +937,11 @@ on-device signature capture and confirmation.
 
 ### Receiver Cashier signatures
 
-A destination branch can require a customer signature after Receiver Cashier processing.
-The cashier records payment and requests the signature, the customer signs on mobile or a
-Windows Topaz pad, and Vipex Desktop confirms delivery and handles printing. See
+A destination branch can require a customer signature for Receiver Cashier handover.
+The cashier requests a signature with a validated payment plan, the customer signs on mobile or a
+Windows Topaz pad, and **Confirm Received** in Vipex Desktop records the payment and delivery
+atomically before printing. Requesting or saving a signature leaves the receiver balance unpaid.
+Older pending requests with existing payments confirm using those records without collecting again. See
 [Receiver Cashier signatures](RECEIVER_CASHIER_SIGNATURES.md) for setup and failure handling.
 
 ## Pickup and Last-Mile Delivery

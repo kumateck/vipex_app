@@ -46,8 +46,8 @@ export function ReceiverHandoverDialogContent({
       : 'Signature received. Confirm and print from Vipex Desktop.';
   } else if (row) {
     status = topaz.available
-      ? 'Payment recorded. Ask the customer to sign on mobile or on the connected Topaz pad.'
-      : 'Payment recorded. Ask the customer to sign in Receiver Signatures on mobile.';
+      ? 'Ask the customer to sign on mobile or on the connected Topaz pad. Confirm Received completes payment and handover.'
+      : 'Ask the customer to sign in Receiver Signatures on mobile, then confirm receipt in Vipex Desktop.';
   } else if (live?.failed) status = 'Unable to refresh the handover. Retrying…';
   else if (live?.page)
     status = 'This handover is no longer pending. Check the Receiver Cashier list.';

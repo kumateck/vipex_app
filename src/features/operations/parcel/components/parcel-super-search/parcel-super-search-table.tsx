@@ -277,7 +277,7 @@ export function ParcelSuperSearchTable({
               meta={meta ?? EMPTY_META}
               loading={loading}
               showSearch={false}
-              serverFilters={{ companyId, includeDeleted: true }}
+              serverFilters={{ companyId, includeDeleted: true, undeliveredFirst: true }}
               onRequestChange={onRequestChange}
               enableVirtualization={false}
             />
