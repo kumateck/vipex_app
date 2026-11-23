@@ -16,21 +16,22 @@ No schema migration is required.
 
 ## Available scripts
 
-The catalog contains **ten operations**, covering all currently identified booking-code
+The catalog contains **eleven operations**, covering all currently identified booking-code
 find/repair scripts plus the parcel financial-state repair already available in Operations.
 
-| Operation ID                       | Script shown in the UI                  | Parameters                                         | Behavior                                                                                                     |
-| ---------------------------------- | --------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `trace-credit-parcel`              | Trace parcel payments                   | Booking/tracking code                              | Read parcel state, payments, credit, tax and recent audit.                                                   |
-| `repair-credit-print-payment`      | Repair credit payment from printing     | Booking code                                       | Void one erroneous sender cash principal payment, exclude unfiled tax and retain credit.                     |
-| `scan-credit-conflicts`            | Find credit and cash conflicts          | Optional booking/tracking code                     | Inspect one parcel or scan up to 200 company candidates with a total count.                                  |
-| `check-parcel-booking-search`      | Check parcel booking search             | Booking/tracking code                              | Run actual source/destination branch search queries and report counts, target match and timings.             |
-| `inspect-cleared-delivery-fee`     | Find cleared delivery fees              | Booking/tracking code                              | Read returned doorstep deliveries, cleared fees, approved fee values, fee payments and return evidence.      |
-| `backfill-parcel-customer-names`   | Repair missing parcel customer names    | Booking/tracking code                              | Fill NULL name snapshots from company-scoped customer records; retain existing names.                        |
-| `restore-reversed-parcel-balance`  | Restore balance after delivery reversal | Booking/tracking code                              | Restore receiver balance after recorded delivery reversal, retaining every payment.                          |
-| `fix-reversed-booking-to-be-paid`  | Repair reversed recipient payments      | Booking/tracking code                              | Void supported reversed/refunded recipient cash principal, exclude unfiled tax and restore receiver balance. |
-| `repair-parcel-financial-state`    | Repair parcel To Be Paid balance        | Booking/tracking code                              | Recalculate receiver balance from charge minus all active principal; retain charge and payments.             |
-| `repair-parcel-receiving-workflow` | Repair parcel receiving workflow        | Booking/tracking code, optional pickup location ID | Fill a missing destination pickup location and/or restore a proven called-pickup status regression.          |
+| Operation ID                       | Script shown in the UI                          | Parameters                                         | Behavior                                                                                                                          |
+| ---------------------------------- | ----------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `trace-credit-parcel`              | Trace parcel payments                           | Booking/tracking code                              | Read parcel state, payments, credit, tax and recent audit.                                                                        |
+| `repair-credit-print-payment`      | Repair credit payment from printing             | Booking code                                       | Void one erroneous sender cash principal payment, exclude unfiled tax and retain credit.                                          |
+| `scan-credit-conflicts`            | Find credit and cash conflicts                  | Optional booking/tracking code                     | Inspect one parcel or scan up to 200 company candidates with a total count.                                                       |
+| `check-parcel-booking-search`      | Check parcel booking search                     | Booking/tracking code                              | Run actual source/destination branch search queries and report counts, target match and timings.                                  |
+| `inspect-cleared-delivery-fee`     | Find cleared delivery fees                      | Booking/tracking code                              | Read returned doorstep deliveries, cleared fees, approved fee values, fee payments and return evidence.                           |
+| `backfill-parcel-customer-names`   | Repair missing parcel customer names            | Booking/tracking code                              | Fill NULL name snapshots from company-scoped customer records; retain existing names.                                             |
+| `restore-reversed-parcel-balance`  | Restore balance after delivery reversal         | Booking/tracking code                              | Restore receiver balance after recorded delivery reversal, retaining every payment.                                               |
+| `fix-reversed-booking-to-be-paid`  | Repair reversed recipient payments              | Booking/tracking code                              | Void supported reversed/refunded recipient cash principal, exclude unfiled tax and restore receiver balance.                      |
+| `repair-parcel-financial-state`    | Repair parcel To Be Paid balance                | Booking/tracking code                              | Recalculate receiver balance from charge minus all active principal; retain charge and payments.                                  |
+| `repair-parcel-receiving-workflow` | Repair parcel receiving workflow                | Booking/tracking code, optional pickup location ID | Fill a missing destination pickup location and/or restore a proven called-pickup status regression.                               |
+| `recover-unpaid-receiver-handover` | Recover receiver handover with no cash received | Booking/tracking code                              | Void exact premature cash principal/storage postings, exclude eligible unfiled tax and defer collection until final confirmation. |
 
 Source coverage is recorded in the catalog and checked by `maintenance-catalog.spec.ts`:
 
@@ -58,7 +59,50 @@ audit output; it takes a company ID, not a booking-code filter. The test verifie
 exception still exists and remains outside the runtime catalog. Other unregistered matching
 scripts still fail coverage, with their paths listed in the failure output.
 
-### Repair validation
+## Repair validation
+
+### Recover an unpaid Receiver Cashier handover
+
+Choose **Recover receiver handover with no cash received** (`recover-unpaid-receiver-handover`).
+Enter one booking/tracking code, preview the exact original receiver principal/storage payments,
+and verify with the cashier that **no physical cash was received** for those entries. Execution
+requires the operation-specific checkbox, sent as `confirmNoCashReceived: true`; the generic
+`confirmRepair` flag is insufficient. This action is for unfinished legacy requests without a
+deferred payment plan. It is unavailable to ordinary cashiers.
+
+The transaction voids the exact payments referenced by that pending handover, excludes their
+unfiled tax entries with tax audit records, restores principal balance, and converts the request
+to a deferred payment plan. It retains the request ID, collector, associate and saved signature.
+It records no replacement payment or delivery. Payment reports exclude the voided originals;
+recorded cash counts and closing balances are not overwritten. The final authorized destination
+cashier uses Receiver Cashier search to reopen the request, physically collects the money and
+chooses **Confirm Received**. That creates a new payment against that cashier's active session
+and confirmation time, atomically with delivery. The original request operator stays in audit.
+
+The preview blocks electronic/MoMo collections, credit parcels, payments outside the original
+request, changed or inconsistent balances/collector, already deferred or delivered requests,
+filed/reviewed tax, accounting journals, saved daily cash confirmations, and non-rejected bank
+settlements for the payment's branch/day. Accounts must resolve those records before recovery.
+Sender payments are retained. A fully sender-paid parcel with no other charges needs only office
+pickup confirmation: its sender payment, original cashier attribution and tax records stay
+unchanged, with no receiver collection. A recovery request referencing any sender payment is
+blocked. Current signature, storage, ticket and reconciliation guards still
+apply at final confirmation; recovery does not waive later accrued storage or replace an ended
+ticket. A changed record invalidates the ten-minute preview. Recovery, exclusions and audit
+roll back together on failure; a consumed preview cannot be reused.
+
+Apply per verified booking. Do not assume that every pending handover is unpaid. The
+[23 November investigation](incidents/2026-11-23-interrupted-receiver-handovers.md) lists candidates;
+the list describes system postings and does not attest to physical cash receipt.
+
+QA: preview as System Admin, check no data changes, reject execution with only generic repair
+confirmation, recover once, verify original payments/tax are excluded and sender payments remain,
+then confirm as another cashier. Verify one active collection belongs to the final cashier.
+Repeat for storage-only and principal-plus-storage, changed previews, filed tax, saved cash/bank
+reconciliation, concurrent/repeated execution, and a forced transactional rollback. Automated
+coverage: `tests/server/unpaid-receiver-handover-recovery.spec.ts`.
+
+### Other repair validation
 
 All new code-based adapters resolve a single active parcel in the authenticated company.
 Matching is case-insensitive and accepts booking/tracking code. Multiple matches are blocked;

@@ -70,13 +70,6 @@ export function ParcelReceiverCashier() {
               {context.branchId && !table.isDelivered ? (
                 <ParcelBatchHandover key={context.branchId} workflow="receiver-cashier" />
               ) : null}
-              {context.branchId && !table.isDelivered ? (
-                <ReceiverHandoverList
-                  key={context.branchId}
-                  enabled={context.requireSignature}
-                  onOpen={dialog.openPendingHandover}
-                />
-              ) : null}
               <Select
                 value={String(table.status)}
                 onValueChange={(value) => table.setStatus(Number(value))}
@@ -102,11 +95,21 @@ export function ParcelReceiverCashier() {
               >
                 <Input
                   value={table.searchInput}
+                  maxLength={100}
                   onChange={(event) => table.setSearchInput(event.target.value)}
                   placeholder="Search by tracking, booking, telephone, or receiver name"
                 />
                 <Button type="submit">Search</Button>
               </form>
+
+              {context.branchId && !table.isDelivered ? (
+                <ReceiverHandoverList
+                  key={`${context.branchId}:${table.query.search ?? ''}`}
+                  enabled={context.requireSignature}
+                  search={table.query.search}
+                  onOpen={dialog.openPendingHandover}
+                />
+              ) : null}
 
               <DataTable
                 mode="server"

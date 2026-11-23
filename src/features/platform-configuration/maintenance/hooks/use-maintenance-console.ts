@@ -60,7 +60,9 @@ export function useMaintenanceConsole() {
           ...(mode === 'execute'
             ? {
                 previewRunId: preview!.id,
-                ...(selected.id === 'repair-credit-print-payment'
+                ...(['repair-credit-print-payment', 'recover-unpaid-receiver-handover'].includes(
+                  selected.id,
+                )
                   ? { confirmNoCashReceived: confirmed }
                   : { confirmRepair: confirmed }),
               }

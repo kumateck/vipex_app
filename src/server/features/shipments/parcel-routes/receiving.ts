@@ -39,8 +39,15 @@ export const routes = new Elysia({ name: 'parcel-receiving' })
   )
   .post(
     '/:id/mark-received',
-    async ({ params, body, user }) =>
-      markParcelReceivedCtrl(params.id, { ...body, receivedBy: (user as AuthUser).sub }),
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return markParcelReceivedCtrl(params.id, {
+        ...body,
+        receivedBy: authUser.sub,
+        companyId: authUser.companyId ?? '',
+        branchId: authUser.branchId ?? '',
+      });
+    },
     {
       params: t.Object({ id: UUID }),
       body: t.Object({

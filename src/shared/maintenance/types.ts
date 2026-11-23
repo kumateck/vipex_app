@@ -1,4 +1,5 @@
 export type MaintenanceScriptId =
+  | 'recover-unpaid-receiver-handover'
   | 'trace-credit-parcel'
   | 'repair-credit-print-payment'
   | 'scan-credit-conflicts'

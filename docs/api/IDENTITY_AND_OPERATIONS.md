@@ -238,7 +238,12 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   or tax entries and leaves the balance unchanged. A stale branch setting, changed collection
   amount, or already prepared handover returns 409. An active cashier session is required.
 - `GET /payments/receiver-handovers` lists the branch's pending parcels with the collector,
-  associate, and nullable `signedAt`. It supports `search` and `after` pagination. A desktop
+  associate, and nullable `signedAt`. It supports `search` and `after` pagination. Search matches
+  tracking/booking codes, sender/receiver name snapshots, saved/current collector names, and
+  primary/secondary sender, receiver or collector phones. `%`, `_` and backslashes are literal
+  search characters. Results include earlier-day requests and requests from other cashiers at
+  the authenticated destination branch, regardless of the current signature setting or balance.
+  The main web/Desktop Receiver Cashier search also filters this pending list. A desktop
   dialog filters by exact `parcelId` and `handoverId` to watch one request independently of
   the visible page. Pass the returned `revision` as `since` to wait up to four seconds for a change.
 - `POST /payments/receiver-handovers/:parcelId/signature` accepts `{ handoverId, signature }`.

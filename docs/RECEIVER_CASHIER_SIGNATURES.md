@@ -36,6 +36,30 @@ capture is retained. Confirming twice does not deliver or print twice. If the re
 print after delivery, use Receiver Cashier → Delivered → Reprint Receipt. Turning the setting
 off affects future requests. Existing pending parcels still require a signature and confirmation.
 
+### Find and continue an interrupted handover
+
+On web and Desktop, the main **Receiver Cashier → Awaiting Pickup → Search** searches both
+parcels needing collection and the **Receiver signatures** section. Search once by booking or
+tracking code, sender/receiver name, collector name, or either contact phone number. Pending
+requests appear in Receiver signatures even when their principal balance is zero or the branch
+has since disabled signature requirements. Search changes reset the pending list to its first
+page. The pending request stays out of the ordinary payment table to prevent a second collection.
+
+Any cashier with `CanCreateReceiverPayments` at the same destination branch can reopen the request;
+it is not filtered by the initiating cashier, session, pickup location, or request date. An open
+ticket referenced by the request remains valid across days. Desktop confirmation uses the final
+cashier's active session, even if the initiating cashier's session has closed. Receiver Signatures
+on mobile uses the same expanded search endpoint; mobile captures the signature and Desktop
+confirms receipt. The Delivered filter remains for delivered receipts only.
+
+If required OTP is unavailable before preparation, no payment or pending handover is created.
+The parcel remains in the ordinary collection flow; another cashier can search and complete it
+later with valid OTP (or an authorized OTP exception) and a current ticket where required. A
+saved request still rechecks its payment/storage balances and original open ticket at confirmation;
+changed storage accrual, charges, receiver, or an ended ticket must be resolved before completion.
+Search does not bypass these guards or rewrite earlier payments. See the
+[23 November incident investigation](incidents/2026-11-23-interrupted-receiver-handovers.md).
+
 Payment is attributed to the cashier who confirms receipt, using that cashier's active session
 and the confirmation-time tax rules. Audit records link the payment to its handover ID and retain
 the operator who originally requested the signature. Signature capture alone never records money.
@@ -43,11 +67,28 @@ Branches without required signatures and signed batches already record payment a
 the same transaction and retain that behavior. This rule applies to receiver handover collections;
 sender payments remain independent of destination pickup.
 
+A parcel fully paid by its sender, with no other outstanding charges, needs delivery confirmation
+only through **Waiting for Pickup**. Another authorized operator may complete that handover;
+the sender payment's amount, cashier attribution, timestamp, receipt and tax records remain
+unchanged, and no receiver payment is created. If the sender paid only part of the charge, retain
+that payment exactly and collect only the remaining receiver balance. The no-cash recovery below
+can reverse only premature receiver payments; it must never void or reassign a sender payment.
+
 Pending handovers created by older server versions may already contain posted payments. They
-retain those exact payment records and confirm without charging again. This change does not void,
-backdate, or rewrite historical payments, including booking `AN7139582Q`. No database migration
-or financial backfill is required. Deploy the server before updated clients; older clients may
+retain those exact payment records and confirm without charging again unless System Admin first
+recovers a verified no-cash case using the operation below. Ordinary confirmation does not void,
+backdate, or reassign historical payments. No database migration is required. Deploy the server
+before updated clients; older clients may
 still display the former payment-recorded wording until updated.
+
+When the original cashier confirms that no physical cash was received, ask System Admin to use
+**Technology → Maintenance Scripts → Recover receiver handover with no cash received** for the
+specific booking. A fresh preview and explicit no-cash confirmation are required. The recovery
+voids the premature postings, excludes eligible unfiled tax, restores the balance and retains the
+handover/signature with a deferred collection plan. Another authorized cashier can then reopen
+it and receive payment attribution only at successful **Confirm Received**. Cases with saved
+cash/bank reconciliation, accounting journals, filed tax or electronic payments require Accounts
+review. See [recovery rules](SYSTEM_MAINTENANCE.md#recover-an-unpaid-receiver-cashier-handover).
 
 ## Batch handover
 
@@ -122,6 +163,27 @@ confirmation so existing sender payments remain intact.
 An existing delivery reversal clears the active delivery snapshot.
 
 ## QA
+
+- Fully pay a parcel as the sender, then confirm its handover as another operator in Waiting for
+  Pickup. Compare complete payment and tax records before/after: they must be identical, with no
+  new receiver payment. For partial sender payment plus recovered receiver collection, verify the
+  complete sender payment remains unchanged. A pending request referencing a sender payment must
+  be rejected by no-cash recovery. Automated coverage: `tests/server/sender-paid-handover-preservation.spec.ts`
+  and `tests/server/unpaid-receiver-handover-recovery.spec.ts`.
+
+- Search the main Receiver Cashier field for an unsigned and a signed pending request by code,
+  receiver name and primary/secondary phone. Find it under Receiver signatures; open it and
+  continue without preparing a duplicate payment. Repeat as another cashier the following day,
+  after closing the original cashier's session and disabling new signature requests at the branch.
+- Paginate the pending list, then search for a request on a different page. Verify that the
+  first matching page loads, including after changing searches back and forth. Switch to Delivered
+  and verify that only delivered receipt results are offered. Simulate a pending-list load failure
+  and verify that the retry message remains visible even if new signatures are disabled.
+- With required OTP unavailable, attempt completion and verify that no payment, tax posting,
+  delivery, or pending signature request is created. Return on another day, obtain a current
+  ticket if needed, and complete with another authorized cashier. Confirm historical paid requests
+  reuse their payments and new requests post exactly once against the final cashier.
+- Automated resumption/search coverage: `tests/server/receiver-handover-resumption.spec.ts`.
 
 - Start a two-parcel batch on desktop in each workflow and request mobile signing after OTP
   verification. Find it on Android and iOS using the second parcel's booking/tracking code.

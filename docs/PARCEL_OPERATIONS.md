@@ -451,6 +451,20 @@ enter an existing customer's telephone and confirm that customer is linked uncha
 main receiver's telephone and a nine-digit number and confirm both are rejected; confirm a
 dispatched parcel remains editable until handover and another branch's parcel returns 404.
 
+Super Search on web, desktop, Android and iOS lists undelivered parcels before delivered parcels.
+**Delivered by Office**, **Rider Given Parcel to Customer** and **Delivered at Home** belong to the
+delivered group, matching Super Search's existing delivered-date display. Awaiting Pickup,
+pending signature requests, returned parcels and other undelivered statuses remain ahead of them.
+The API orders the entire matching set before pagination. Existing date or selected column order
+is retained within each group, with a stable parcel ID tie-breaker. Delivered matches remain
+available on later rows/pages. This ordering changes no parcel status, payment or permissions;
+other operational lists retain their existing order.
+
+QA: search a name or phone with older delivered parcels and newer undelivered parcels. Verify
+undelivered matches come first, including when there are more matches than one page. Test both
+office/home delivered statuses, a pending signature, column sorting, delivered-only filters and
+mobile search refresh. Automated coverage: `tests/server/super-search-undelivered-first.spec.ts`.
+
 All Parcels Super Search uses the same payment legend and places the matching colored indicator in
 each Payment cell. A fully paid parcel shows only its **Paid** amount; a fully unpaid parcel shows
 only its **To be paid** amount; a partial parcel shows both amounts. Zero rows for the inapplicable
@@ -629,6 +643,15 @@ with other edits in that legacy PATCH; save edits separately. These server prote
 web, desktop and older mobile clients after backend deployment; the new mobile button behavior
 requires the updated mobile bundle.
 
+Both single-parcel POST receipt and legacy status-only PATCH receipt use the authenticated
+session's active company and branch, including a validated **Switch branch** selection. The
+user's assigned/home branch is not substituted for that receiving scope. The saved receiving
+actor remains the signed-in active user, and the user's branch assignment is unchanged.
+Switching away from the parcel's destination makes receipt return 404 even if the user's
+assigned branch is that destination. Company, deletion, status and duplicate-receipt checks
+remain in force. This server fix applies to web, desktop and mobile after backend deployment;
+it requires no client payload change or database migration.
+
 These changes prevent new missing-location arrivals and repeat-arrival regressions. They do not
 bulk-rewrite historical parcels or infer missing historical receipt timestamps. Use the reviewed
 [maintenance repair](SYSTEM_MAINTENANCE.md#receiving-workflow-repair) for existing affected records.
@@ -643,6 +666,8 @@ Repeat via a stale consignment item and a mixed bulk selection; verify complete 
 concurrent receipt requests and verify only one succeeds. Automated integration coverage is
 `parcel-receiving-workflow.spec.ts` using only the empty local `vipex_receiving_workflow_test`
 database with `RECEIVING_WORKFLOW_TEST=1`; its fixture refuses remote/other databases.
+The same suite covers POST and legacy PATCH receipt after switching into the destination,
+switching away from an assigned destination, foreign-company parcels and revoked switch grants.
 
 ### Receiving offices
 

@@ -7,6 +7,7 @@ import { registerConsignmentCases } from '../utils/receiving-workflow-cases/cons
 
 import { registerReceivingOfficeCases } from '../utils/receiving-workflow-cases/receiving-office';
 import { registerOfficeDeletionCases } from '../utils/receiving-workflow-cases/receiving-office-deletion';
+import { registerReceivingSessionScopeCases } from '../utils/receiving-workflow-cases/session-scope';
 
 describe.skipIf(process.env.RECEIVING_WORKFLOW_TEST !== '1')(
   'receiving workflow regression protection',
@@ -24,6 +25,7 @@ describe.skipIf(process.env.RECEIVING_WORKFLOW_TEST !== '1')(
     });
     const current = () => fixture;
     registerArrivalCases(current);
+    registerReceivingSessionScopeCases(current);
     registerReceivingOfficeCases(current);
     registerOfficeDeletionCases(current);
     registerLocationCases(current);

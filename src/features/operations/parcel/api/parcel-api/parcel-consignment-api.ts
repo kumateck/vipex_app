@@ -63,6 +63,7 @@ export type SenderCashierParcelFilters = {
 };
 
 export type ParcelSearchFilters = {
+  undeliveredFirst?: boolean;
   companyId?: string | null;
   sourceId?: string | null;
   destinationId?: string | null;

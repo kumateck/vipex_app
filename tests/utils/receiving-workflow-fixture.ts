@@ -41,8 +41,14 @@ export async function createReceivingWorkflowFixture() {
     async location(id = 'circle', branchId = 'destination', companyId = 'company') {
       await db.insert(locations).values({ id, companyId, branchId, name: id, createdBy: 'admin' });
     },
-    async request(method: string, path: string, body?: unknown, group = 'parcels') {
-      const token = await signAccessToken({ sub: 'admin' });
+    async request(
+      method: string,
+      path: string,
+      body?: unknown,
+      group = 'parcels',
+      accessToken?: string,
+    ) {
+      const token = accessToken ?? (await signAccessToken({ sub: 'admin' }));
       return app.handle(
         new Request(`http://localhost/${group}${path}`, {
           method,

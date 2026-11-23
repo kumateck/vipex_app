@@ -1,5 +1,6 @@
 import { ParcelOfficeEditor } from '@mobile/features/operations/parcel-receiving-office';
 import { ParcelHandoverNoteAction } from '@mobile/features/operations/parcel-handover-note';
+import { ParcelInformationEditAction } from '@mobile/features/super-search/parcel-information-editor';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from '@mobile/navigation/router-compat';
@@ -25,11 +26,12 @@ export function ParcelRecordDetailsScreen() {
     bookingCode?: string;
   }>();
   const [tab, setTab] = useState<ParcelDetailTab>('overview');
-  const { loading, details, row, relatedRows, loadError, load } = useParcelRecordDetails({
-    parcelId: canView ? parcelId : undefined,
-    companyId,
-    withAuth,
-  });
+  const { loading, details, row, relatedRows, loadError, load, hasCanonicalDetails } =
+    useParcelRecordDetails({
+      parcelId: canView ? parcelId : undefined,
+      companyId,
+      withAuth,
+    });
   const history = useParcelHistory({ parcelId: canView ? parcelId : undefined, withAuth });
   const branchNameById = useMemo(() => {
     const names = new Map<string, string>();
@@ -84,6 +86,17 @@ export function ParcelRecordDetailsScreen() {
       }}
     >
       <ParcelDetailsHeader bookingCode={bookingCode ?? row?.bookingCode} />
+      {hasCanonicalDetails ? (
+        <ParcelInformationEditAction
+          key={details.parcel.id}
+          details={details}
+          row={row}
+          onSaved={() => {
+            void load();
+            void history.reload();
+          }}
+        />
+      ) : null}
       {!details.parcel.isDeleted ? (
         <ParcelHandoverNoteAction
           parcelId={details.parcel.id}
