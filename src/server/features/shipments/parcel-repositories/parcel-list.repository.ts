@@ -73,6 +73,7 @@ export async function listParcelsRepo(
     senderPaidPrincipalPsw: number;
     receiverPaidPrincipalPsw: number;
     outstandingDeliveryFeePsw: number;
+    settledStoragePsw: number;
   })[];
   totalRecords: number;
 }> {
@@ -102,6 +103,8 @@ export async function listParcelsRepo(
     receiverPaidPrincipalPsw,
     paidDeliveryFeePsw,
     outstandingPrincipalPsw,
+    paidStoragePsw,
+    waivedStoragePsw,
   } = context;
   const { orderBy, pickupQueueJoin, whereClause } = createParcelListOrder(p, context);
   let countQuery = executor.select({ c: count() }).from(parcels).$dynamic();
@@ -158,6 +161,8 @@ export async function listParcelsRepo(
       paidPrincipalPsw: paidPrincipalPsw.mapWith(Number),
       senderPaidPrincipalPsw: senderPaidPrincipalPsw.mapWith(Number),
       receiverPaidPrincipalPsw: receiverPaidPrincipalPsw.mapWith(Number),
+      // Storage already paid or cleared (executed waivers); subtracted from the accrual.
+      settledStoragePsw: sql<number>`${paidStoragePsw} + ${waivedStoragePsw}`.mapWith(Number),
       outstandingDeliveryFeePsw:
         sql<number>`greatest(coalesce(${deliveries.chargePsw}, 0) - ${paidDeliveryFeePsw}, 0)`.mapWith(
           Number,

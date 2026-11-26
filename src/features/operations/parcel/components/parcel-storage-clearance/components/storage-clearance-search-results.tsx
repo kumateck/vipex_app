@@ -28,6 +28,7 @@ export function StorageClearanceSearchResults({ state }: { state: State }) {
               ) : null}
               <p className="text-sm text-muted-foreground">
                 Accrued storage: {parcel.storageChargeDays ?? 0} days ·{' '}
+                {formatStorageMoney(parcel.storageAccruedPsw ?? parcel.storageChargePsw)} · Owed{' '}
                 {formatStorageMoney(parcel.storageChargePsw)}
               </p>
             </button>

@@ -1702,9 +1702,11 @@ Every web and mobile parcel search result backed by the parcel list API shows a
 zero. This includes Super Search, status, receive, transit, pickup, waiting pickup, receiver
 cashier, delivery cashier, call-center assignment, shelf-picker update, home-delivery queues,
 internal-transfer search, sender payments, uncollected, returned, and mobile Super Search results.
-The amount is the current accrued charge from the company ageing policy and received timestamp,
-including parcels moved to the aged-warehouse status; it is informational and does not by itself
-mean the amount is still outstanding after a payment or waiver. Search rows with no accrued charge
+The amount is the storage still owed: the accrual from the company ageing policy and received
+timestamp (including aged-warehouse parcels) minus storage payments and executed storage
+clearances. After Finance executes a Clear All clearance the indicator disappears until new days
+accrue; an approved but unexecuted clearance does not change it. Before 26 Nov 2026 the indicator
+showed the gross accrual even after payment or clearance. Search rows with no accrued charge
 remain unchanged. The indicator is rendered from the search response, so clients do not calculate
 or mutate storage fees locally.
 
@@ -1748,11 +1750,36 @@ which resets approval and sends it through the flow again. Approvers can reject 
 Finance can reject approved requests. Rejection requires a reason and closes the request. A new
 request must be created to start again.
 
+**Status display and locked actions.** Each request list (requests, approvals, finance
+execution) and the action dialog show a one-line coloured status with its meaning: Pending
+Approval (waiting for an approver, storage still owed), Approved for Finance (waiting for finance
+to execute, storage still owed), Returned for Review (requester must review and resubmit),
+Rejected (closed, storage still owed), Executed (cleared, removed from the parcel storage
+balance). Approve shows only for Pending Approval; Execute, Return for Review and Reject show only
+for Approved for Finance. Executed and Rejected requests are final and show no action buttons.
+After a successful action the row's buttons hide immediately, before the list refreshes. If the
+request changed meanwhile (for example another finance user executed it), the dialog says so and
+disables submit; the server still rejects the action with HTTP 409.
+
 Approval checks that unpaid accrual still exists. Finance execution rechecks the latest balance,
 rate, and requested amount. Changed Clear All days/amount, a changed rate, an amount above the
 remaining balance, or no remaining accrual returns HTTP 409 without posting. Finance can return
 the request for correction; execution never silently increases or reduces the approved amount.
 Additional days do not block execution of an affordable partial request.
+
+**Open clearance blocks receiver storage collection (from 26 Nov 2026).** While a parcel with
+outstanding storage has a clearance request that is Pending Approval, Approved for Finance, or
+Returned for Review, the Receiver Cashier cannot collect storage or hand the parcel over. The web
+and desktop payment dialog shows an amber "Storage fee clearance in progress" warning with the
+request status, disables the storage amount, hides **Request Clearance**, and disables the
+confirm button. The server enforces the same rule (HTTP 409) when collecting receiver payments,
+preparing a signature handover, and confirming a signed handover, so mobile, stale screens and
+direct API calls are blocked too. Handover resumes once Finance executes the clearance (reducing
+the balance) or the request is rejected. A returned request can only be resubmitted, so to abandon
+it the requester resubmits and an approver rejects it. Parcels without outstanding storage are not
+affected. This prevents the case seen on AO9728958R (25 Nov 2026), where storage was collected
+and printed on the receipt 15 minutes after the clearance was approved but before Finance executed
+it.
 
 Execution locks the request and parcel and commits the waiver, accounting posting (when enabled),
 executed status, and audit together. Concurrent or repeated execution cannot create a second
@@ -1776,6 +1803,8 @@ Automated QA: `parcel-storage-clearance.workflow.spec.ts`, `.finance.spec.ts`, `
 `.path-access.spec.ts`, and the clearance rules unit tests cover partial/above-balance requests,
 no-accrual rejection, company/branch scope, requester separation, return/resubmit/reapproval,
 rejection/restart, Clear All after prior clearance, subsequent accrual, stale execution conflicts,
+receiver storage collection blocked while a request is pending or approved for finance,
+parcel rows dropping the storage fee after an executed Clear All, final-status action locks,
 permissions, the removed bypass endpoint, concurrent execution, balanced posting, and rollback
 on accounting failure. Manual QA: check each page, search and pagination, evidence links,
 current/unpaid/requested/remaining days, returned-request editing, and desktop navigation.

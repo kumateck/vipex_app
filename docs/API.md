@@ -225,7 +225,12 @@ it, or `null`), `userNames` (user ID to full name for every person referenced), 
 returns `{ events }`, oldest first, each `{ id, occurredAt, category, title, description,
 actorName, branchName }`. Both require `CanReadParcels` and return 404 for a parcel outside the
 caller's company. Details were not company-checked before October 2026. See
-[Parcel details and history](PARCEL_DETAILS.md).
+[Parcel details and history](PARCEL_DETAILS.md). Details also return `openStorageClearance`
+(`{ id, status }` or `null`): the parcel's storage clearance request that is still Pending
+Approval, Approved for Finance, or Returned for Review. While it is set and storage is
+outstanding, receiver payment collection, signature-handover preparation and signed-handover
+confirmation return HTTP 409 for any storage collection (see
+[Parcel operations](PARCEL_OPERATIONS.md#storage-fee-clearance-reconciliation)).
 
 `GET /v1/shipments/parcels/:id/receipt-reprint-tax` returns the summed, non-voided sender
 principal payment and recorded tax amounts for a receipt reprint, or `null` when no such payment
@@ -256,10 +261,13 @@ for the existing original-storage-tax mismatch and QA scenarios.
 
 Parcel list/search responses include the ageing snapshot fields `storageChargePsw`,
 `storageChargeDays`, `storageChargeStartAt`, `isParcelAgeingEligible`, and `isParcelAged` when
-the row is eligible for storage accrual, including aged-warehouse parcels. `storageChargePsw` is the currently accrued storage fee
-in pesewas and is used by web and mobile search results to show the storage-fee indicator. It is
-informational; outstanding collection continues to use the server-side cashier eligibility and
-settlement rules, including recorded storage payments and waivers.
+the row is eligible for storage accrual, including aged-warehouse parcels. Since 26 Nov 2026
+`storageChargePsw` is the storage still owed in pesewas: the accrual minus non-voided storage
+payments and executed clearances (waivers). The gross accrual is returned as `storageAccruedPsw`.
+Web and mobile search results show the storage-fee indicator from `storageChargePsw`, so it
+disappears once a clearance is executed or storage is paid. Screens labelled "Accrued" (Receiver
+Cashier, Uncollected, clearance parcel search) show `storageAccruedPsw`. Collection still uses the
+server-side cashier eligibility and settlement rules.
 
 Storage fee clearance reconciliation uses the parcel prefix `/v1/shipments/parcels`:
 

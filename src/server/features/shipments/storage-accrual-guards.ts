@@ -8,6 +8,19 @@ export function assertNoOutstandingStorageForHandover(outstandingPsw: number) {
   }
 }
 
+export const OPEN_STORAGE_CLEARANCE_HANDOVER_MESSAGE =
+  'A storage fee clearance for this parcel is awaiting approval or finance execution. Storage cannot be collected until finance executes or rejects the clearance.';
+
+/** Blocks storage collection while a clearance request for the parcel is still open. */
+export function assertNoOpenStorageClearanceForCollection(input: {
+  hasOpenClearance: boolean;
+  outstandingPsw: number;
+}) {
+  if (input.hasOpenClearance && input.outstandingPsw > 0) {
+    throw Conflict(OPEN_STORAGE_CLEARANCE_HANDOVER_MESSAGE);
+  }
+}
+
 export function assertValidStorageCollectionAmount(input: {
   outstandingPsw: number;
   collectionPsw: number;

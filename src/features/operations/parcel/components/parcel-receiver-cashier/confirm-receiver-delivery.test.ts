@@ -138,4 +138,45 @@ describe('confirmReceiverDelivery branch OTP policy', () => {
     expect(receipt.storageChargeCedis).toBe(6);
     expect(receipt.taxBreakdown?.taxTotalCedis).toBe(0.5);
   });
+
+  it('blocks storage collection while a storage clearance is open', async () => {
+    let called = false;
+    await expect(
+      confirmReceiverDelivery({
+        selectedParcel: PARCEL,
+        pickerStaffId: 'staff-1',
+        paymentAmount: '0',
+        storagePaymentAmount: '64.00',
+        receiverDuePsw: 0,
+        storageOutstandingPsw: 6_400,
+        hasOpenStorageClearance: true,
+        canWaiveStorageAccrual: false,
+        handoverTarget: 'main',
+        mainCardMode: 'none',
+        mainExistingCardRecordId: '',
+        mainNewCardTypeId: '',
+        mainNewCardNumber: '',
+        mainReceiverCards: [],
+        secondCardMode: 'none',
+        secondExistingCardRecordId: '',
+        secondNewCardTypeId: '',
+        secondNewCardNumber: '',
+        secondNewName: '',
+        secondNewPhone: '',
+        secondReceiverCards: [],
+        paymentMethod: '0',
+        destinationBranchName: 'Accra',
+        destinationLocationName: 'Front desk',
+        isReceiverOtpRequired: false,
+        receiverOtpVerificationToken: '',
+        addCustomerCard: async () => undefined,
+        createCustomer: async () => ({ id: 'customer-2' }),
+        collectReceiverAndDeliver: async () => {
+          called = true;
+          return { payment: null };
+        },
+      }),
+    ).rejects.toThrow('storage fee clearance');
+    expect(called).toBe(false);
+  });
 });

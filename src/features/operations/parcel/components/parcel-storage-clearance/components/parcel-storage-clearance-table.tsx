@@ -1,7 +1,7 @@
 import type { ParcelStorageClearanceRow } from '../types';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatStorageClearanceStatus, formatStorageMoney } from '../utils';
+import { formatStorageMoney, isStorageClearanceActionAllowed } from '../utils';
+import { StorageClearanceStatusBadge } from './storage-clearance-status-badge';
 import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 type Props = {
@@ -16,6 +16,8 @@ type Props = {
   onExecute?: (row: ParcelStorageClearanceRow) => void;
   requesterId?: string;
   onResubmit?: (row: ParcelStorageClearanceRow) => void;
+  /** Requests actioned in this session; their buttons hide before the list refetches. */
+  completedIds?: ReadonlySet<string>;
 };
 
 export function ParcelStorageClearanceTable({
@@ -30,6 +32,7 @@ export function ParcelStorageClearanceTable({
   onExecute,
   onResubmit,
   requesterId,
+  completedIds,
 }: Props) {
   return (
     <div className="overflow-x-auto rounded-md border">
@@ -65,14 +68,13 @@ export function ParcelStorageClearanceTable({
               </td>
               <td className="max-w-xs p-3">{row.reason}</td>
               <td className="p-3">
-                <Badge variant={row.status === 3 ? 'destructive' : 'outline'}>
-                  {formatStorageClearanceStatus(row.status)}
-                </Badge>
+                <StorageClearanceStatusBadge status={row.status} />
               </td>
               <td className="p-3">
                 <div className="flex flex-wrap gap-2">
                   <ViewParcelDetailsButton parcelId={row.parcelId} label="Parcel" />
-                  {canApprove && row.status === 0 ? (
+                  {completedIds?.has(row.id) ? null : canApprove &&
+                    isStorageClearanceActionAllowed('approve', row.status) ? (
                     <>
                       <Button size="sm" onClick={() => onApprove?.(row)}>
                         Approve
@@ -82,7 +84,8 @@ export function ParcelStorageClearanceTable({
                       </Button>
                     </>
                   ) : null}
-                  {canExecute && row.status === 1 ? (
+                  {completedIds?.has(row.id) ? null : canExecute &&
+                    isStorageClearanceActionAllowed('execute', row.status) ? (
                     <>
                       <Button size="sm" onClick={() => onExecute?.(row)}>
                         Execute

@@ -78,6 +78,9 @@ The parcel remains in the ordinary collection flow; another cashier can search a
 later with valid OTP (or an authorized OTP exception) and a current ticket where required. A
 saved request still rechecks its payment/storage balances and original open ticket at confirmation;
 changed storage accrual, charges, receiver, or an ended ticket must be resolved before completion.
+A storage fee clearance request opened for the parcel (pending approval, approved for finance, or
+returned for review) also blocks preparation and confirmation while storage is outstanding; see
+[Parcel operations](PARCEL_OPERATIONS.md#storage-fee-clearance-reconciliation).
 Search does not bypass these guards or rewrite earlier payments. See the
 [23 November incident investigation](incidents/2026-11-23-interrupted-receiver-handovers.md).
 

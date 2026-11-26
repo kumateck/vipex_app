@@ -108,3 +108,19 @@ export function computeStorageAccrualPsw(input: {
       );
   return chargeDays * input.policy.storageFeePerDayPsw;
 }
+
+/**
+ * Parcel rows show the storage still owed: accrual minus valid storage payments and executed
+ * clearances. The gross accrual stays available as `storageAccruedPsw`.
+ */
+export function applyStorageSettlement<T extends { storageChargePsw: number }>(
+  snapshot: T,
+  settledStoragePsw: number,
+) {
+  const storageAccruedPsw = snapshot.storageChargePsw;
+  return {
+    ...snapshot,
+    storageAccruedPsw,
+    storageChargePsw: Math.max(storageAccruedPsw - Math.max(settledStoragePsw, 0), 0),
+  };
+}

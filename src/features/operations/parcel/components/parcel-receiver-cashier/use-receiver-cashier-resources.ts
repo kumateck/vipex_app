@@ -88,6 +88,11 @@ export function useReceiverCashierResources({
       parcelDetails?.payments ?? [],
     ),
     storageOutstandingPsw: parcelDetails?.storageSettlement?.outstandingPsw ?? 0,
+    // Storage cannot be collected while a clearance request is still open.
+    blockingStorageClearance:
+      (parcelDetails?.storageSettlement?.outstandingPsw ?? 0) > 0
+        ? (parcelDetails?.openStorageClearance ?? null)
+        : null,
     hasPickupQueue: Boolean(parcelDetails?.pickupQueue),
     isDialogDataLoading: dialogLoadState.isLoading,
     hasDialogLoadError: dialogLoadState.hasError,

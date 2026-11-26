@@ -9,6 +9,7 @@ import {
   getErrorMessage,
 } from '../services';
 import type { StorageClearanceAction, ParcelStorageClearanceRow } from '../types';
+import { formatStorageClearanceStatus, isStorageClearanceActionAllowed } from '../utils';
 const TITLES = {
   approve: 'Approve Storage Clearance',
   reject: 'Reject Storage Clearance',
@@ -32,8 +33,15 @@ export function useStorageClearanceAction(
     returnState.isLoading ||
     executeState.isLoading;
   const required = mode === 'reject' || mode === 'return';
+  // Use the freshest status: another user may have executed or rejected it meanwhile.
+  const currentStatus = detail.data?.request.status ?? row.status;
+  const isClosed = !isStorageClearanceActionAllowed(mode, currentStatus);
   const canSubmit =
-    !isSaving && (!required || note.trim().length >= 3) && !detail.isFetching && !detail.isError;
+    !isSaving &&
+    !isClosed &&
+    (!required || note.trim().length >= 3) &&
+    !detail.isFetching &&
+    !detail.isError;
   const submit = async () => {
     if (!canSubmit) return;
     try {
@@ -47,5 +55,16 @@ export function useStorageClearanceAction(
       toast.error(getErrorMessage(error, 'Could not complete storage clearance action'));
     }
   };
-  return { note, setNote, isSaving, canSubmit, required, title: TITLES[mode], submit, detail };
+  return {
+    note,
+    setNote,
+    isSaving,
+    canSubmit,
+    required,
+    isClosed,
+    currentStatusLabel: formatStorageClearanceStatus(currentStatus).toLowerCase(),
+    title: TITLES[mode],
+    submit,
+    detail,
+  };
 }

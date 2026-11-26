@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  assertNoOpenStorageClearanceForCollection,
   assertNoOutstandingStorageForHandover,
+  OPEN_STORAGE_CLEARANCE_HANDOVER_MESSAGE,
   assertValidStorageCollectionAmount,
   resolveAndValidateStorageWaiverAmountPsw,
   validateStorageWaiverReason,
@@ -41,5 +43,25 @@ describe('storage accrual guard rules', () => {
         requestedPsw: 600,
       }),
     ).toThrow('Waived amount cannot exceed outstanding storage accrual');
+  });
+});
+
+describe('open storage clearance handover guard', () => {
+  test('blocks storage collection while a clearance request is open', () => {
+    expect(() =>
+      assertNoOpenStorageClearanceForCollection({ hasOpenClearance: true, outstandingPsw: 6400 }),
+    ).toThrow(OPEN_STORAGE_CLEARANCE_HANDOVER_MESSAGE);
+  });
+
+  test('allows handover when no storage is outstanding', () => {
+    expect(() =>
+      assertNoOpenStorageClearanceForCollection({ hasOpenClearance: true, outstandingPsw: 0 }),
+    ).not.toThrow();
+  });
+
+  test('allows collection when no clearance request is open', () => {
+    expect(() =>
+      assertNoOpenStorageClearanceForCollection({ hasOpenClearance: false, outstandingPsw: 6400 }),
+    ).not.toThrow();
   });
 });

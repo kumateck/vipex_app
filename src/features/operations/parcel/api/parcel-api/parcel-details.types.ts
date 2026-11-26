@@ -156,6 +156,8 @@ export type ParcelFullDetails = {
   dispositionActions: ParcelDispositionActionRow[];
   storageWaivers: ParcelStorageWaiverRow[];
   storageSettlement: ParcelStorageSettlement;
+  /** Clearance request still awaiting approval, finance execution, or requester review. */
+  openStorageClearance?: { id: string; status: number } | null;
 };
 
 export type PickupQueueRecord = {
