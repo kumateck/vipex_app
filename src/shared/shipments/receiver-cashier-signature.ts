@@ -12,6 +12,9 @@ export type PendingReceiverHandoverRow = ParcelHandoverNoteIndicator &
     handoverId: string;
     trackingCode: string;
     bookingCode: string;
+    receiverName: string;
+    receiverTelephone: string | null;
+    parcelDetails: string;
     collectorName: string;
     associateName: string;
     requestedAt: string;

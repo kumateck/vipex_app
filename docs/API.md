@@ -729,6 +729,11 @@ contact phones, plus saved/current collector names and phones. The main web/Desk
 Cashier search includes this pending list, so another authorized cashier at the destination
 branch can find an earlier handover. Requests are not restricted to the initiating operator or
 day; financial, signature and ticket confirmation guards remain enforced.
+Each row also returns `receiverName` (parcel snapshot, else current customer name),
+`receiverTelephone` (current primary phone, nullable) and `parcelDetails` so clients can show the
+booking code and receiver instead of internal IDs. Web/Desktop Receiver Cashier also reads
+`GET /v1/payments/batch-handover-signatures` (filtered to `receiver-cashier` rows) for its
+Multiple-parcel signatures list.
 
 For a legacy pending handover whose original cash collection did not physically occur, System
 Admin can preview `recover-unpaid-receiver-handover` through `POST /v1/maintenance/runs` with

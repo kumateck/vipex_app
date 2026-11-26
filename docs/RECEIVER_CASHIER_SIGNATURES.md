@@ -38,6 +38,27 @@ off affects future requests. Existing pending parcels still require a signature 
 
 ### Find and continue an interrupted handover
 
+Receiver Cashier on web and Desktop has three tabs at the top of the page: **Awaiting Pickup**
+(parcels needing collection, **Hand over multiple parcels**, and the single-parcel signatures
+section when the branch requires signatures or a request is pending), **Receiver signatures**,
+and **Delivered** (receipt reprint). These tabs replace the former status dropdown.
+
+The **Receiver signatures** tab is always shown, even when the branch setting is off and the list
+is empty. It has two lists, each marked **Awaiting signature** or **Ready to confirm**:
+
+- **Multiple-parcel signatures**: Receiver Cashier batch requests at the active branch, showing
+  the receiver name and telephone, the parcel count, and each parcel's booking code and parcel
+  details. It refreshes every four seconds and follows the main search. Confirmation stays in the
+  **Hand over multiple parcels** dialog that started the request.
+- **Single-parcel signatures**: each pending handover shows its booking code, receiver name
+  (parcel snapshot, else current customer name), receiver telephone, parcel details, collector,
+  associate and pickup office, with **Open handover** / **Review signature**.
+
+Internal IDs are never shown. Mobile Receiver Signatures uses the same booking code, receiver,
+telephone and parcel details on single-parcel cards. Batch cards show each booking code and
+parcel details. `GET /payments/receiver-handovers` rows now include `receiverName`,
+`receiverTelephone` and `parcelDetails`.
+
 On web and Desktop, the main **Receiver Cashier → Awaiting Pickup → Search** searches both
 parcels needing collection and the **Receiver signatures** section. Search once by booking or
 tracking code, sender/receiver name, collector name, or either contact phone number. Pending
@@ -50,7 +71,7 @@ it is not filtered by the initiating cashier, session, pickup location, or reque
 ticket referenced by the request remains valid across days. Desktop confirmation uses the final
 cashier's active session, even if the initiating cashier's session has closed. Receiver Signatures
 on mobile uses the same expanded search endpoint; mobile captures the signature and Desktop
-confirms receipt. The Delivered filter remains for delivered receipts only.
+confirms receipt. The Delivered tab remains for delivered receipts only.
 
 If required OTP is unavailable before preparation, no payment or pending handover is created.
 The parcel remains in the ordinary collection flow; another cashier can search and complete it
@@ -100,7 +121,10 @@ signing pads are available, and Desktop supports Topaz. Confirmed payments remai
 per-parcel receipt reprint in **Receiver Cashier → Delivered**. Existing pending signatures use
 the single-parcel flow above. See [Parcel operations](PARCEL_OPERATIONS.md#hand-over-multiple-parcels).
 
-For a desktop-initiated batch, verify its OTP, then choose **Request signature on mobile**.
+For a desktop-initiated batch, verify its OTP. The dialog then automatically publishes the
+signature request to mobile (once per OTP verification) and shows "Waiting for one signature".
+**Sign here instead** cancels it and shows the local pad; **Request signature on mobile** sends
+it again. A failed automatic request shows its error and the local pad stays available.
 On Android or iOS, open **Operations → Receiver Signatures**. The **Multiple-parcel signatures**
 section shows one request with every selected booking and tracking code. Review the list, choose
 **Sign for N parcels**, and save one drawing. The desktop dialog checks for the signature every
@@ -184,9 +208,21 @@ An existing delivery reversal clears the active delivery snapshot.
   ticket if needed, and complete with another authorized cashier. Confirm historical paid requests
   reuse their payments and new requests post exactly once against the final cashier.
 - Automated resumption/search coverage: `tests/server/receiver-handover-resumption.spec.ts`.
+- Open Receiver Cashier at a branch with **Require Receiver Cashier signature** off and no pending
+  requests. The **Awaiting Pickup**, **Receiver signatures** and **Delivered** tabs are visible;
+  **Receiver signatures** shows the empty list instead of hiding it. Create a pending request and
+  verify it appears in both Awaiting Pickup and the Receiver signatures tab with its booking code,
+  receiver name, telephone and parcel details, and no internal ID. Start a batch mobile request
+  and verify it appears under Multiple-parcel signatures with every booking code and parcel
+  details, then changes to Ready to confirm after mobile signing. Switching tabs keeps
+  the tabs in place, and Delivered hides batch handover and the pending list.
+- Verify a batch OTP on web/Desktop and do not press **Request signature on mobile**. The request
+  must appear in mobile Receiver Signatures automatically. **Sign here instead** must not
+  republish it until the button is pressed or a new OTP is verified. Automated coverage:
+  `tests/utils/batch-mobile-signature-auto-request.spec.tsx`.
 
-- Start a two-parcel batch on desktop in each workflow and request mobile signing after OTP
-  verification. Find it on Android and iOS using the second parcel's booking/tracking code.
+- Start a two-parcel batch on desktop in each workflow and verify the OTP (the mobile request is
+  sent automatically). Find it on Android and iOS using the second parcel's booking/tracking code.
   Review all members, save one signature and verify the open desktop preview updates. Confirm
   once and verify both parcels record that batch and mobile capture operator, with one payment
   per cashier parcel. An unselected third parcel must stay Awaiting Pickup.

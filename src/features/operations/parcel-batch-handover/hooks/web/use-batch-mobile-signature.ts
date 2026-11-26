@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import type { BatchHandoverWorkflow } from '@/shared/shipments/parcel-batch-handover';
 import {
@@ -27,6 +27,31 @@ export function useBatchMobileSignature(
   const [cancel, cancelling] = useCancelBatchSignatureMutation();
   const pending = requesting.isLoading || cancelling.isLoading;
   const status = query.currentData;
+  const autoRequested = useRef<string | undefined>(undefined);
+
+  const sendRequest = async () => {
+    if (!preparation || pending || flow.busy) return;
+    setError('');
+    try {
+      await request({ workflow, ...preparation }).unwrap();
+      flow.setSignature(undefined);
+      await query.refetch().unwrap();
+    } catch (failure) {
+      setError(getErrorMessage(failure, 'Unable to request the mobile signature'));
+    }
+  };
+  const sendRequestRef = useRef(sendRequest);
+  sendRequestRef.current = sendRequest;
+
+  // Publish the request to mobile Receiver Signatures as soon as the OTP is verified, once per
+  // verification. "Sign here instead" cancels it and the local pad remains available.
+  const proofToken = preparation?.verificationToken;
+  useEffect(() => {
+    if (!proofToken || flow.completedCount || autoRequested.current === proofToken) return;
+    if (flow.busy || pending) return;
+    autoRequested.current = proofToken;
+    void sendRequestRef.current();
+  }, [flow.busy, flow.completedCount, pending, proofToken]);
 
   return {
     status,
@@ -36,17 +61,7 @@ export function useBatchMobileSignature(
       error ||
       (query.isError ? 'Unable to check the mobile signature. Retry before confirming.' : ''),
     retry: () => void query.refetch(),
-    request: async () => {
-      if (!preparation || pending || flow.busy) return;
-      setError('');
-      try {
-        await request({ workflow, ...preparation }).unwrap();
-        flow.setSignature(undefined);
-        await query.refetch().unwrap();
-      } catch (failure) {
-        setError(getErrorMessage(failure, 'Unable to request the mobile signature'));
-      }
-    },
+    request: sendRequest,
     cancel: async () => {
       if (!status || !preparation || pending || flow.busy) return;
       setError('');
