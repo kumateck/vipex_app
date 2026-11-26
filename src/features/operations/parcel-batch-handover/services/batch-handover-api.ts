@@ -1,5 +1,6 @@
 import { api } from '@/services/api';
 import type {
+  BatchSignaturePage,
   BatchSignaturePreparation,
   BatchSignatureStatus,
 } from '@/shared/shipments/batch-signature-request';
@@ -18,6 +19,10 @@ const root = (workflow: BatchHandoverWorkflow) => `/payments/${workflow}-batch-h
 
 const batchHandoverApi = api.injectEndpoints({
   endpoints: (builder) => ({
+    listBatchSignatures: builder.query<BatchSignaturePage, { search?: string; after?: string }>({
+      query: (params) => ({ url: '/payments/batch-handover-signatures', params }),
+      keepUnusedDataFor: 0,
+    }),
     requestBatchSignature: builder.mutation<
       { requestId: string },
       Request<BatchSignaturePreparation>
@@ -83,6 +88,7 @@ const batchHandoverApi = api.injectEndpoints({
 });
 
 export const {
+  useListBatchSignaturesQuery,
   useRequestBatchSignatureMutation,
   useGetBatchSignatureQuery,
   useCancelBatchSignatureMutation,

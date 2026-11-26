@@ -1,21 +1,19 @@
-import { ParcelBatchHandover } from '@/features/operations/parcel-batch-handover';
+import {
+  BatchSignatureRequests,
+  ParcelBatchHandover,
+} from '@/features/operations/parcel-batch-handover';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useReceiverReceiptReprint } from '../../hooks';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { DataTable } from '@/components/datatable';
 import { ParcelStatus } from '@/db/schemas/enums';
+import { useCallback, useState } from 'react';
 import { ParcelReceiptActions } from '../parcel-receipt-actions';
 import { ParcelSessionGuard } from '../parcel-session-guard';
 import { ReceiverHandoverList } from './receiver-handover-list';
+import { ReceiverCashierTabs, type ReceiverCashierView } from './receiver-cashier-tabs';
 import { PAYMENT_TYPE_LEGEND } from './receiver-cashier-constants';
 import { ReceiverPaymentDeliveryDialog } from './receiver-payment-delivery-dialog';
 import { EMPTY_META } from './receiver-cashier-types';
@@ -27,6 +25,22 @@ export function ParcelReceiverCashier() {
   const workflow = useParcelReceiverCashierWorkflow();
   const { context, table, dialog, receipt, edit } = workflow;
   const reprint = useReceiverReceiptReprint();
+  const [signaturesOpen, setSignaturesOpen] = useState(false);
+  const { setStatus } = table;
+  const view: ReceiverCashierView = table.isDelivered
+    ? 'delivered'
+    : signaturesOpen
+      ? 'signatures'
+      : 'awaiting';
+  const changeView = useCallback(
+    (next: ReceiverCashierView) => {
+      setSignaturesOpen(next === 'signatures');
+      setStatus(
+        next === 'delivered' ? ParcelStatus.DELIVERED_BY_OFFICE : ParcelStatus.AWAITING_PICKUP,
+      );
+    },
+    [setStatus],
+  );
 
   const columns = useParcelReceiverCashierColumns({
     isPickupQueueEnabled: context.isPickupQueueEnabled,
@@ -67,25 +81,10 @@ export function ParcelReceiverCashier() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {context.branchId && !table.isDelivered ? (
+              <ReceiverCashierTabs value={view} onChange={changeView} />
+              {context.branchId && view === 'awaiting' ? (
                 <ParcelBatchHandover key={context.branchId} workflow="receiver-cashier" />
               ) : null}
-              <Select
-                value={String(table.status)}
-                onValueChange={(value) => table.setStatus(Number(value))}
-              >
-                <SelectTrigger className="w-48" aria-label="Parcel status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={String(ParcelStatus.AWAITING_PICKUP)}>
-                    Awaiting Pickup
-                  </SelectItem>
-                  <SelectItem value={String(ParcelStatus.DELIVERED_BY_OFFICE)}>
-                    Delivered
-                  </SelectItem>
-                </SelectContent>
-              </Select>
               <form
                 className="flex items-center gap-2"
                 onSubmit={(event) => {
@@ -102,26 +101,35 @@ export function ParcelReceiverCashier() {
                 <Button type="submit">Search</Button>
               </form>
 
+              {context.branchId && view === 'signatures' ? (
+                <BatchSignatureRequests
+                  key={context.branchId}
+                  workflow="receiver-cashier"
+                  search={table.query.search}
+                />
+              ) : null}
               {context.branchId && !table.isDelivered ? (
                 <ReceiverHandoverList
                   key={`${context.branchId}:${table.query.search ?? ''}`}
-                  enabled={context.requireSignature}
+                  enabled={context.requireSignature || view === 'signatures'}
                   search={table.query.search}
                   onOpen={dialog.openPendingHandover}
                 />
               ) : null}
 
-              <DataTable
-                mode="server"
-                data={table.rows}
-                columns={columns}
-                meta={table.listQuery.currentData?.meta ?? EMPTY_META}
-                loading={table.listQuery.isFetching}
-                showSearch={false}
-                serverFilters={table.query.filters}
-                onRequestChange={table.handleRequestChange}
-                enableVirtualization={false}
-              />
+              {view === 'signatures' ? null : (
+                <DataTable
+                  mode="server"
+                  data={table.rows}
+                  columns={columns}
+                  meta={table.listQuery.currentData?.meta ?? EMPTY_META}
+                  loading={table.listQuery.isFetching}
+                  showSearch={false}
+                  serverFilters={table.query.filters}
+                  onRequestChange={table.handleRequestChange}
+                  enableVirtualization={false}
+                />
+              )}
             </CardContent>
           </Card>
         </ScrollableWrapper>

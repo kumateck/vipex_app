@@ -55,6 +55,13 @@ describe('Interrupted Receiver Cashier handovers stay searchable and resumable',
       const page = await listReceiverHandovers({ ...fixture.scope, search });
       expect(page.rows.some((row) => row.id === parcel.id)).toBe(true);
     }
+    const [row] = (await listReceiverHandovers({ ...fixture.scope, parcelId: parcel.id })).rows;
+    expect(row).toMatchObject({
+      bookingCode: parcel.bookingCode,
+      receiverName: 'Original receiver name',
+      receiverTelephone: '0241234567',
+      parcelDetails: parcel.parcelDetails,
+    });
     expect((await listReceiverHandovers({ ...fixture.scope, search: '%' })).rows).toEqual([]);
     expect((await listReceiverHandovers({ ...fixture.scope, search: '_' })).rows).toEqual([]);
     expect(
