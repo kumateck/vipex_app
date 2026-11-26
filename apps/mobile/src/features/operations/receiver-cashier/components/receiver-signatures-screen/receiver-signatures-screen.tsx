@@ -87,16 +87,19 @@ export function ReceiverSignaturesScreen() {
       ) : null}
       {page?.rows.map((row) => (
         <AppCard key={row.handoverId}>
-          <Text style={{ color: theme.colors.text, fontWeight: '600' }}>
-            {row.trackingCode} · {row.bookingCode}
+          <Text style={{ color: theme.colors.text, fontWeight: '600' }}>{row.bookingCode}</Text>
+          <Text style={{ color: theme.colors.text }}>
+            {row.receiverName || 'Receiver'}
+            {row.receiverTelephone ? ` · ${row.receiverTelephone}` : ''}
           </Text>
+          <Text style={{ color: theme.colors.textMuted }}>{row.parcelDetails}</Text>
           <ParcelHandoverNoteAction
             parcelId={row.id}
             hasHandoverNote={row.hasHandoverNote}
             handoverNoteCritical={row.handoverNoteCritical}
           />
           <Text style={{ color: theme.colors.textMuted }}>
-            {row.collectorName} · Associate: {row.associateName}
+            Collector: {row.collectorName} · Associate: {row.associateName}
           </Text>
           <PickupOfficeText
             location={row.pickupLocationName}

@@ -899,8 +899,11 @@ workflow. Batch payments and receipt records are kept per parcel. Use **Receiver
 Delivered** to reprint individual receipts. Desktop can use a Topaz pad for Receiver Cashier
 batch signatures. All clients can use the on-screen signing pad.
 
-After verifying the batch OTP on web or Desktop, **Request signature on mobile** sends the
-whole selected list to **Operations → Receiver Signatures** on Android and iOS. The receiver
+As soon as the batch OTP is verified on web or Desktop, the dialog automatically sends the
+whole selected list to **Operations → Receiver Signatures** on Android and iOS (once per OTP
+verification). **Sign here instead** cancels that request and returns to the local pad;
+**Request signature on mobile** sends it again. If the automatic request fails, the dialog shows
+the error and the button retries it. The receiver
 reviews the list and signs once. The initiating dialog refreshes the signature preview every
 four seconds, then confirms the exact selection. This works in both batch workflows and uses
 their existing permissions. See [batch mobile signatures](RECEIVER_CASHIER_SIGNATURES.md#batch-handover)

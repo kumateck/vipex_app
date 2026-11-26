@@ -19,7 +19,7 @@ export function ReceiverHandoverList({
 
   return (
     <section className="space-y-3 rounded-md border p-4" aria-label="Receiver signatures">
-      <h2 className="font-semibold">Receiver signatures</h2>
+      <h2 className="font-semibold">Single-parcel signatures</h2>
       <p className="text-sm text-muted-foreground">
         Continue an earlier handover, including one started by another cashier at this branch. Use
         the parcel search above to find it. Confirm signed parcels in Vipex Desktop.
@@ -33,12 +33,15 @@ export function ReceiverHandoverList({
             key={row.handoverId}
             className="flex flex-wrap items-center justify-between gap-3 py-3"
           >
-            <div>
-              <p className="font-medium">
-                {row.trackingCode} · {row.bookingCode}
+            <div className="space-y-0.5">
+              <p className="font-medium">{row.bookingCode}</p>
+              <p className="text-sm">
+                {row.receiverName || 'Receiver'}
+                {row.receiverTelephone ? ` · ${row.receiverTelephone}` : ''}
               </p>
+              <p className="text-sm text-muted-foreground">{row.parcelDetails}</p>
               <p className="text-sm text-muted-foreground">
-                {row.collectorName} · Associate: {row.associateName}
+                Collector: {row.collectorName} · Associate: {row.associateName}
               </p>
               <ParcelPickupOffice parcel={row} className="text-sm text-muted-foreground" />
               <p className="text-sm" aria-live="polite">

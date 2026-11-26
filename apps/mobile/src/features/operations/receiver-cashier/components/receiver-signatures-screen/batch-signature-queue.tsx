@@ -51,8 +51,8 @@ export function BatchSignatureQueue({
           </Text>
           {row.parcels.map((parcel) => (
             <AppCard key={parcel.id}>
-              <Text style={{ color: theme.colors.text }}>
-                {parcel.bookingCode} · {parcel.trackingCode}
+              <Text style={{ color: theme.colors.text, fontWeight: '600' }}>
+                {parcel.bookingCode}
               </Text>
               <Text style={{ color: theme.colors.textMuted }}>{parcel.parcelDetails}</Text>
               <ParcelHandoverNoteAction
