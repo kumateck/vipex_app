@@ -18,6 +18,7 @@ const PAGE_SIZE = 40;
 const receiver = alias(customers, 'handover_receiver');
 const collector = alias(customers, 'handover_collector');
 const sender = alias(customers, 'handover_sender');
+const secondReceiver = alias(customers, 'handover_second_receiver');
 
 export async function listReceiverHandovers(
   scope: Scope & ReceiverHandoverListQuery,
@@ -51,6 +52,7 @@ export async function listReceiverHandovers(
     .leftJoin(receivingOffices, receivingOfficeJoin)
     .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
     .leftJoin(sender, eq(sender.id, parcels.senderId))
+    .leftJoin(secondReceiver, eq(secondReceiver.id, parcels.secondReceiverId))
     .leftJoin(collector, sql`${collector.id} = ${parcels.pendingReceiverHandover}->>'collectorId'`)
     .where(
       and(
@@ -76,9 +78,15 @@ export async function listReceiverHandovers(
                 sql`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname})`,
                 `%${search}%`,
               ),
+              ilike(
+                sql`coalesce(nullif(btrim(${parcels.secondReceiverNameSnapshot}), ''), ${secondReceiver.fullname})`,
+                `%${search}%`,
+              ),
               ilike(collector.fullname, `%${search}%`),
               ilike(receiver.telephone, `%${search}%`),
               ilike(receiver.telephone2, `%${search}%`),
+              ilike(secondReceiver.telephone, `%${search}%`),
+              ilike(secondReceiver.telephone2, `%${search}%`),
               ilike(collector.telephone, `%${search}%`),
               ilike(collector.telephone2, `%${search}%`),
               ilike(sender.telephone, `%${search}%`),

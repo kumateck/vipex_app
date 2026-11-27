@@ -80,6 +80,7 @@ export function StorageClearanceList({ mode }: { mode: StorageClearanceMode }) {
             canApprove={mode === 'approvals'}
             canExecute={mode === 'execution'}
             requesterId={state.user?.id}
+            completedIds={state.completedIds}
             onSelect={state.showDetails}
             onResubmit={state.canRequest ? state.review : undefined}
             onApprove={(row) => state.openAction(row, 'approve')}
@@ -117,6 +118,7 @@ export function StorageClearanceList({ mode }: { mode: StorageClearanceMode }) {
           row={state.action.row}
           mode={state.action.mode}
           onClose={state.closeAction}
+          onCompleted={state.completeAction}
         />
       ) : null}
       {state.resubmitRow ? (

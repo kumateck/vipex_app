@@ -5,6 +5,8 @@ import { assertActiveSessionSvc } from '../../../cashiers/service';
 import { getParcelPaymentSettlement } from '../../../shipments/parcel-payment-settlement';
 import { getParcelStorageSettlementSvc, getParcelSvc } from '../../../shipments/parcels.service';
 import { assertParcelCanAccrueCharge } from '../../../shipments/charge-exemption';
+import { getOpenParcelStorageClearanceRepo } from '../../../shipments/parcel-storage-clearance.repository';
+import { assertNoOpenStorageClearanceForCollection } from '../../../shipments/storage-accrual-guards';
 import { assertCreditPrincipalNotCollected } from '../../utils';
 import { listPaymentsForParcelRepo } from '../../repository';
 import type { DbExecutor } from '../../types/payment.types';
@@ -18,12 +20,17 @@ export async function prepareReceiverPaymentPlan(input: ReceiverPaymentInput, tx
     branchId: input.branchId,
     executor: tx,
   });
-  const [parcel, settlement, storageAfter, existingPayments] = await Promise.all([
+  const [parcel, settlement, storageAfter, existingPayments, openClearance] = await Promise.all([
     getParcelSvc(input.parcelId, tx),
     getParcelPaymentSettlement(input.parcelId, tx),
     getParcelStorageSettlementSvc(input.parcelId, tx),
     listPaymentsForParcelRepo(input.parcelId, tx),
+    getOpenParcelStorageClearanceRepo(input.parcelId, tx),
   ]);
+  assertNoOpenStorageClearanceForCollection({
+    hasOpenClearance: Boolean(openClearance),
+    outstandingPsw: storageAfter.outstandingPsw,
+  });
   const principalCedis = Number(input.amountCedis ?? 0);
   const storageCedis = Number(input.storageAmountCedis ?? 0);
   if (![principalCedis, storageCedis].every((value) => Number.isFinite(value) && value >= 0)) {

@@ -20,6 +20,12 @@ relinking and the latter for profile/name/telephone edits. These grants authoriz
 within the authenticated company until handover/delivery confirmation. They add no module gate
 or automatic role grants. See [Parcel Customer Corrections](PARCEL_CUSTOMER_CORRECTIONS.md).
 
+`GET /v1/shipments/parcels/:id/destination-options` and `PATCH /v1/shipments/parcels/:id/destination`
+require `CanChangeParcelDestination` and authorize any parcel within the authenticated company
+(no branch match). The web/desktop **Change Destination** action in Super Search uses the same
+grant. No module gate or automatic role grant is added. See
+[Parcel Operations](PARCEL_OPERATIONS.md#changing-a-parcel-destination-from-super-search).
+
 `/settings/maintenance` and `/v1/maintenance/*` are restricted to the **System Admin role**, not
 a grantable permission. Navigation and page guard use the role name; each API call rechecks the
 active user and non-deleted role in the database and scopes operations/history to that company.

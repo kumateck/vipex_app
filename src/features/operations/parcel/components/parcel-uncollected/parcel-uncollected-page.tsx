@@ -112,7 +112,11 @@ export function ParcelUncollectedPage() {
         header: 'Storage',
         cell: ({ row }) => (
           <div className="text-xs">
-            <p>Accrued: {formatCurrency(row.original.storageChargePsw)}</p>
+            <p>
+              Accrued:{' '}
+              {formatCurrency(row.original.storageAccruedPsw ?? row.original.storageChargePsw)}
+            </p>
+            <p>Owed: {formatCurrency(row.original.storageChargePsw)}</p>
             <p>
               Start:{' '}
               {row.original.storageChargeStartAt

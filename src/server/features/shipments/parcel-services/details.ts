@@ -17,6 +17,7 @@ import {
 } from '../parcels.repository';
 import { isSchemaCompatibilityError } from './helpers';
 import { getParcelStorageSettlementSvc } from './storage';
+import { getOpenParcelStorageClearanceRepo } from '../parcel-storage-clearance.repository';
 import { listParcelsSvc, getParcelSvc } from './queries';
 
 export async function getParcelFullDetailsSvc(
@@ -38,6 +39,7 @@ export async function getParcelFullDetailsSvc(
     dispositionActions,
     storageWaivers,
     storageSettlement,
+    openStorageClearance,
   ] = await Promise.all([
     listParcelsSvc({
       parcelId: id,
@@ -117,6 +119,14 @@ export async function getParcelFullDetailsSvc(
         throw error;
       }
     })(),
+    (async () => {
+      try {
+        return await getOpenParcelStorageClearanceRepo(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) return null;
+        throw error;
+      }
+    })(),
   ]);
 
   const userNames = await listUserNamesByIdsRepo(
@@ -140,5 +150,6 @@ export async function getParcelFullDetailsSvc(
     dispositionActions,
     storageWaivers,
     storageSettlement,
+    openStorageClearance,
   };
 }

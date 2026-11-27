@@ -1,6 +1,7 @@
 import { ParcelInformationEditAction } from '../../parcel-information-editor';
 import { useCallback } from 'react';
 import { SendReceiptAction } from '@/features/digital-receipts';
+import { ChangeDestinationAction } from '@/features/operations/parcel-destination-change';
 import { ParcelDetailsDialog } from '@/features/operations/parcel-details';
 import { ParcelOfficeEditor } from '@/features/operations/parcel-receiving-office';
 import type { ParcelFullDetails, ParcelSearchRow } from '../../api/parcel.api';
@@ -54,6 +55,14 @@ export function ParcelSuperSearchDetailsDialog({
           parcelId={details.parcel.id}
           bookingCode={details.parcel.bookingCode}
           isDeleted={details.parcel.isDeleted}
+        />
+        <ChangeDestinationAction
+          key={`destination:${details.parcel.id}`}
+          parcel={{
+            id: details.parcel.id,
+            bookingCode: details.parcel.bookingCode,
+            isDeleted: details.parcel.isDeleted,
+          }}
         />
         <ReturnToSourceAction
           parcel={details.parcel}

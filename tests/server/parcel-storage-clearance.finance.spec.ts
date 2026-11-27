@@ -10,6 +10,7 @@ import {
 import { executeParcelStorageClearanceSvc as execute } from '@/server/features/shipments/parcel-storage-clearance-execution.service';
 import { getParcelStorageClearanceRepo as getRequest } from '@/server/features/shipments/parcel-storage-clearance.repository';
 import { createStorageClearanceFixture } from '../utils/storage-clearance/fixture';
+import { listParcelsSvc } from '@/server/features/shipments/parcel-services/queries';
 
 describe('Finance storage clearance transactions', () => {
   let fixture: Awaited<ReturnType<typeof createStorageClearanceFixture>>;
@@ -110,5 +111,36 @@ describe('Finance storage clearance transactions', () => {
     expect(after?.chargePsw).toBe(parcel.chargePsw);
     expect(after?.confirmedAt).toBeNull();
     expect(after?.updatedAt).toEqual(parcel.updatedAt);
+  });
+
+  test('executed Clear All removes the storage fee from parcel rows', async () => {
+    const parcel = await fixture.parcel();
+    const request = await create({
+      companyId: fixture.companyId,
+      parcelId: parcel.id,
+      actorUserId: fixture.requester,
+      clearAll: true,
+      reason: 'Receiver was never notified',
+    });
+    await approve({
+      companyId: fixture.companyId,
+      requestId: request.id,
+      actorUserId: fixture.approver,
+    });
+    const row = async () =>
+      (
+        await listParcelsSvc({
+          parcelId: parcel.id,
+          companyId: fixture.companyId,
+          limit: 1,
+          offset: 0,
+        })
+      ).data[0]!;
+    const before = await row();
+    expect(before.storageChargePsw).toBeGreaterThan(0);
+    await execute(financeInput(request.id));
+    const after = await row();
+    expect(after.storageChargePsw).toBe(0);
+    expect(after.storageAccruedPsw).toBe(before.storageAccruedPsw);
   });
 });

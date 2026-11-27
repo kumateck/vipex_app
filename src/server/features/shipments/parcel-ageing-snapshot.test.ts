@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { computeParcelAgeingSnapshot } from './parcels.service';
+import { applyStorageSettlement } from './parcel-services/ageing';
 
 const policy = {
   storageFeePerDayPsw: 200,
@@ -32,4 +33,13 @@ test('does not accrue storage fees for statuses outside collection', () => {
 
   expect(snapshot.isParcelAgeingEligible).toBe(false);
   expect(snapshot.storageChargePsw).toBe(0);
+});
+
+test('parcel rows show storage still owed after payments and executed clearances', () => {
+  expect(applyStorageSettlement({ storageChargePsw: 6600 }, 6600)).toEqual({
+    storageChargePsw: 0,
+    storageAccruedPsw: 6600,
+  });
+  expect(applyStorageSettlement({ storageChargePsw: 6600 }, 6400).storageChargePsw).toBe(200);
+  expect(applyStorageSettlement({ storageChargePsw: 400 }, 1000).storageChargePsw).toBe(0);
 });

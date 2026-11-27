@@ -13,7 +13,7 @@ export function formatDateTime(value: string | null | undefined) {
 }
 
 export function formatStorageCharge(parcel: ParcelSearchRow) {
-  return formatCurrency(parcel.storageChargePsw ?? 0);
+  return formatCurrency(parcel.storageAccruedPsw ?? parcel.storageChargePsw ?? 0);
 }
 
 export function formatPhones(primary?: string | null, secondary?: string | null) {

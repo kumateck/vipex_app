@@ -15,12 +15,14 @@ export function StorageClearanceActionDialog({
   row,
   mode,
   onClose,
+  onCompleted,
 }: {
   row: ParcelStorageClearanceRow;
   mode: StorageClearanceAction;
   onClose: () => void;
+  onCompleted?: () => void;
 }) {
-  const state = useStorageClearanceAction(row, mode, onClose);
+  const state = useStorageClearanceAction(row, mode, onCompleted ?? onClose);
   return (
     <Dialog
       open
@@ -38,6 +40,11 @@ export function StorageClearanceActionDialog({
           <p role="alert" className="text-destructive">
             Unable to load current accrual.{' '}
             <Button onClick={() => void state.detail.refetch()}>Retry</Button>
+          </p>
+        ) : null}
+        {state.isClosed ? (
+          <p role="alert" className="text-sm text-destructive">
+            This request is already {state.currentStatusLabel}. No further changes are allowed.
           </p>
         ) : null}
         <Label htmlFor="clearance-action-note">

@@ -282,7 +282,9 @@ are backfilled in batches from customer names available when the backfill runs. 
 new printing code after the backfill completes; see the rollout steps in
 [Parcel operations](PARCEL_OPERATIONS.md).
 The receiver cashier A5 receipt shows an **Ageing storage** line when storage was collected at
-handover. Its printed total adds the actual storage payment to the receiver's to-be-paid principal
+handover. The line reflects recorded storage payments only: an approved but not yet executed
+storage clearance does not reduce it, so Receiver Cashier blocks storage collection while a
+clearance is open (see [Parcel operations](PARCEL_OPERATIONS.md#storage-fee-clearance-reconciliation)). Its printed total adds the actual storage payment to the receiver's to-be-paid principal
 payment. A previously paid parcel with only storage due still produces a receiver payment receipt
 for the storage charge through the same A5 print flow. For any receipt with storage, the server
 calculates the displayed tax components from the combined principal and storage collection using

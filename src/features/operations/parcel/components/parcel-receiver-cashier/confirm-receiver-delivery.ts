@@ -13,6 +13,7 @@ type ConfirmReceiverDeliveryArgs = {
   storagePaymentAmount: string;
   receiverDuePsw: number;
   storageOutstandingPsw: number;
+  hasOpenStorageClearance?: boolean;
   canWaiveStorageAccrual: boolean;
   handoverTarget: HandoverTarget;
   mainCardMode: CardMode;
@@ -94,6 +95,7 @@ export async function confirmReceiverDelivery({
   storagePaymentAmount,
   receiverDuePsw,
   storageOutstandingPsw,
+  hasOpenStorageClearance = false,
   canWaiveStorageAccrual,
   handoverTarget,
   mainCardMode,
@@ -135,6 +137,11 @@ export async function confirmReceiverDelivery({
     );
   }
 
+  if (hasOpenStorageClearance && storageOutstandingPsw > 0) {
+    throw new Error(
+      'A storage fee clearance for this parcel is awaiting approval or finance execution. Handover is blocked until finance executes or rejects it.',
+    );
+  }
   const storageAmount = Number(storagePaymentAmount || 0);
   if (storageOutstandingPsw > 0 && (Number.isNaN(storageAmount) || storageAmount <= 0)) {
     throw new Error(

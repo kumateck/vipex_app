@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useListParcelStorageClearancesQuery } from '../services';
@@ -20,6 +20,13 @@ export function useStorageClearanceList(mode: StorageClearanceMode) {
     row: ParcelStorageClearanceRow;
     mode: StorageClearanceAction;
   } | null>(null);
+  const [completedIds, setCompletedIds] = useState<ReadonlySet<string>>(() => new Set());
+  const completeAction = useCallback(() => {
+    setAction((current) => {
+      if (current) setCompletedIds((ids) => new Set(ids).add(current.row.id));
+      return null;
+    });
+  }, []);
   const statuses =
     mode === 'approvals'
       ? APPROVAL_STATUSES
@@ -62,5 +69,7 @@ export function useStorageClearanceList(mode: StorageClearanceMode) {
     openAction: (row: ParcelStorageClearanceRow, actionMode: StorageClearanceAction) =>
       setAction({ row, mode: actionMode }),
     closeAction: () => setAction(null),
+    completeAction,
+    completedIds,
   };
 }

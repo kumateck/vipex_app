@@ -12,7 +12,7 @@ export function createParcelListOrder(
   context: ReturnType<typeof createParcelListContext>,
   now = new Date(),
 ) {
-  const { whereParts, s, r, senderName, receiverName, secondReceiverName } = context;
+  const { whereParts, s, r, sr, senderName, receiverName, secondReceiverName } = context;
   const sort = p.sort ?? [];
   const orderBy = p.callCenterAssignmentOrder
     ? [
@@ -92,6 +92,8 @@ export function createParcelListOrder(
                   ilike(secondReceiverName, `%${p.search}%`),
                   ilike(r.telephone, `%${p.search}%`),
                   ilike(r.telephone2, `%${p.search}%`),
+                  ilike(sr.telephone, `%${p.search}%`),
+                  ilike(sr.telephone2, `%${p.search}%`),
                 ),
               ]
             : []),
