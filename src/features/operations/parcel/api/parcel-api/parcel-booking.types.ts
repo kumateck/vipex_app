@@ -75,7 +75,10 @@ export type SenderCashierParcel = {
   currentHolderLocationName?: string | null;
   currentHolderWarehouseId?: string | null;
   currentHolderWarehouseName?: string | null;
+  /** Storage still owed (accrual minus storage payments and executed clearances). */
   storageChargePsw?: number;
+  /** Gross storage accrued before payments and clearances. */
+  storageAccruedPsw?: number;
   storageChargeDays?: number;
   storageChargeStartAt?: string | null;
 };
@@ -176,7 +179,10 @@ export type ParcelSearchRow = ParcelHandoverNoteIndicator & {
   ageingDays?: number | null;
   storageChargeStartAt?: string | null;
   storageChargeDays?: number;
+  /** Storage still owed (accrual minus storage payments and executed clearances). */
   storageChargePsw?: number;
+  /** Gross storage accrued before payments and clearances. */
+  storageAccruedPsw?: number;
   storageFeePerDayPsw?: number;
   storageChargeGraceDays?: number;
   ageingThresholdMonths?: number;

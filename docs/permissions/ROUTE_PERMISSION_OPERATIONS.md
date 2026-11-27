@@ -101,6 +101,12 @@ search-only fallback details remain read-only. This is a client gate over the ex
 the API permissions above are unchanged. See [Mobile editing](../PARCEL_DETAILS.md#mobile-super-search-editing)
 for validation, error handling and QA scenarios.
 
+Destination change: `GET /shipments/parcels/:id/destination-options` and
+`PATCH /shipments/parcels/:id/destination` require `CanChangeParcelDestination`, company-scoped
+with no branch match, for any stage before delivery (home-delivery stages excluded).
+`CanUpdateParcels` alone does not grant it. See
+[Parcel Operations](../PARCEL_OPERATIONS.md#changing-a-parcel-destination-from-super-search).
+
 Sender customer correction: `GET /shipments/parcels/:id/sender-candidates` and
 `POST /shipments/parcels/:id/correct-sender` both require `CanUpdateParcels` **and**
 `CanUpdateCustomers` and enforce the authenticated company/source branch. Neither destination

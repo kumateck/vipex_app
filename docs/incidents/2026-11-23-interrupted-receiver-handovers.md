@@ -156,3 +156,31 @@ Automated scenarios are in `tests/server/receiver-handover-resumption.spec.ts`,
 `tests/server/sender-paid-handover-preservation.spec.ts` and
 `tests/server/super-search-undelivered-first.spec.ts`. Device printing and shared-field
 search/pagination checks remain in the module QA checklist.
+
+## Follow-up: AN2524984O, 27 November 2026
+
+Read-only live inspection (`vipex_live_db`, 27 November) of the parcel reported as "OTP entered,
+signature not received, not showing in Receiver Cashier":
+
+| Time (UTC)       | Event                                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------------- |
+| 22 Nov 14:00     | Main-receiver OTP verified (Mavis Owusu); deferred request prepared, GHS 30 unpaid             |
+| 23 Nov 15:01     | Signature captured on mobile (Abigail Frimpong), handover target **second receiver**           |
+| 24 Nov 11:24     | Confirmed on Desktop (Cutecy Yamoah Arthur); GHS 30 receiver payment; status Delivered         |
+| 25 Nov 10:29     | Delivery reversed (Gyamfua Ophelia Boadi), reason "wrong printout"; payment voided             |
+| 27 Nov (inspect) | Awaiting Pickup, GHS 30 due, no pending request, no open storage/reconciliation case or ticket |
+
+The parcel is therefore not an interrupted signature request any more. The reversal removed the
+earlier handover, so it never appears under **Receiver signatures** or on mobile Receiver
+Signatures; it is under **Awaiting Pickup** and needs a fresh OTP, signature request, mobile
+signature and Desktop confirmation. The live Receiver Cashier list query returned it for its
+booking/tracking code, main receiver phone and names, but **not** for the second receiver's phone
+(the person who collected). No server logs for 22 November are retained, so why the first
+request took until the next day to be signed cannot be proved from data; the request did exist
+on 22 November, and the 23 November search fix was released before it was signed.
+
+Fixes (not yet deployed at time of writing): second receiver name/phone search in parcel lists
+and pending handovers; a Receiver signatures notice linking to matching Awaiting Pickup parcels;
+mobile search hint and empty-state guidance. No live data was changed. Ten other parcels reversed
+since 15 November are also back in Awaiting Pickup and follow the same path. Behavior and QA:
+[Receiver Cashier signatures](../RECEIVER_CASHIER_SIGNATURES.md#continue-after-a-delivery-reversal-or-a-lost-request).

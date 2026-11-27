@@ -2,9 +2,11 @@ import { CashierType, Payer, PaymentComponent } from '@/db/schemas';
 import { toPesewas } from '@/server/utils/gh-money';
 import { getParcelStorageSettlementSvc } from '../../shipments/parcels.service';
 import {
+  assertNoOpenStorageClearanceForCollection,
   assertNoOutstandingStorageForHandover,
   assertValidStorageCollectionAmount,
 } from '../../shipments/storage-accrual-guards';
+import { getOpenParcelStorageClearanceRepo } from '../../shipments/parcel-storage-clearance.repository';
 import { assertParcelFullyPaid } from '../../shipments/parcel-payment-settlement';
 import type { ReceiverPaymentInput } from '../types/receiver-payment.types';
 import type { DbExecutor } from '../types/payment.types';
@@ -40,7 +42,14 @@ export async function settleReceiverPayments(input: ReceiverPaymentInput, tx: Db
 
   let storagePayment = null;
   if (storageAmountCedis != null && Number(storageAmountCedis) > 0) {
-    const storageBefore = await getParcelStorageSettlementSvc(input.parcelId, tx);
+    const [storageBefore, openClearance] = await Promise.all([
+      getParcelStorageSettlementSvc(input.parcelId, tx),
+      getOpenParcelStorageClearanceRepo(input.parcelId, tx),
+    ]);
+    assertNoOpenStorageClearanceForCollection({
+      hasOpenClearance: Boolean(openClearance),
+      outstandingPsw: storageBefore.outstandingPsw,
+    });
     assertValidStorageCollectionAmount({
       outstandingPsw: storageBefore.outstandingPsw,
       collectionPsw: Number(toPesewas(storageAmountCedis)),

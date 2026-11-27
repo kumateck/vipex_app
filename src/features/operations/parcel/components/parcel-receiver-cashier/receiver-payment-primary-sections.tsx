@@ -14,6 +14,7 @@ import {
 import { PaymentMethod } from '@/db/schemas/enums';
 import { MomoRequestToPayPanel } from '@/features/operations/momo/components/momo-request-to-pay-panel';
 import { ShelfPickupReassignmentLink } from '../parcel-shelf-pickup-reassignment';
+import { StorageClearanceBlockAlert } from './storage-clearance-block-alert';
 import { PAYMENT_METHOD_OPTIONS } from './receiver-cashier-constants';
 import { formatCurrency, formatDateTime, formatStorageCharge } from './receiver-cashier-utils';
 import type { useParcelReceiverCashierWorkflow } from './use-parcel-receiver-cashier-workflow';
@@ -33,6 +34,9 @@ export function ReceiverPaymentPrimarySections({
 }) {
   return (
     <>
+      {dialog.blockingStorageClearance ? (
+        <StorageClearanceBlockAlert status={dialog.blockingStorageClearance.status} />
+      ) : null}
       <StorageChargeSummary dialog={dialog} parcel={parcel} />
       <ParcelSummary dialog={dialog} parcel={parcel} />
       <PaymentInputs dialog={dialog} parcel={parcel} />
@@ -134,7 +138,7 @@ function PaymentInputs({ dialog, parcel }: { dialog: WorkflowDialog; parcel: Sel
         value={dialog.storagePaymentAmount}
         onChange={(event) => dialog.setStoragePaymentAmount(event.target.value)}
         placeholder="0.00"
-        disabled={dialog.storageOutstandingPsw <= 0}
+        disabled={dialog.storageOutstandingPsw <= 0 || Boolean(dialog.blockingStorageClearance)}
       />
       <Label htmlFor="receiver-payment-method">Payment Method</Label>
       <Select value={dialog.paymentMethod} onValueChange={dialog.setPaymentMethod}>
@@ -165,7 +169,12 @@ function StorageWaiver({
   dialog: WorkflowDialog;
   parcel: SelectedParcel;
 }) {
-  if (dialog.storageOutstandingPsw <= 0 || !context.canRequestStorageClearance) return null;
+  if (
+    dialog.storageOutstandingPsw <= 0 ||
+    dialog.blockingStorageClearance ||
+    !context.canRequestStorageClearance
+  )
+    return null;
   return (
     <div className="space-y-2 rounded-md border p-3">
       <Label>Storage Fee Clearance</Label>

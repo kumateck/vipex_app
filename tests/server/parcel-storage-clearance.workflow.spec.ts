@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { parcelStorageWaivers, parcels } from '@/db/schemas';
+import { parcelStorageWaivers, parcels, payments } from '@/db/schemas';
 import { ParcelStorageClearanceStatus as Status } from '@/db/schemas/enums';
 import {
   createParcelStorageClearanceSvc as create,
@@ -15,6 +15,7 @@ import { executeParcelStorageClearanceSvc as execute } from '@/server/features/s
 import { getParcelStorageClearanceRepo as getRequest } from '@/server/features/shipments/parcel-storage-clearance.repository';
 import { getParcelStorageClearanceDetailSvc as detail } from '@/server/features/shipments/parcel-storage-clearance-detail.service';
 import { createStorageClearanceFixture, receivedDate } from '../utils/storage-clearance/fixture';
+import { settleReceiverPayments } from '@/server/features/payments/services/settle-receiver-payments';
 
 describe('storage clearance lifecycle', () => {
   let fixture: Awaited<ReturnType<typeof createStorageClearanceFixture>>;
@@ -140,5 +141,31 @@ describe('storage clearance lifecycle', () => {
       .set({ receivedAt: receivedDate(7) })
       .where(eq(parcels.id, parcel.id));
     expect((await detail({ id: all.id, companyId: fixture.companyId })).outstandingPsw).toBe(200);
+  });
+
+  test('open clearance blocks receiver storage collection until finance acts', async () => {
+    const parcel = await fixture.parcel();
+    const request = await create({ ...requestInput(parcel.id), clearAll: true });
+    const collect = {
+      companyId: fixture.companyId,
+      branchId: fixture.branchId,
+      parcelId: parcel.id,
+      cashierUserId: fixture.finance,
+      confirmedBy: fixture.finance,
+      method: 0,
+      amountCedis: null,
+      storageAmountCedis: '64.00',
+    };
+    const blocked = 'storage fee clearance for this parcel is awaiting approval';
+    await expect(db.transaction((tx) => settleReceiverPayments(collect, tx))).rejects.toThrow(
+      blocked,
+    );
+    await approve(actionInput(request.id, fixture.approver));
+    await expect(db.transaction((tx) => settleReceiverPayments(collect, tx))).rejects.toThrow(
+      blocked,
+    );
+    expect(await db.select().from(payments).where(eq(payments.parcelId, parcel.id))).toHaveLength(
+      0,
+    );
   });
 });

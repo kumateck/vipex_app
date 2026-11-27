@@ -40,7 +40,10 @@ export async function getOpenParcelStorageClearanceRepo(
   executor: DbExecutor = db,
 ) {
   const [row] = await executor
-    .select({ id: parcelStorageClearanceRequests.id })
+    .select({
+      id: parcelStorageClearanceRequests.id,
+      status: parcelStorageClearanceRequests.status,
+    })
     .from(parcelStorageClearanceRequests)
     .where(
       and(

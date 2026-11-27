@@ -106,6 +106,7 @@ export async function getParcelDetailsCtrl(
       createdAt: row.createdAt ? row.createdAt.toISOString() : null,
     })),
     storageSettlement: result.storageSettlement,
+    openStorageClearance: result.openStorageClearance ?? null,
     userNames: result.userNames,
   };
 }

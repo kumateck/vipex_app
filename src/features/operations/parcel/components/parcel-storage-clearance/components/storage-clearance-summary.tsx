@@ -1,5 +1,6 @@
 import type { ParcelStorageClearanceRow, ParcelStorageClearanceDetail } from '../types';
-import { formatStorageMoney, storageClearanceLabel, formatStorageClearanceStatus } from '../utils';
+import { formatStorageMoney, storageClearanceLabel } from '../utils';
+import { StorageClearanceStatusBadge } from './storage-clearance-status-badge';
 export function StorageClearanceSummary({
   row,
   detail,
@@ -9,9 +10,8 @@ export function StorageClearanceSummary({
 }) {
   return (
     <div className="space-y-2 text-sm">
-      <p className="font-medium">
-        {storageClearanceLabel(row)} · {formatStorageClearanceStatus(row.status)}
-      </p>
+      <p className="font-medium">{storageClearanceLabel(row)}</p>
+      <StorageClearanceStatusBadge status={detail?.request.status ?? row.status} />
       <p>
         Requested: {row.requestedDays} days · {formatStorageMoney(row.requestedAmountPsw)}{' '}
         {row.clearAll ? '(Clear All)' : ''}

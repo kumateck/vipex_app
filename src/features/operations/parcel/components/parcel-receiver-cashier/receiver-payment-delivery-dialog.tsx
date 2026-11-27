@@ -234,6 +234,7 @@ export function ReceiverPaymentDeliveryDialog({
                   dialog.isLoading ||
                   dialog.hasLoadError ||
                   dialog.isSaving ||
+                  Boolean(dialog.blockingStorageClearance) ||
                   (context.isReceiverOtpRequired && !dialog.otpVerified && !approval) ||
                   (dialog.paymentMethod === String(PaymentMethod.MTN) &&
                     !dialog.momoTransactionId) ||

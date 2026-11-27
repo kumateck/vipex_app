@@ -50,7 +50,7 @@ export function ReceiverSignaturesScreen() {
         <AppInput
           value={search}
           onChangeText={setSearch}
-          placeholder="Tracking, booking, or collector name"
+          placeholder="Booking, tracking, name, or phone"
           accessibilityLabel="Search receiver signatures"
           maxLength={100}
           returnKeyType="search"
@@ -83,7 +83,11 @@ export function ReceiverSignaturesScreen() {
         <Text style={{ color: theme.colors.textMuted }}>Loading signatures…</Text>
       ) : null}
       {page?.rows.length === 0 ? (
-        <Text style={{ color: theme.colors.textMuted }}>No matching parcels at this branch.</Text>
+        <Text style={{ color: theme.colors.textMuted }}>
+          {submittedSearch
+            ? 'No signature request matches this search. Ask the cashier to verify OTP and choose Request Signature in Receiver Cashier. A parcel whose delivery was reversed needs a new request.'
+            : 'No signature requests at this branch.'}
+        </Text>
       ) : null}
       {page?.rows.map((row) => (
         <AppCard key={row.handoverId}>

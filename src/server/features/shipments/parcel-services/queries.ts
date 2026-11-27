@@ -13,7 +13,11 @@ import {
   type ParcelRow,
 } from '../parcels.repository';
 import { type DbExecutor } from './helpers';
-import { getCompanyParcelAgeingPolicy, computeParcelAgeingSnapshot } from './ageing';
+import {
+  applyStorageSettlement,
+  computeParcelAgeingSnapshot,
+  getCompanyParcelAgeingPolicy,
+} from './ageing';
 
 export async function listParcelsSvc(p: ListParcelsParams) {
   const policyCompanyId =
@@ -51,13 +55,16 @@ export async function listParcelsSvc(p: ListParcelsParams) {
       const rowPolicy = policyByCompany.get(row.companyId) ?? DEFAULT_PARCEL_AGEING_POLICY;
       return {
         ...row,
-        ...computeParcelAgeingSnapshot({
-          chargeExemptCustomerType: row.chargeExemptCustomerType,
-          status: row.status,
-          receivedAt: row.receivedAt,
-          policy: rowPolicy,
-          now,
-        }),
+        ...applyStorageSettlement(
+          computeParcelAgeingSnapshot({
+            chargeExemptCustomerType: row.chargeExemptCustomerType,
+            status: row.status,
+            receivedAt: row.receivedAt,
+            policy: rowPolicy,
+            now,
+          }),
+          row.settledStoragePsw,
+        ),
       };
     }),
     totalRecords,

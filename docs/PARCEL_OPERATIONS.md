@@ -700,6 +700,54 @@ locations and invalid receipt states leave the parcel and consignment checklist 
 Legacy clients can still receive at single-office locations. Receiving at a multi-office location
 requires a client that can send the office ID.
 
+### Changing a parcel destination from Super Search
+
+Staff with `CanChangeParcelDestination` can open **All Parcels Super Search → Parcel Details** on
+web/desktop and select **Change Destination**. The dialog lists the company's active branches
+(except the parcel's source branch) and each branch's receiving-enabled pickup locations. A reason
+of 5–500 characters is required. The permission is company-wide: the actor does not need to be
+signed into the source or destination branch.
+
+Rules (enforced by `PATCH /shipments/parcels/:id/destination`):
+
+- Any stage **before delivery** can move. What happens depends on where the parcel is:
+
+  | Stage                    | Statuses                                                                                         | Effect                                                                                                                                                                                                                                                                                    |
+  | ------------------------ | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | Before dispatch          | Created, Processed                                                                               | Destination/location change; removed from any consignment.                                                                                                                                                                                                                                |
+  | In transit               | In Transit                                                                                       | Removed from its consignment so the old branch no longer expects it; stays In Transit. The new branch receives it with Scan to Receive / In Transit Incoming.                                                                                                                             |
+  | At destination (forward) | Arrived, Customer Contacted, Awaiting Pickup, Returned to Office, Discrepancy, Aged in Warehouse | Forwarded: status returns to **In Transit**, `receivedAt`/`receivedBy`, shelf picker and call-center assignment are cleared and any open pickup-queue ticket is ended. The old branch physically sends it on; the new branch receives it normally and storage restarts from that arrival. |
+
+- Blocked: delivered/confirmed parcels (Delivered by Office, Rider Given to Customer, Delivered
+  at Home), Returned to Sender, Cancelled, disposed parcels, Return to Source, deleted parcels,
+  parcels in home delivery (Home Delivery Requested, Address Collected, Dispatched — record
+  **Returned to Office** first), parcels awaiting a Receiver Cashier signature, parcels with an
+  open reconciliation case or storage clearance request, and arrived parcels whose storage was
+  already paid or waived (accrued-but-unpaid storage is dropped when forwarding).
+- The new destination must be an active branch in the same company and differ from the source
+  (use **Return to Source** to send a parcel back).
+- The pickup location must be receiving-enabled and belong to the new destination. When the branch
+  has exactly one receiving location it is chosen automatically; branches with several require a
+  choice; a branch whose locations cannot receive is rejected.
+- Moving to a different pickup location, or forwarding, clears the recorded receiving office. The
+  charge, payments and receivers are **not** recalculated.
+- The save is rejected if another user changed the destination or pickup location after the
+  dialog opened; reopen the parcel and retry.
+- Each change writes a `PARCEL_DESTINATION_CHANGED` audit entry with the stage (`phase`), previous
+  status, previous/new branch and location, removed consignment, cleared office, previous receipt
+  time and the reason, shown in Parcel History.
+
+The action is hidden without the permission and on deleted parcels. The dialog explains what will
+happen for the parcel's stage, or why it cannot move. Mobile Super Search does not expose this
+action yet.
+
+QA: with the permission, move (1) a Processed parcel on an open consignment, (2) an In Transit
+parcel, and (3) an Awaiting Pickup parcel with a queue ticket. Confirm each leaves its consignment,
+(3) returns to In Transit with the ticket ended and appears in the new branch's In Transit Incoming,
+and Parcel History records the stage and reason. Verify rejection for a delivered parcel, a
+Dispatched parcel, a parcel with paid storage, the source branch as destination, a stale dialog and
+a user without the permission. Covered by `tests/server/parcel-destination-change.spec.ts`.
+
 When a parcel changes offices, receiving staff at the destination can open **Super Search →
 Parcel Details → Overview** on web, desktop or mobile, choose another office at the same
 pickup location and select **Save office**. This also corrects the recorded office on a parcel marked **Delivered by
@@ -1160,8 +1208,8 @@ payment badges, and table actions. Automated layout coverage is in
 `tests/utils/parcel-table-layout.spec.tsx`.
 
 Parcel search matches the stored sender, main receiver, and second receiver names, case
-insensitively and by partial name, as well as booking/tracking codes and customer phone
-numbers. Searching the name recorded on an older parcel returns that parcel after the
+insensitively and by partial name, as well as booking/tracking codes and the sender, main
+receiver and second receiver primary/secondary phone numbers. Searching the name recorded on an older parcel returns that parcel after the
 customer profile is renamed. A newer name only matches parcels that recorded that name.
 If a legacy parcel has a null or blank name snapshot, parcel list, detail, search, rider
 delivery, pickup queue, consignment receiving, discrepancy, and report reads use the linked
@@ -1702,9 +1750,11 @@ Every web and mobile parcel search result backed by the parcel list API shows a
 zero. This includes Super Search, status, receive, transit, pickup, waiting pickup, receiver
 cashier, delivery cashier, call-center assignment, shelf-picker update, home-delivery queues,
 internal-transfer search, sender payments, uncollected, returned, and mobile Super Search results.
-The amount is the current accrued charge from the company ageing policy and received timestamp,
-including parcels moved to the aged-warehouse status; it is informational and does not by itself
-mean the amount is still outstanding after a payment or waiver. Search rows with no accrued charge
+The amount is the storage still owed: the accrual from the company ageing policy and received
+timestamp (including aged-warehouse parcels) minus storage payments and executed storage
+clearances. After Finance executes a Clear All clearance the indicator disappears until new days
+accrue; an approved but unexecuted clearance does not change it. Before 26 Nov 2026 the indicator
+showed the gross accrual even after payment or clearance. Search rows with no accrued charge
 remain unchanged. The indicator is rendered from the search response, so clients do not calculate
 or mutate storage fees locally.
 
@@ -1748,11 +1798,36 @@ which resets approval and sends it through the flow again. Approvers can reject 
 Finance can reject approved requests. Rejection requires a reason and closes the request. A new
 request must be created to start again.
 
+**Status display and locked actions.** Each request list (requests, approvals, finance
+execution) and the action dialog show a one-line coloured status with its meaning: Pending
+Approval (waiting for an approver, storage still owed), Approved for Finance (waiting for finance
+to execute, storage still owed), Returned for Review (requester must review and resubmit),
+Rejected (closed, storage still owed), Executed (cleared, removed from the parcel storage
+balance). Approve shows only for Pending Approval; Execute, Return for Review and Reject show only
+for Approved for Finance. Executed and Rejected requests are final and show no action buttons.
+After a successful action the row's buttons hide immediately, before the list refreshes. If the
+request changed meanwhile (for example another finance user executed it), the dialog says so and
+disables submit; the server still rejects the action with HTTP 409.
+
 Approval checks that unpaid accrual still exists. Finance execution rechecks the latest balance,
 rate, and requested amount. Changed Clear All days/amount, a changed rate, an amount above the
 remaining balance, or no remaining accrual returns HTTP 409 without posting. Finance can return
 the request for correction; execution never silently increases or reduces the approved amount.
 Additional days do not block execution of an affordable partial request.
+
+**Open clearance blocks receiver storage collection (from 26 Nov 2026).** While a parcel with
+outstanding storage has a clearance request that is Pending Approval, Approved for Finance, or
+Returned for Review, the Receiver Cashier cannot collect storage or hand the parcel over. The web
+and desktop payment dialog shows an amber "Storage fee clearance in progress" warning with the
+request status, disables the storage amount, hides **Request Clearance**, and disables the
+confirm button. The server enforces the same rule (HTTP 409) when collecting receiver payments,
+preparing a signature handover, and confirming a signed handover, so mobile, stale screens and
+direct API calls are blocked too. Handover resumes once Finance executes the clearance (reducing
+the balance) or the request is rejected. A returned request can only be resubmitted, so to abandon
+it the requester resubmits and an approver rejects it. Parcels without outstanding storage are not
+affected. This prevents the case seen on AO9728958R (25 Nov 2026), where storage was collected
+and printed on the receipt 15 minutes after the clearance was approved but before Finance executed
+it.
 
 Execution locks the request and parcel and commits the waiver, accounting posting (when enabled),
 executed status, and audit together. Concurrent or repeated execution cannot create a second
@@ -1776,6 +1851,8 @@ Automated QA: `parcel-storage-clearance.workflow.spec.ts`, `.finance.spec.ts`, `
 `.path-access.spec.ts`, and the clearance rules unit tests cover partial/above-balance requests,
 no-accrual rejection, company/branch scope, requester separation, return/resubmit/reapproval,
 rejection/restart, Clear All after prior clearance, subsequent accrual, stale execution conflicts,
+receiver storage collection blocked while a request is pending or approved for finance,
+parcel rows dropping the storage fee after an executed Clear All, final-status action locks,
 permissions, the removed bypass endpoint, concurrent execution, balanced posting, and rollback
 on accounting failure. Manual QA: check each page, search and pagination, evidence links,
 current/unpaid/requested/remaining days, returned-request editing, and desktop navigation.
