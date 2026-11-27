@@ -700,6 +700,54 @@ locations and invalid receipt states leave the parcel and consignment checklist 
 Legacy clients can still receive at single-office locations. Receiving at a multi-office location
 requires a client that can send the office ID.
 
+### Changing a parcel destination from Super Search
+
+Staff with `CanChangeParcelDestination` can open **All Parcels Super Search → Parcel Details** on
+web/desktop and select **Change Destination**. The dialog lists the company's active branches
+(except the parcel's source branch) and each branch's receiving-enabled pickup locations. A reason
+of 5–500 characters is required. The permission is company-wide: the actor does not need to be
+signed into the source or destination branch.
+
+Rules (enforced by `PATCH /shipments/parcels/:id/destination`):
+
+- Any stage **before delivery** can move. What happens depends on where the parcel is:
+
+  | Stage                    | Statuses                                                                                         | Effect                                                                                                                                                                                                                                                                                    |
+  | ------------------------ | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | Before dispatch          | Created, Processed                                                                               | Destination/location change; removed from any consignment.                                                                                                                                                                                                                                |
+  | In transit               | In Transit                                                                                       | Removed from its consignment so the old branch no longer expects it; stays In Transit. The new branch receives it with Scan to Receive / In Transit Incoming.                                                                                                                             |
+  | At destination (forward) | Arrived, Customer Contacted, Awaiting Pickup, Returned to Office, Discrepancy, Aged in Warehouse | Forwarded: status returns to **In Transit**, `receivedAt`/`receivedBy`, shelf picker and call-center assignment are cleared and any open pickup-queue ticket is ended. The old branch physically sends it on; the new branch receives it normally and storage restarts from that arrival. |
+
+- Blocked: delivered/confirmed parcels (Delivered by Office, Rider Given to Customer, Delivered
+  at Home), Returned to Sender, Cancelled, disposed parcels, Return to Source, deleted parcels,
+  parcels in home delivery (Home Delivery Requested, Address Collected, Dispatched — record
+  **Returned to Office** first), parcels awaiting a Receiver Cashier signature, parcels with an
+  open reconciliation case or storage clearance request, and arrived parcels whose storage was
+  already paid or waived (accrued-but-unpaid storage is dropped when forwarding).
+- The new destination must be an active branch in the same company and differ from the source
+  (use **Return to Source** to send a parcel back).
+- The pickup location must be receiving-enabled and belong to the new destination. When the branch
+  has exactly one receiving location it is chosen automatically; branches with several require a
+  choice; a branch whose locations cannot receive is rejected.
+- Moving to a different pickup location, or forwarding, clears the recorded receiving office. The
+  charge, payments and receivers are **not** recalculated.
+- The save is rejected if another user changed the destination or pickup location after the
+  dialog opened; reopen the parcel and retry.
+- Each change writes a `PARCEL_DESTINATION_CHANGED` audit entry with the stage (`phase`), previous
+  status, previous/new branch and location, removed consignment, cleared office, previous receipt
+  time and the reason, shown in Parcel History.
+
+The action is hidden without the permission and on deleted parcels. The dialog explains what will
+happen for the parcel's stage, or why it cannot move. Mobile Super Search does not expose this
+action yet.
+
+QA: with the permission, move (1) a Processed parcel on an open consignment, (2) an In Transit
+parcel, and (3) an Awaiting Pickup parcel with a queue ticket. Confirm each leaves its consignment,
+(3) returns to In Transit with the ticket ended and appears in the new branch's In Transit Incoming,
+and Parcel History records the stage and reason. Verify rejection for a delivered parcel, a
+Dispatched parcel, a parcel with paid storage, the source branch as destination, a stale dialog and
+a user without the permission. Covered by `tests/server/parcel-destination-change.spec.ts`.
+
 When a parcel changes offices, receiving staff at the destination can open **Super Search →
 Parcel Details → Overview** on web, desktop or mobile, choose another office at the same
 pickup location and select **Save office**. This also corrects the recorded office on a parcel marked **Delivered by
@@ -1160,8 +1208,8 @@ payment badges, and table actions. Automated layout coverage is in
 `tests/utils/parcel-table-layout.spec.tsx`.
 
 Parcel search matches the stored sender, main receiver, and second receiver names, case
-insensitively and by partial name, as well as booking/tracking codes and customer phone
-numbers. Searching the name recorded on an older parcel returns that parcel after the
+insensitively and by partial name, as well as booking/tracking codes and the sender, main
+receiver and second receiver primary/secondary phone numbers. Searching the name recorded on an older parcel returns that parcel after the
 customer profile is renamed. A newer name only matches parcels that recorded that name.
 If a legacy parcel has a null or blank name snapshot, parcel list, detail, search, rider
 delivery, pickup queue, consignment receiving, discrepancy, and report reads use the linked

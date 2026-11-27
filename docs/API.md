@@ -391,7 +391,10 @@ without `--apply` to check for remaining rows. Names already lost before backfil
 recovered from current customer records. The capture trigger rejects a missing, blank, or
 cross-company customer name on a new parcel or receiver change.
 Parcel list search matches the stored sender, main receiver, and second receiver names with
-case-insensitive partial matching; both total count and page rows use the same filter.
+case-insensitive partial matching; both total count and page rows use the same filter. It also
+matches sender, main receiver and second receiver primary/secondary phones (second receiver phones
+added 27 Nov 2026), so Receiver Cashier and Waiting for Pickup find a parcel by the collector who
+is present.
 For a legacy parcel whose name snapshot is null or blank, parcel list, detail, rider delivery,
 pickup queue, consignment receiving, discrepancy, and report responses temporarily display
 the linked customer's current name, and list search matches that name.
@@ -733,7 +736,8 @@ requests with already-posted payments confirm without another charge. See
 [request/confirmation responses and validation](api/IDENTITY_AND_OPERATIONS.md).
 
 `GET /v1/payments/receiver-handovers` also matches sender/receiver names and primary/secondary
-contact phones, plus saved/current collector names and phones. The main web/Desktop Receiver
+contact phones, the second receiver's name and phones, plus saved/current collector names and
+phones. The main web/Desktop Receiver
 Cashier search includes this pending list, so another authorized cashier at the destination
 branch can find an earlier handover. Requests are not restricted to the initiating operator or
 day; financial, signature and ticket confirmation guards remain enforced.
@@ -787,6 +791,16 @@ permissions and company/branch scope come from authentication, not the request b
 is exposed on Processed Parcels / Consignment, In Transit Outgoing and Super Search on web/desktop.
 Third branches and other companies remain rejected. See
 [Parcel Operations](PARCEL_OPERATIONS.md#correcting-a-receiver-from-a-parcel).
+
+Parcel destination change uses `GET /shipments/parcels/:id/destination-options` (returns
+`restriction`, `phase` (`pre_dispatch`, `in_transit`, `forward`), current `sourceId`/`destinationId`/`pickupLocationId` and active branches with
+receiving-enabled locations; branches are empty when restricted) and
+`PATCH /shipments/parcels/:id/destination` with `destinationId`, optional `pickupLocationId`,
+`expectedDestinationId`, `expectedPickupLocationId` and a 5–500 character `reason`. Both require
+`CanChangeParcelDestination` and are scoped to the authenticated company. Responses: `404` outside
+the company, `409` for delivered/home-delivery/return statuses, a pending Receiver Cashier signature, open reconciliation or storage clearance, paid/waived storage on a forward, or stale expected values, `400` for
+the source branch, inactive branch or invalid/ambiguous pickup location. Success returns
+`{ id, changed }`. See [Parcel Operations](PARCEL_OPERATIONS.md#changing-a-parcel-destination-from-super-search).
 
 Source-branch sender reassociation now uses `GET /shipments/parcels/:id/sender-candidates` and
 `POST /shipments/parcels/:id/correct-sender`, guarded by both parcel/customer-update permissions.

@@ -68,6 +68,11 @@ const catalog = [
   ['CanUpdateParcels', 'Update parcels', 'Shipments'],
   ['CanUpdateParcelHandoverNote', 'Add or edit critical parcel handover notes', 'Shipments'],
   [
+    'CanChangeParcelDestination',
+    'Change a parcel’s destination branch and pickup location from Super Search before dispatch',
+    'Shipments',
+  ],
+  [
     'CanCorrectParcelCustomers',
     'Relink parcel customers by booking code across company branches before delivery',
     'Shipments',

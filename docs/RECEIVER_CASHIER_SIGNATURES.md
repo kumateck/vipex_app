@@ -61,10 +61,27 @@ parcel details. `GET /payments/receiver-handovers` rows now include `receiverNam
 
 On web and Desktop, the main **Receiver Cashier → Awaiting Pickup → Search** searches both
 parcels needing collection and the **Receiver signatures** section. Search once by booking or
-tracking code, sender/receiver name, collector name, or either contact phone number. Pending
+tracking code, sender/receiver/second receiver name, collector name, or the primary/secondary
+phone of the sender, main receiver, second receiver or collector. Pending
 requests appear in Receiver signatures even when their principal balance is zero or the branch
 has since disabled signature requirements. Search changes reset the pending list to its first
 page. The pending request stays out of the ordinary payment table to prevent a second collection.
+
+### Continue after a delivery reversal or a lost request
+
+**Receiver signatures** lists only parcels with a pending request. A parcel has none when the
+request was never sent or when its delivery was confirmed and then reversed (for example for a
+wrong printout): the reversal voids the receiver payment, restores the balance and status
+Awaiting Pickup, and the earlier handover and signature are not reused. Such a parcel is under
+**Awaiting Pickup**. If a search in the **Receiver signatures** tab matches parcels that still need
+collection, the tab shows how many and a **Show in Awaiting Pickup** button that keeps the search.
+Open the parcel there, verify a new OTP where required and choose **Request Signature**; the new
+request then appears on mobile Receiver Signatures, and Desktop confirms it as usual. The new
+payment belongs to the confirming cashier; the voided payment remains voided.
+
+Mobile **Receiver Signatures** search accepts booking/tracking codes, names and phones. When a
+search finds no pending request, mobile explains that the cashier must first verify OTP and choose
+Request Signature, and that a reversed delivery needs a new request.
 
 Any cashier with `CanCreateReceiverPayments` at the same destination branch can reopen the request;
 it is not filtered by the initiating cashier, session, pickup location, or request date. An open
@@ -211,6 +228,14 @@ An existing delivery reversal clears the active delivery snapshot.
   ticket if needed, and complete with another authorized cashier. Confirm historical paid requests
   reuse their payments and new requests post exactly once against the final cashier.
 - Automated resumption/search coverage: `tests/server/receiver-handover-resumption.spec.ts`.
+- Confirm a signed handover, reverse the delivery, then search Receiver Cashier by booking code
+  and by the second receiver's phone. In the Receiver signatures tab the search shows the
+  Awaiting Pickup notice and **Show in Awaiting Pickup** keeps the search. Request a new signature,
+  sign on mobile and confirm on Desktop: exactly one active receiver payment (the confirming
+  cashier's) remains and the reversed payment stays voided. On mobile, search a code with no
+  pending request and verify the "ask the cashier to Request Signature" message. Automated:
+  `tests/server/reversed-receiver-handover-resumption.spec.ts` and
+  `awaiting-pickup-matches-notice.test.tsx`.
 - Open Receiver Cashier at a branch with **Require Receiver Cashier signature** off and no pending
   requests. The **Awaiting Pickup**, **Receiver signatures** and **Delivered** tabs are visible;
   **Receiver signatures** shows the empty list instead of hiding it. Create a pending request and

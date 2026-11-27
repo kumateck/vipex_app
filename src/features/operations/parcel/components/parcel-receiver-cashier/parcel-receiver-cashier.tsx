@@ -12,6 +12,7 @@ import { ParcelStatus } from '@/db/schemas/enums';
 import { useCallback, useState } from 'react';
 import { ParcelReceiptActions } from '../parcel-receipt-actions';
 import { ParcelSessionGuard } from '../parcel-session-guard';
+import { AwaitingPickupMatchesNotice } from './awaiting-pickup-matches-notice';
 import { ReceiverHandoverList } from './receiver-handover-list';
 import { ReceiverCashierTabs, type ReceiverCashierView } from './receiver-cashier-tabs';
 import { PAYMENT_TYPE_LEGEND } from './receiver-cashier-constants';
@@ -41,6 +42,7 @@ export function ParcelReceiverCashier() {
     },
     [setStatus],
   );
+  const showAwaiting = useCallback(() => changeView('awaiting'), [changeView]);
 
   const columns = useParcelReceiverCashierColumns({
     isPickupQueueEnabled: context.isPickupQueueEnabled,
@@ -101,6 +103,13 @@ export function ParcelReceiverCashier() {
                 <Button type="submit">Search</Button>
               </form>
 
+              {view === 'signatures' && table.query.search && table.rows.length ? (
+                <AwaitingPickupMatchesNotice
+                  count={table.listQuery.currentData?.meta?.totalRecords ?? table.rows.length}
+                  search={table.query.search}
+                  onShow={showAwaiting}
+                />
+              ) : null}
               {context.branchId && view === 'signatures' ? (
                 <BatchSignatureRequests
                   key={context.branchId}
